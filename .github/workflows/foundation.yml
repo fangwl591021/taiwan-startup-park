@@ -22,9 +22,7 @@ jobs:
           if test -f package-lock.json; then npm ci; else npm install; fi
       - name: Dependency audit report
         run: |
-          npm audit || true
-          npm view wrangler version
-          npm view @playwright/test version
+          npm audit --audit-level=high
       - name: Typecheck and core permission tests
         run: |
           npm run typecheck
