@@ -1,4 +1,9 @@
-# No production auth provider is configured in foundation.
+# Safe defaults; no real credentials. Do not publish this local demo server.
 APP_ENV=production
 DEMO_MODE=off
-# Real LINE, AI and payment secrets are deliberately not used in round 1.
+APP_ORIGIN=https://staging.example.invalid
+ACCESS_ISSUER=
+ACCESS_AUD=
+LINE_SEND_ENABLED=off
+# Set privately through a secret binding, not in git:
+# LINE_CHANNELS_JSON={"connection-id":{"channelSecret":"FAKE","channelAccessToken":"FAKE"}}

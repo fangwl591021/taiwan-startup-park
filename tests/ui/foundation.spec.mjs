@@ -72,3 +72,18 @@ test('sales UI omits owner risk and historical input is escaped',async({page})=>
  await expect(page.locator('.message.out .bubble')).toHaveText('<img src=x onerror=alert(1)>');
  await expect(page.locator('.message.out img')).toHaveCount(0);
 });
+
+test('owner integration center desktop/mobile displays honest unconfigured state, staff cannot see it',async({page})=>{
+ await page.setViewportSize({width:1440,height:1050});await login(page);
+ await page.getByRole('button',{name:'整合中心',exact:false}).click();
+ await expect(page.getByRole('heading',{name:'LINE OA 尚未串接'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'目前沒有待分派來客'})).toBeVisible();
+ await page.getByRole('button',{name:'處理待收／待送訊息'}).click();
+ await expect(page.getByRole('status')).toContainText('外送未啟用');
+ await page.screenshot({path:'docs/screenshots/desktop-integrations.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'docs/screenshots/mobile-integrations.png',fullPage:true});
+ await page.getByRole('button',{name:'登出',exact:true}).click();await login(page,'sales-a1');
+ await expect(page.getByRole('button',{name:'整合中心',exact:false})).toHaveCount(0);
+});

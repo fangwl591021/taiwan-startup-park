@@ -12,7 +12,8 @@
   },
   "vars": {
     "APP_ENV": "production",
-    "DEMO_MODE": "off"
+    "DEMO_MODE": "off",
+    "LINE_SEND_ENABLED": "off"
   },
   "d1_databases": [
     {

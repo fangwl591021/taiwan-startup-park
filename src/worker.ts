@@ -1,15 +1,11 @@
-import type {Actor,Env,Opportunity,Statement} from './types.js';
-
-class HttpError extends Error { constructor(public status:number,message:string){super(message);} }
-const fail=(status:number,message:string):never=>{throw new HttpError(status,message);};
-const now=()=>new Date().toISOString();
-const uid=()=>crypto.randomUUID();
-const stmt=(env:Env,sql:string,...args:unknown[])=>env.DB.prepare(sql).bind(...args);
+import type {Actor,Env,Opportunity} from './types.js';
+import {HttpError,fail,now,uid,stmt,local,digest,audit} from './shared.js';
+import {actor,accessLogin,configured} from './auth.js';
+import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueueLine,dispatchOutbox,retryLine,conversationLineStatus} from './line.js';
+type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
 const modules=['website','store','line','crm'];
-const local=(req:Request,env:Env)=>env.APP_ENV==='local'&&env.DEMO_MODE==='on'&&['localhost','127.0.0.1','[::1]'].includes(new URL(req.url).hostname);
-async function digest(value:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))).map(x=>x.toString(16).padStart(2,'0')).join('');}
 function textField(v:unknown,label:string,max=300,empty=false):string{
  if(typeof v!=='string'||v.length>max||(!empty&&!v.trim()))return fail(400,label+'格式不正確');
  return v.trim();
@@ -29,15 +25,6 @@ async function body(req:Request,keys:string[]):Promise<Record<string,unknown>>{
 }
 function writes(req:Request){
  if(req.headers.get('origin')!==new URL(req.url).origin||req.headers.get('x-requested-with')!=='tsp')fail(403,'請從工作台操作');
-}
-async function actor(req:Request,env:Env):Promise<Actor>{
- // Foundation has no production identity provider. Deny all operational API access outside local mode.
- if(!local(req,env))fail(503,'正式登入尚未串接');
- const token=req.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith('tsp_session='))?.slice(12);
- if(!token)fail(401,'請先登入');
- const a=await stmt(env,'SELECT u.id,u.operator_id,u.name,u.role,u.active FROM sessions s JOIN staff_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1',await digest(token!),now()).first<Actor>();
- if(!a)fail(401,'登入已失效或帳號已停權');
- return a!;
 }
 function roles(a:Actor,allowed:string[]){if(!allowed.includes(a.role))fail(403,'沒有此操作權限');}
 function opScope(a:Actor,alias='o'):{sql:string,args:unknown[]}{
@@ -66,21 +53,21 @@ async function getConversation(env:Env,a:Actor,id:string){
  const c=await stmt(env,'SELECT c.*,o.owner_id,o.title FROM conversations c JOIN businesses b ON b.id=c.business_id AND b.operator_id=c.operator_id JOIN opportunities o ON o.id=c.opportunity_id AND o.operator_id=c.operator_id WHERE c.id=? AND c.operator_id=? AND '+s.sql,id,a.operator_id,...s.args).first();
  if(!c||(a.role==='operator_sales'&&c.owner_id!==a.id))fail(404,'找不到可存取的對話');return c!;
 }
-function audit(env:Env,a:Actor,businessId:string|null,opportunityId:string|null,action:string,detail:unknown,conditional=false):Statement{
- const sql=conditional?
- 'INSERT INTO activity_events(id,operator_id,business_id,opportunity_id,actor_id,action,detail,created_at) SELECT ?,?,?,?,?,?,?,? WHERE changes()>0':
- 'INSERT INTO activity_events(id,operator_id,business_id,opportunity_id,actor_id,action,detail,created_at) VALUES(?,?,?,?,?,?,?,?)';
- return stmt(env,sql,uid(),a.operator_id,businessId,opportunityId,a.id,action,JSON.stringify(detail),now());
-}
 async function agent(env:Env,a:Actor,id:unknown){
  const value=textField(id,'承辦人',100);
  const u=await stmt(env,"SELECT id FROM staff_users WHERE id=? AND operator_id=? AND active=1 AND role IN('operator_owner','operator_sales')",value,a.operator_id).first();
  if(!u)fail(400,'承辦人不屬於本業者或已停權');return value;
 }
-async function route(req:Request,env:Env):Promise<Response>{
+async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  const url=new URL(req.url);const path=url.pathname;const method=req.method;
- if(path==='/api/health')return json({ok:true,version:'0.1.0'});
- if(path==='/api/bootstrap'&&method==='GET')return json({demo:local(req,env),auth:local(req,env)?'local_demo':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
+ if(path==='/api/health')return json({ok:true,version:'0.2.0'});
+ if(path==='/api/bootstrap'&&method==='GET')return json({demo:local(req,env),auth:local(req,env)?'local_demo':configured(env)?'cloudflare_access':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
+ const webhook=path.match(/^\/api\/line\/webhook\/([a-zA-Z0-9_-]+)$/);
+ if(webhook&&method==='POST'){
+  const response=await receiveWebhook(req,env,webhook[1]);
+  ctx?.waitUntil(processInbox(env).catch(()=>console.error('LINE inbox processing needs recovery')));
+  return response;
+ }
  if(!path.startsWith('/api/'))return env.ASSETS?env.ASSETS.fetch(req):new Response('Not found',{status:404});
  if(!['GET','HEAD','OPTIONS'].includes(method))writes(req);
  if(path==='/api/demo/users'&&method==='GET'){
@@ -95,15 +82,29 @@ async function route(req:Request,env:Env):Promise<Response>{
   const token=uid()+uid();await stmt(env,'INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)',await digest(token),id,new Date(Date.now()+8*3600000).toISOString()).run();
   return json({ok:true},200,{'Set-Cookie':'tsp_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800'});
  }
+ if(path==='/api/auth/access'&&method==='POST'){await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
+ if(path==='/api/integrations'&&method==='GET')return json(await integrationStatus(env,a));
+ if(path==='/api/line/inbox'&&method==='GET')return json(await inbox(env,a));
+ const attach=path.match(/^\/api\/line\/inbox\/([^/]+)\/attach$/);
+ if(attach&&method==='POST'){const d=await body(req,['conversation_id']);return json(await attachContact(env,a,attach[1],textField(d.conversation_id,'對話',100)));}
+ if(path==='/api/line/recover'&&method==='POST'){
+  roles(a,['operator_owner']);await body(req,[]);
+  const received=await processInbox(env,a.operator_id);
+  const sent=await dispatchOutbox(env,a.operator_id);
+  return json({received,...sent});
+ }
+ const lineStatus=path.match(/^\/api\/conversations\/([^/]+)\/line-status$/);
+ if(lineStatus&&method==='GET'){await getConversation(env,a,lineStatus[1]);return json(await conversationLineStatus(env,a,lineStatus[1]));}
+
  if(path==='/api/me'&&method==='GET'){
   const op=await stmt(env,'SELECT name FROM operators WHERE id=?',a.operator_id).first();
-  return json({...a,operator_name:op?.name});
+  return json({...a,operator_name:op?.name,demo:local(req,env)});
  }
  if(path==='/api/logout'&&method==='POST'){
   const token=req.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith('tsp_session='))?.slice(12)||'';
   await stmt(env,'DELETE FROM sessions WHERE token_hash=?',await digest(token)).run();
-  return json({ok:true},200,{'Set-Cookie':'tsp_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});
+  return json({ok:true},200,{'Set-Cookie':'tsp_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'+(local(req,env)?'':'; Secure')});
  }
  if(path==='/api/staff'&&method==='GET'){
   roles(a,['operator_owner','operator_sales','operator_service','operator_finance']);
@@ -255,12 +256,18 @@ async function route(req:Request,env:Env):Promise<Response>{
  const msgMatch=path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
  if(msgMatch&&method==='GET'){
   await getConversation(env,a,msgMatch[1]);
-  return json((await stmt(env,'SELECT m.id,m.actor_id,m.direction,m.body,m.source,m.approved_by,m.status,m.created_at,m.updated_at,u.name AS actor_name FROM messages m LEFT JOIN staff_users u ON u.id=m.actor_id WHERE m.operator_id=? AND m.conversation_id=? ORDER BY m.created_at,m.rowid',a.operator_id,msgMatch[1]).all()).results);
+  return json((await stmt(env,'SELECT m.id,m.actor_id,m.direction,m.body,m.source,m.approved_by,m.status,m.connection_id,m.created_at,m.updated_at,u.name AS actor_name FROM messages m LEFT JOIN staff_users u ON u.id=m.actor_id WHERE m.operator_id=? AND m.conversation_id=? ORDER BY m.created_at,m.rowid',a.operator_id,msgMatch[1]).all()).results);
  }
  if(msgMatch&&method==='POST'){
   const c=await getConversation(env,a,msgMatch[1]);
   const d=await body(req,['body','idempotency_key','simulate_failure']);
   const message=textField(d.body,'訊息',2000);const key=textField(d.idempotency_key,'請求識別碼',100);
+  if(!local(req,env)){
+   if(d.simulate_failure!==undefined)fail(400,'正式 LINE 訊息不能指定模擬狀態');
+   const result=await enqueueLine(env,a,c,message,key);
+   ctx?.waitUntil(dispatchOutbox(env,a.operator_id).catch(()=>console.error('LINE delivery needs recovery')));
+   return json(result,202);
+  }
   if(d.simulate_failure!==undefined&&typeof d.simulate_failure!=='boolean')fail(400,'測試狀態錯誤');
   const old=await stmt(env,'SELECT id,body,status,actor_id FROM messages WHERE operator_id=? AND conversation_id=? AND idempotency_key=?',a.operator_id,c.id,key).first();
   if(old){if(old.body!==message||old.actor_id!==a.id)fail(409,'識別碼已用於另一則訊息');return json(old);}
@@ -280,6 +287,12 @@ async function route(req:Request,env:Env):Promise<Response>{
   const m=await stmt(env,'SELECT * FROM messages WHERE id=? AND operator_id=? AND conversation_id=?',retryMatch[2],a.operator_id,c.id).first();
   if(!m)fail(404,'訊息不存在');
   if(m!.actor_id!==a.id)fail(403,'請原發送人重試，以保留正確歸屬');
+  if(m!.connection_id&&m!.direction==='out'){
+   const result=await retryLine(env,a,String(m!.id));
+   await audit(env,a,c.business_id as string,c.opportunity_id as string,'line_message_retry_requested',{message_id:m!.id}).run();
+   ctx?.waitUntil(dispatchOutbox(env,a.operator_id).catch(()=>console.error('LINE delivery needs recovery')));
+   return json(result);
+  }
   if(m!.status==='simulated')return json({id:m!.id,status:'simulated'});
   if(m!.status!=='failed')fail(409,'此訊息不可重試');
   await env.DB.batch([stmt(env,"UPDATE messages SET status='simulated',updated_at=? WHERE id=? AND operator_id=? AND status='failed'",now(),m!.id,a.operator_id),
@@ -300,9 +313,9 @@ async function route(req:Request,env:Env):Promise<Response>{
  }
  return fail(404,'找不到此功能');
 }
-export default {async fetch(req:Request,env:Env):Promise<Response>{
+export default {async fetch(req:Request,env:Env,ctx?:Context):Promise<Response>{
  let response:Response;
- try {response=await route(req,env);} catch(e){
+ try {response=await route(req,env,ctx);} catch(e){
   if(e instanceof HttpError)response=json({error:e.message},e.status);
   else {console.error('Request failed',e instanceof Error?e.message:'unknown');response=json({error:'處理失敗，請重新整理或聯絡管理員'},500);}
  }
@@ -311,4 +324,4 @@ export default {async fetch(req:Request,env:Env):Promise<Response>{
  headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
  if(new URL(req.url).pathname.startsWith('/api/'))headers.set('Cache-Control','no-store');
  return new Response(response.body,{status:response.status,headers});
-}};
+},async scheduled(_event:unknown,env:Env){await processInbox(env);await dispatchOutbox(env);}};
