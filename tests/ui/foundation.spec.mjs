@@ -83,7 +83,8 @@ test('owner integration center desktop/mobile displays honest unconfigured state
  await page.screenshot({path:'docs/screenshots/desktop-integrations.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.screenshot({path:'docs/screenshots/mobile-integrations.png',fullPage:true});
+ await expect.poll(()=>page.locator('.sidebar').evaluate(el=>el.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
+ await page.screenshot({path:'docs/screenshots/mobile-integrations.png',fullPage:true,animations:'disabled'});
  await page.getByRole('button',{name:'登出',exact:true}).click();await login(page,'sales-a1');
  await expect(page.getByRole('button',{name:'整合中心',exact:false})).toHaveCount(0);
 });
