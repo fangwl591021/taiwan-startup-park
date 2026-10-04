@@ -2,11 +2,11 @@ export {};
 type Row=Record<string,any>;
 const root=document.querySelector<HTMLDivElement>('#app')!;
 const dialog=document.querySelector<HTMLDialogElement>('#modal')!;
-let me:Row;let page='dashboard';let staff:Row[]=[];let opps:Row[]=[];let tenants:Row[]=[];let chats:Row[]=[];let selectedChat='';let chatLine:Row={bound:false,send_enabled:false};let filter='';let search='';let busy=false;
+let me:Row;let page='dashboard';let staff:Row[]=[];let opps:Row[]=[];let tenants:Row[]=[];let chats:Row[]=[];let selectedChat='';let chatLine:Row={bound:false,send_enabled:false};let filter='';let search='';let busy=false;let opsBusiness='';let opsTab='overview';let opsData:Row;let opsCatalog:Row;
 const stageNames:Row={contact:'接觸',onboarding:'導入',billing:'收費',won:'成交',paused:'暫緩',lost:'未成交'};
 const roleNames:Row={operator_owner:'總管理員',operator_sales:'業務',operator_service:'維運',operator_finance:'財務',platform_admin:'平台管理員',business_admin:'企業管理員'};
 const moduleNames:Row={website:'品牌官網',store:'獨立商城',line:'LINE OA 串接',crm:'客戶管理 CRM'};
-const actionNames:Row={fixture_created:'建立示範案件',opportunity_created:'建立案件',assignment_changed:'轉交案件',opportunity_updated:'更新案件',opportunity_won:'成交轉租戶',payment_recorded:'人工核對收款',message_attempted:'回覆訊息（本地）',message_retried:'重試訊息（本地）',service_requested:'申請功能',service_cancelled:'取消功能申請',service_assignment_changed:'指派服務承辦',staff_status:'變更人員狀態',line_contact_linked:'分派 LINE 來客',line_message_queued:'加入 LINE 外送佇列',line_message_retry_requested:'請求 LINE 訊息重試'};
+const actionNames:Row={location_created:'新增登記據點',plan_created:'新增數位方案',plan_status_changed:'變更方案販售狀態',contract_created:'建立地址合約',contract_renewal_created:'建立地址續約',contract_status_changed:'變更合約狀態',subscription_created:'建立數位訂閱',subscription_status_changed:'變更訂閱狀態',receivable_created:'建立應收單',receivable_voided:'作廢應收單',ledger_recorded:'人工核對收退款',mail_received:'登記信件包裹',mail_status_changed:'更新信件交付',ticket_created:'建立維運需求',ticket_status_changed:'更新維運需求',fixture_created:'建立示範案件',opportunity_created:'建立案件',assignment_changed:'轉交案件',opportunity_updated:'更新案件',opportunity_won:'成交轉租戶',payment_recorded:'人工核對收款',message_attempted:'回覆訊息（本地）',message_retried:'重試訊息（本地）',service_requested:'申請功能',service_cancelled:'取消功能申請',service_assignment_changed:'指派服務承辦',staff_status:'變更人員狀態',line_contact_linked:'分派 LINE 來客',line_message_queued:'加入 LINE 外送佇列',line_message_retry_requested:'請求 LINE 訊息重試'};
 const e=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const money=(v:number)=>'NT$ '+Number(v||0).toLocaleString('zh-TW');
 const date=(v:string)=>v?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(v)):'未安排';
@@ -35,7 +35,7 @@ async function loginScreen(){
  root.innerHTML='<main class="login"><div class="brand-mark">園</div><p class="eyebrow">TAIWAN STARTUP PARK</p><h1>台灣創業園</h1><h2>'+(config.auth==='cloudflare_access'?'使用企業身分登入':'正式登入尚未設定')+'</h2><p>'+(config.auth==='cloudflare_access'?'通過 Cloudflare Access 驗證後，使用已綁定的個人操作帳號進入工作台。':'請先完成企業登入與人員綁定，系統不提供公開示範登入。')+'</p>'+(config.auth==='cloudflare_access'?'<button class="primary" data-action="access-login">驗證並進入工作台</button>':'')+'<p>LINE 依業者設定；金流尚未串接，AI 尚未啟用。</p></main>';return;
  }
  const users=await api('/demo/users');
- root.innerHTML='<main class="login"><div class="brand-mark">園</div><p class="eyebrow">TAIWAN STARTUP PARK</p><h1>讓每一次成交<br>成為長期的服務關係</h1><p>業者工作台 · 第一輪可操作基礎版</p><form id="login-form"><label>選擇本地驗收身分<select name="user_id" aria-label="示範身分">'+users.map((u:Row)=>'<option value="'+e(u.id)+'" '+(u.id==='owner-a'?'selected':'')+'>'+e(u.operator_name+' / '+u.name)+'</option>').join('')+'</select></label><button class="primary" type="submit">進入示範工作台</button><p class="form-error" role="alert"></p></form><div class="notice">純虛構資料 · 僅限本機<br>正式登入、LINE、金流與 AI 尚未串接。</div><p class="fine">公司工作通訊將記錄操作人員與服務歷程，供授權管理與服務品質核查；不包含私人通訊。</p></main>';
+ root.innerHTML='<main class="login"><div class="brand-mark">園</div><p class="eyebrow">TAIWAN STARTUP PARK</p><h1>讓每一次成交<br>成為長期的服務關係</h1><p>業者工作台 · 租戶維運驗收版</p><form id="login-form"><label>選擇本地驗收身分<select name="user_id" aria-label="示範身分">'+users.map((u:Row)=>'<option value="'+e(u.id)+'" '+(u.id==='owner-a'?'selected':'')+'>'+e(u.operator_name+' / '+u.name)+'</option>').join('')+'</select></label><button class="primary" type="submit">進入示範工作台</button><p class="form-error" role="alert"></p></form><div class="notice">純虛構資料 · 僅限本機<br>正式登入、LINE、金流與 AI 尚未串接。</div><p class="fine">公司工作通訊將記錄操作人員與服務歷程，供授權管理與服務品質核查；不包含私人通訊。</p></main>';
 }
 async function start(){
  try{me=await api('/me');staff=await api('/staff');await refresh();}
@@ -47,8 +47,8 @@ async function refresh(){
 }
 function render(){
  const nav=[['dashboard','▦','總覽'],...(salesView()?[['pipeline','↗','成交追蹤']]:[]),['tenants','▤','租戶管理'],...(chatView()?[['chat','◌','工作聊天室']]:[]),...(owner()?[['activity','≡','操作歷程'],['staff','♙','操作人員'],['integrations','⇄','整合中心'],['risk','◇','管理員專區']]:[])];
- const title=nav.find(n=>n[0]===page)?.[2]||'總覽';
- root.innerHTML='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span>台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+'><span>'+n[1]+'</span>'+n[2]+'</button>').join('')+'</nav><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'本地驗收環境':'企業工作環境')+'<small>Integration · v0.2</small></div></aside><div class="workspace"><header class="topbar"><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>LOCAL DEMO</span>虛構示範資料 · LINE／金流尚未串接 · AI 尚未啟用':'<span>WORKSPACE</span>LINE 狀態依對話顯示 · 金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',risk:'僅總管理員可存取的獨立工作區。'} as Row)[page])+'</p></div>'+(seller()&&['dashboard','pipeline'].includes(page)?'<button class="primary" data-action="new">＋ 建立案件</button>':'')+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
+ const title=page==='operations'?'租戶維運':nav.find(n=>n[0]===page)?.[2]||'總覽';
+ root.innerHTML='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span>台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]||page==='operations'&&n[0]==='tenants'?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+'><span>'+n[1]+'</span>'+n[2]+'</button>').join('')+'</nav><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'本地驗收環境':'企業工作環境')+'<small>Operations · v0.3</small></div></aside><div class="workspace"><header class="topbar"><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>LOCAL DEMO</span>虛構示範資料 · LINE／金流尚未串接 · AI 尚未啟用':'<span>WORKSPACE</span>LINE 狀態依對話顯示 · 金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',operations:'合約、帳務與日常服務，一次掌握。',risk:'僅總管理員可存取的獨立工作區。'} as Row)[page])+'</p></div>'+(seller()&&['dashboard','pipeline'].includes(page)?'<button class="primary" data-action="new">＋ 建立案件</button>':'')+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
  const content=document.querySelector('#content')!;
  if(page==='dashboard')content.innerHTML=dashboard();
  if(page==='pipeline')content.innerHTML=pipeline();
@@ -58,6 +58,7 @@ function render(){
  if(page==='staff')content.innerHTML=staffPage();
  if(page==='risk')void renderRisk();
  if(page==='integrations')void renderIntegrations();
+ if(page==='operations')void renderOperations();
 }
 function dashboard(){
  const open=opps.filter(o=>!['won','lost'].includes(o.stage));
@@ -74,7 +75,7 @@ function pipeline(){
 }
 function tenantList(){
  const rows=tenants.filter(t=>!search||t.name.toLowerCase().includes(search.toLowerCase()));
- return '<section class="panel"><div class="panel-heading"><h2>租戶企業 <span class="count">'+tenants.length+'</span></h2><form id="search-form" class="search"><input name="q" aria-label="搜尋租戶" placeholder="搜尋企業" value="'+e(search)+'"><button type="submit" aria-label="搜尋">⌕</button></form></div>'+(rows.length?'<div class="tenant-grid">'+rows.map(t=>'<button class="tenant-card" data-tenant="'+e(t.id)+'"><span class="company-icon">'+e(t.name.slice(0,1))+'</span><h3>'+e(t.name)+'</h3>'+badge('已成交','green')+badge('功能未開通')+'<p>服務承辦：'+e(t.service_owner_name||'尚未指派')+'</p><div><span>功能申請</span><b>'+t.request_count+' 項</b></div></button>').join('')+'</div>':empty('尚無符合的租戶','案件完成成交後，企業會出現在這裡。'))+'</section>';
+ return '<section class="panel"><div class="panel-heading"><h2>租戶企業 <span class="count">'+tenants.length+'</span></h2>'+(tenants.length?'<button data-operations="'+e(tenants[0].id)+'">租戶維運台 →</button>':'')+'<form id="search-form" class="search"><input name="q" aria-label="搜尋租戶" placeholder="搜尋企業" value="'+e(search)+'"><button type="submit" aria-label="搜尋">⌕</button></form></div>'+(rows.length?'<div class="tenant-grid">'+rows.map(t=>'<button class="tenant-card" data-tenant="'+e(t.id)+'"><span class="company-icon">'+e(t.name.slice(0,1))+'</span><h3>'+e(t.name)+'</h3>'+badge('已成交','green')+badge('功能未開通')+'<p>服務承辦：'+e(t.service_owner_name||'尚未指派')+'</p><div><span>功能申請</span><b>'+t.request_count+' 項</b></div></button>').join('')+'</div>':empty('尚無符合的租戶','案件完成成交後，企業會出現在這裡。'))+'</section>';
 }
 function chatShell(){
  if(!chats.length)return empty('目前沒有可存取的對話','新案件會建立一個本地工作對話。');
@@ -108,12 +109,13 @@ async function showOpportunity(id:string){
 }
 async function showTenant(id:string){
  const b=await api('/businesses/'+id);const events=await api('/activity?business_id='+encodeURIComponent(id));
- showModal('<p class="eyebrow">TENANT SERVICES</p><h2>'+e(b.name)+'</h2><div class="detail-badges">'+badge('已成交','green')+badge('數位服務尚未開通')+'</div><p class="muted">'+b.contacts.map((c:Row)=>e(c.name)+' · '+e(c.phone)).join('<br>')+'</p>'+(owner()?'<form id="assignee-form" data-id="'+e(id)+'"><label>服務承辦人<select name="service_owner_id">'+options(staff.filter(s=>s.active&&['operator_owner','operator_sales','operator_service'].includes(s.role)),b.service_owner_id)+'</select></label><p class="form-error" role="alert"></p><button type="submit">指派承辦人</button></form>':'')+'<h3 class="section-title">企業數位服務租用</h3><p class="muted">本輪可管理需求；申請中不代表付費、訂閱或正式開通。</p><div class="service-grid">'+Object.entries(moduleNames).map(([key,name])=>{const req=b.services.find((s:Row)=>s.module===key&&s.status==='requested');return '<article><h3>'+name+'</h3>'+badge(req?'申請中':'未申請',req?'amber':'')+'<p>尚未串接 · 未開通</p>'+(canRequest()?req?'<button data-cancel="'+e(req.id)+'" data-business="'+e(id)+'">取消申請</button>':'<button data-module="'+key+'" data-business="'+e(id)+'">提出需求</button>':'')+'</article>';}).join('')+'</div>'+(seller()?'<button class="primary" data-upsell="'+e(id)+'">＋ 建立加購案件</button>':'')+'<h3 class="section-title">服務與操作歷程</h3>'+history(events));
+ showModal('<p class="eyebrow">TENANT SERVICES</p><h2>'+e(b.name)+'</h2><div class="detail-badges">'+badge('已成交','green')+badge('數位服務尚未開通')+'</div><p class="muted">'+b.contacts.map((c:Row)=>e(c.name)+' · '+e(c.phone)).join('<br>')+'</p>'+(owner()?'<form id="assignee-form" data-id="'+e(id)+'"><label>服務承辦人<select name="service_owner_id">'+options(staff.filter(s=>s.active&&['operator_owner','operator_sales','operator_service'].includes(s.role)),b.service_owner_id)+'</select></label><p class="form-error" role="alert"></p><button type="submit">指派承辦人</button></form>':'')+'<button class="primary" data-operations="'+e(id)+'">開啟租戶維運台 →</button><h3 class="section-title">企業數位服務租用</h3><p class="muted">本輪可管理需求；申請中不代表付費、訂閱或正式開通。</p><div class="service-grid">'+Object.entries(moduleNames).map(([key,name])=>{const req=b.services.find((s:Row)=>s.module===key&&s.status==='requested');return '<article><h3>'+name+'</h3>'+badge(req?'申請中':'未申請',req?'amber':'')+'<p>尚未串接 · 未開通</p>'+(canRequest()?req?'<button data-cancel="'+e(req.id)+'" data-business="'+e(id)+'">取消申請</button>':'<button data-module="'+key+'" data-business="'+e(id)+'">提出需求</button>':'')+'</article>';}).join('')+'</div>'+(seller()?'<button class="primary" data-upsell="'+e(id)+'">＋ 建立加購案件</button>':'')+'<h3 class="section-title">服務與操作歷程</h3>'+history(events));
 }
 function formData(form:HTMLFormElement):Row{return Object.fromEntries(new FormData(form));}
 function followUTC(value:string){return value?new Date(value+':00+08:00').toISOString():'';}
 document.addEventListener('change',event=>{
- const target=event.target as HTMLSelectElement;if(target.id==='business-select'){
+ const target=event.target as HTMLSelectElement;if(target.id==='operations-business'){opsBusiness=target.value;void renderOperations();}
+ if(target.id==='business-select'){
   const box=document.querySelector<HTMLElement>('#new-business')!;box.hidden=!!target.value;
   box.querySelectorAll<HTMLInputElement>('input[name="business_name"],input[name="contact_name"]').forEach(i=>i.required=!target.value);
  }
@@ -123,6 +125,24 @@ document.addEventListener('submit',async event=>{
  const button=form.querySelector<HTMLButtonElement>('button[type="submit"]');if(button)button.disabled=true;
  try{
   const d=formData(form);
+  if(form.id==='ops-form'){
+   const op=form.dataset.op!,id=form.dataset.id;const version=Number(form.dataset.version);
+   const key=form.dataset.requestKey!;
+   let path='',method='POST',payload:Row={...d,request_key:key};
+   if(op==='contract'||op==='renew-contract'){path='/businesses/'+opsBusiness+'/contracts'+(id?'/'+id+'/renew':'');payload.amount=Number(d.amount);if(id)payload.version=version;}
+   if(op==='subscription'||op==='renew-subscription'){path='/businesses/'+opsBusiness+'/subscriptions'+(id?'/'+id+'/renew':'');if(id)payload.version=version;}
+   if(op==='invoice'){const [kind,source_id]=d.kind_source.split(':');path='/businesses/'+opsBusiness+'/invoices';payload={kind,source_id,due_on:d.due_on,request_key:key};}
+   if(op==='ledger'){path='/businesses/'+opsBusiness+'/invoices/'+id+'/ledger';payload.amount=Number(d.amount);payload.version=version;if(d.direction==='receipt')delete payload.refund_of;}
+   if(op==='mail')path='/businesses/'+opsBusiness+'/mail';
+   if(op==='ticket')path='/businesses/'+opsBusiness+'/tickets';
+   if(op==='location'){path='/operations/locations';delete payload.request_key;}
+   if(op==='plan'){path='/operations/plans';delete payload.request_key;payload.amount=Number(d.amount);payload.duration_days=Number(d.duration_days);payload.quota_limit=Number(d.quota_limit);}
+   await api(path,method,payload);dialog.close();await renderOperations();toast('紀錄已保存；沒有執行付款、配送或功能開通');
+  }
+  if(form.id==='ops-state-form'){
+   await api('/businesses/'+opsBusiness+'/'+form.dataset.kind+'/'+form.dataset.id,'PATCH',{...d,status:form.dataset.status,version:Number(form.dataset.version)});
+   dialog.close();await renderOperations();toast('狀態已更新，實際操作者已記錄');
+  }
   if(form.id==='login-form'){await api('/demo/login','POST',d);await start();}
   if(form.id==='search-form'){search=d.q;render();}
   if(form.id==='opportunity-form'){
@@ -151,6 +171,13 @@ document.addEventListener('submit',async event=>{
 document.addEventListener('click',async event=>{
  const target=(event.target as HTMLElement).closest<HTMLElement>('button,a');if(!target)return;
  const d=target.dataset;try{
+ if(d.operations){opsBusiness=d.operations;opsTab='overview';dialog.close();page='operations';render();}
+ if(d.opsTab){opsTab=d.opsTab;void renderOperations();}
+ if(d.opsNew)await showOpsForm(d.opsNew,d.id);
+ if(d.opsState)showOpsState(d.opsState);
+ if(d.opsLedger)await showLedger(d.opsLedger);
+ if(d.opsCatalog)showCatalog();
+ if(d.planToggle){await api('/operations/plans/'+d.planToggle,'PATCH',{active:d.active==='1',version:Number(d.version)});await renderOperations();showCatalog();toast('方案狀態已更新；既有訂閱快照不變');}
  if(d.action==='access-login'){await api('/auth/access','POST',{});await start();}
  if(d.action==='menu')document.querySelector('.shell')?.classList.add('menu-open');
  if(d.action==='menu-close')document.querySelector('.shell')?.classList.remove('menu-open');
@@ -181,4 +208,103 @@ async function renderIntegrations(){
  if(page!=='integrations')return;
  const target=document.querySelector('#content')!;
  target.innerHTML='<div class="metrics"><article><span>LINE Channel</span><strong>'+state.line.length+'<small>組</small></strong><p>各業者獨立設定與隔離</p></article><article><span>待處理接收事件</span><strong>'+state.inbox_pending+'<small>筆</small></strong><p>已持久保存，可重新處理</p></article><article><span>待分派來客</span><strong>'+pending.length+'<small>位</small></strong><p>先核對企業再分派案件</p></article><article><span>外送紀錄</span><strong>'+state.outbox.reduce((n:number,r:Row)=>n+r.count,0)+'<small>筆</small></strong><p>API 接受不代表客戶已讀</p></article></div><section class="panel"><div class="panel-heading"><h2>業者 LINE OA 連線</h2>'+badge(me.demo?'本地示範，不對外發訊':'依私有設定啟用','amber')+'</div>'+(state.line.length?'<div class="connection-list">'+state.line.map((c:Row)=>'<article class="connection-card"><div><h3>'+e(c.id)+'</h3><p class="muted">Channel '+e(c.channel_id)+' · Provider '+e(c.provider_id)+'</p></div><div class="detail-badges">'+badge(c.signature_configured&&c.enabled?'驗簽已設定':'驗簽尚未設定',c.signature_configured&&c.enabled?'green':'amber')+badge(c.send_enabled?'外送已啟用':'外送未啟用',c.send_enabled?'green':'amber')+'</div><p class="muted">最後接收：'+e(c.last_received?date(c.last_received):'尚無事件')+'</p></article>').join('')+'</div>':empty('LINE OA 尚未串接','由授權管理員在私有設定綁定業者、Provider 與 Channel。此頁不顯示或收集任何密鑰。'))+'<div class="integration-help"><h3>接線前需要完成</h3><p>企業登入與操作帳號綁定 → LINE channel 與驗簽設定 → 測試接收 → 人工確認外送開關。</p><p>租戶自己的 LINE OA、金流與 AI 仍屬後續功能，尚未啟用。</p></div></section><section class="panel inbox-panel"><div class="panel-heading"><div><h2>LINE 來客待分派</h2><p class="muted">只有總管理員能分派到本業者案件。</p></div><button data-action="recover">處理待收／待送訊息</button></div>'+(pending.length?pending.map((p:Row)=>'<article class="inbox-row"><div><h3>來客 '+e(p.id.slice(0,8))+'</h3><p>'+e(p.preview||'沒有可見文字／已收回')+'</p><small class="muted">'+p.message_count+' 則文字事件 · '+e(p.connection_id)+'</small></div><label>指定案件<select data-contact-select="'+e(p.id)+'" aria-label="指定案件"><option value="">請選擇案件</option>'+chats.map(c=>'<option value="'+e(c.id)+'">'+e(c.business_name+' / '+c.owner_name)+'</option>').join('')+'</select></label><button data-attach="'+e(p.id)+'">確認分派</button></article>').join(''):empty('目前沒有待分派來客','已驗簽的 LINE 文字訊息會先保存；綁定案件後才能由授權人員回覆。'))+'</section><section class="integration-panel"><div><h2>訊息可靠性</h2><p>同一訊息固定重試識別碼；超過重試窗口或次數時保留待核查狀態。</p></div><button data-action="refresh">重新整理狀態</button></section>';
+}
+
+const contractLabels:Row={draft:'草稿',active:'已確認',ended:'已終止'};
+const subscriptionLabels:Row={pending:'待確認',trial:'試用',active:'訂閱已確認',paused:'已暫停',cancelled:'已取消'};
+const mailLabels:Row={received:'已收件',ready:'待領取',collected:'已領取',forwarded:'已轉寄',returned:'已退回'};
+const ticketLabels:Row={open:'待處理',in_progress:'處理中',resolved:'已解決',closed:'已結案'};
+const periodLabels:Row={current:'期間內',scheduled:'尚未開始',expired:'已到期'};
+const opsMoney=()=>['operator_owner','operator_sales','operator_finance'].includes(me.role);
+const opsFinance=()=>['operator_owner','operator_finance'].includes(me.role);
+const opsService=()=>['operator_owner','operator_sales','operator_service'].includes(me.role);
+const today=()=>new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+const after=(value:string,n:number)=>new Date(Date.parse(value+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
+function opsButton(kind:string,id:string,status:string,label:string){return '<button data-ops-state="'+e(kind+':'+id+':'+status)+'">'+e(label)+'</button>';}
+async function renderOperations(){
+ const target=document.querySelector('#content');if(!target||page!=='operations')return;
+ if(!tenants.length){target.innerHTML=empty('尚無可維運的租戶','請先完成成交並轉為租戶。');return;}
+ if(!tenants.some(t=>t.id===opsBusiness))opsBusiness=tenants[0].id;
+ const businessId=opsBusiness;
+ target.innerHTML='<p class="loading">正在載入租戶維運紀錄…</p>';
+ const [data,catalog]=await Promise.all([api('/businesses/'+businessId+'/operations'),api('/operations/catalog')]);
+ if(page!=='operations'||opsBusiness!==businessId)return;opsData=data;opsCatalog=catalog;
+ const tabs=[['overview','服務總覽'],['contracts','地址合約'],...(opsMoney()?[['billing','應收與收退款']]:[]),['subscriptions','數位訂閱'],...(opsService()?[['mail','信件包裹'],['tickets','維運需求']]:[])];
+ if(!tabs.some(t=>t[0]===opsTab))opsTab='overview';
+ target.innerHTML='<div class="ops-toolbar"><label>目前租戶<select id="operations-business" aria-label="目前租戶">'+tenants.map(t=>'<option value="'+e(t.id)+'" '+(t.id===opsBusiness?'selected':'')+'>'+e(t.name)+'</option>').join('')+'</select></label><div>'+badge('資料持久保存','green')+(owner()?'<button data-ops-catalog="1">據點與方案設定</button>':'')+'</div></div><div class="ops-tabs tabs" role="navigation" aria-label="租戶維運分類">'+tabs.map(t=>'<button data-ops-tab="'+t[0]+'" class="'+(opsTab===t[0]?'selected':'')+'">'+t[1]+'</button>').join('')+'</div><div id="ops-panel">'+({overview:opsOverview,contracts:opsContracts,billing:opsBilling,subscriptions:opsSubscriptions,mail:opsMail,tickets:opsTickets} as Row)[opsTab]()+'</div><div class="ops-note">人工管理台帳 · 金流／物流尚未串接 · 數位功能尚未開通。地址合約與數位訂閱各自管理。</div>';
+}
+function opsOverview(){
+ const b=opsData.invoices||[];const address=b.filter((r:Row)=>r.kind==='address'&&r.status==='open').reduce((n:number,r:Row)=>n+r.balance,0);
+ const digital=b.filter((r:Row)=>r.kind==='digital'&&r.status==='open').reduce((n:number,r:Row)=>n+r.balance,0);
+ return '<div class="metrics"><article><span>地址合約</span><strong>'+opsData.contracts.filter((c:Row)=>c.status==='active'&&c.period_status==='current').length+'<small>份期間內</small></strong><p>到期與終止不刪除數位服務</p></article><article><span>數位訂閱</span><strong>'+opsData.subscriptions.length+'<small>筆紀錄</small></strong><p>資格、付款與開通分開顯示</p></article><article><span>待領信件／包裹</span><strong>'+opsData.mail.filter((m:Row)=>['received','ready'].includes(m.status)).length+'<small>件</small></strong><p>人工記錄交付，不自動發送通知</p></article><article><span>未結案維運</span><strong>'+opsData.tickets.filter((t:Row)=>t.status!=='closed').length+'<small>件</small></strong><p>依租戶服務承辦權限管理</p></article></div><div class="ops-overview-grid"><section class="panel"><div class="panel-heading"><h2>服務接續</h2><span class="muted">同一企業，持續服務</span></div><div class="ops-summary"><article><span class="company-icon">址</span><div><b>借址服務</b><p>'+opsData.contracts.length+' 份合約台帳，保留各期歷程。</p></div><button data-ops-tab="contracts">管理合約 →</button></article><article><span class="company-icon">雲</span><div><b>企業數位服務</b><p>官網、商城、LINE OA 與 CRM 方案。</p></div><button data-ops-tab="subscriptions">管理訂閱 →</button></article></div></section><section class="panel"><div class="panel-heading"><h2>'+(opsMoney()?'分開對帳':'服務權益')+'</h2>'+badge('人工台帳')+'</div>'+(opsMoney()?'<div class="balance-box"><div><span>地址服務待收</span><b>'+money(address)+'</b></div><div><span>數位訂閱待收</span><b>'+money(digital)+'</b></div><small>商城商品款尚未開放，不混入本台帳。</small><button data-ops-tab="billing">查看應收與收退款 →</button></div>':'<div class="balance-box"><p>方案資格符合後，仍須完成實際整合與開通。</p>'+badge('功能未開通','amber')+'</div>')+'</section></div>'+opsSubscriptions(true);
+}
+function opsContracts(){
+ return '<section class="panel"><div class="panel-heading"><h2>地址合約台帳</h2>'+(seller()?'<button class="primary" data-ops-new="contract">＋ 新增合約</button>':'')+'</div><p class="panel-description">登記據點、期間及人工確認依據；此處不產生法律契約或電子簽章。</p>'+(opsData.contracts.length?'<div class="ops-cards">'+opsData.contracts.map((c:Row)=>'<article class="ops-card"><div class="ops-card-top"><span class="company-icon">址</span><div><h3>'+e(c.location_name)+'</h3><p>'+e(c.address)+'</p></div>'+badge(contractLabels[c.status],c.status==='active'?'green':'')+'</div><div class="ops-facts"><span>合約期間<b>'+e(c.starts_on)+' — '+e(c.ends_on)+'</b></span>'+(opsMoney()?'<span>本期合約總額<b>'+money(c.amount)+'</b></span>':'')+'<span>期間狀態<b>'+e(periodLabels[c.period_status])+'</b></span></div><p class="muted">確認依據：'+e(c.reference||'待確認')+(c.renewal_of?' · 續約紀錄':'')+'</p><div class="ops-actions">'+(owner()&&c.status==='draft'?opsButton('contracts',c.id,'active','確認合約'):'')+(owner()&&['draft','active'].includes(c.status)?opsButton('contracts',c.id,'ended','終止／撤回'):'')+(seller()&&c.status!=='draft'?'<button data-ops-new="renew-contract" data-id="'+e(c.id)+'">建立下一期</button>':'')+'</div></article>').join('')+'</div>':empty('尚無地址合約','選擇據點與期間，建立合約台帳。'))+'</section>';
+}
+function opsSubscriptions(compact=false){
+ const rows=opsData.subscriptions;
+ return '<section class="panel ops-section"><div class="panel-heading"><h2>數位訂閱與功能權益</h2>'+(seller()?'<button class="primary" data-ops-new="subscription">＋ 新增訂閱</button>':'')+'</div><p class="panel-description">金額、期限與額度保存為當期快照。暫停、取消、到期與退款會重新影響資格；沒有整合時不開通功能。</p>'+(rows.length?'<div class="ops-cards">'+rows.map((s:Row)=>{
+ const right=opsData.entitlements.find((r:Row)=>r.subscription_id===s.id);
+ return '<article class="ops-card"><div class="ops-card-top"><span class="company-icon">雲</span><div><h3>'+e(s.plan_name)+'</h3><p>'+e(moduleNames[s.module])+'</p></div>'+badge(subscriptionLabels[s.status],right.commercial_eligible?'green':'')+'</div><div class="ops-facts"><span>當期期間<b>'+e(s.starts_on)+' — '+e(s.ends_on)+'</b></span>'+(opsMoney()?'<span>當期方案價<b>'+money(s.amount)+'</b></span>':'')+'<span>方案額度上限<b>'+s.quota_limit+' · 用量尚未計量</b></span></div><div class="detail-badges">'+badge(periodLabels[right.period_status])+badge(right.commercial_eligible?'訂閱資格符合':right.reason==='payment_required'?'收款未符合':'訂閱資格未符合',right.commercial_eligible?'green':'amber')+badge('功能未開通','amber')+'</div>'+(compact?'':'<div class="ops-actions">'+(owner()?({pending:opsButton('subscriptions',s.id,'trial','開始試用')+opsButton('subscriptions',s.id,'active','確認訂閱')+opsButton('subscriptions',s.id,'cancelled','取消'),trial:opsButton('subscriptions',s.id,'active','確認訂閱')+opsButton('subscriptions',s.id,'paused','暫停')+opsButton('subscriptions',s.id,'cancelled','取消'),active:opsButton('subscriptions',s.id,'paused','暫停')+opsButton('subscriptions',s.id,'cancelled','取消'),paused:opsButton('subscriptions',s.id,'resume','恢復')+opsButton('subscriptions',s.id,'cancelled','取消'),cancelled:''} as Row)[s.status]:'')+(seller()?'<button data-ops-new="renew-subscription" data-id="'+e(s.id)+'">建立續訂</button>':'')+'</div>')+'</article>';
+ }).join('')+'</div>':empty('尚無訂閱紀錄','先建立可設定的方案，再為租戶安排期間。'))+'</section>';
+}
+function opsBilling(){
+ const rows=opsData.invoices||[];
+ return '<section class="panel"><div class="panel-heading"><h2>應收與人工收退款</h2>'+(opsFinance()?'<button class="primary" data-ops-new="invoice">＋ 建立應收</button>':'')+'</div><p class="panel-description">依地址合約或數位訂閱分開記帳。這是人工應收台帳，不是電子發票；不執行扣款或退款交易。</p>'+(rows.length?'<div class="ops-cards">'+rows.map((r:Row)=>'<article class="ops-card"><div class="ops-card-top"><span class="company-icon">'+(r.kind==='address'?'址':'雲')+'</span><div><h3>'+(r.kind==='address'?'地址服務款':'數位訂閱款')+'</h3><p>付款期限 '+e(r.due_on)+'</p></div>'+badge(({paid:'已核對收足',partial:'部分收款',unpaid:'尚未收款',void:'已作廢'} as Row)[r.payment_status],r.payment_status==='paid'?'green':r.overdue?'amber':'')+'</div><div class="ops-facts"><span>應收總額<b>'+money(r.amount)+'</b></span><span>淨實收<b>'+money(r.net_received)+'</b></span><span>待收餘額<b>'+money(r.status==='void'?0:r.balance)+'</b></span></div>'+(r.overdue?badge('已逾付款期限','amber'):'')+'<div class="ops-actions">'+(opsFinance()?'<button data-ops-ledger="'+e(r.id)+'">查看收退款歷程</button>'+(r.status==='open'?'<button class="primary" data-ops-new="ledger" data-id="'+e(r.id)+'">記錄收款／退款</button>'+opsButton('invoices',r.id,'void','作廢'):''):'')+'</div></article>').join('')+'</div>':empty('尚無應收單','確認地址合約或建立數位訂閱後，由財務建立應收。'))+'</section>';
+}
+function opsMail(){
+ return '<section class="panel"><div class="panel-heading"><h2>信件與包裹</h2><button class="primary" data-ops-new="mail">＋ 登記收件</button></div><p class="panel-description">待領、自取、轉寄與退回皆留存操作人員。物流及 LINE 通知尚未串接，不會自動寄送通知。</p>'+(opsData.mail.length?'<div class="ops-cards">'+opsData.mail.map((m:Row)=>'<article class="ops-card"><div class="ops-card-top"><span class="company-icon">'+(m.kind==='package'?'包':'信')+'</span><div><h3>'+e(m.description)+'</h3><p>'+e(m.carrier)+' '+e(m.tracking_no)+'</p></div>'+badge(mailLabels[m.status],['collected','forwarded'].includes(m.status)?'green':'')+'</div><p class="muted">收件：'+e(date(m.created_at))+'</p><p class="muted">交付依據：'+e(m.handoff_reference||'尚未交付')+'</p><div class="ops-actions">'+({received:opsButton('mail',m.id,'ready','標記待領')+opsButton('mail',m.id,'returned','退回'),ready:opsButton('mail',m.id,'collected','確認領取')+opsButton('mail',m.id,'forwarded','記錄轉寄')+opsButton('mail',m.id,'returned','退回'),collected:'',forwarded:'',returned:''} as Row)[m.status]+'</div></article>').join('')+'</div>':empty('目前沒有收件紀錄','收到信件或包裹時，先登記再記錄交付。'))+'</section>';
+}
+function opsTickets(){
+ return '<section class="panel"><div class="panel-heading"><h2>租戶維運需求</h2><button class="primary" data-ops-new="ticket">＋ 建立需求</button></div><p class="panel-description">由此租戶的授權業務／維運承辦處理；保留實際操作人員與解決說明。</p>'+(opsData.tickets.length?'<div class="ops-cards">'+opsData.tickets.map((t:Row)=>'<article class="ops-card"><div class="ops-card-top"><span class="company-icon">務</span><div><h3>'+e(t.title)+'</h3><p>優先順序：'+e(({low:'低',normal:'一般',high:'高'} as Row)[t.priority])+'</p></div>'+badge(ticketLabels[t.status],t.status==='closed'?'green':'')+'</div><p class="ticket-description">'+e(t.description)+'</p>'+(t.resolution?'<p class="muted">處理說明：'+e(t.resolution)+'</p>':'')+'<div class="ops-actions">'+({open:opsButton('tickets',t.id,'in_progress','開始處理')+opsButton('tickets',t.id,'resolved','標記解決'),in_progress:opsButton('tickets',t.id,'resolved','標記解決'),resolved:opsButton('tickets',t.id,'closed','確認結案')+opsButton('tickets',t.id,'open','重新開啟'),closed:''} as Row)[t.status]+'</div></article>').join('')+'</div>':empty('目前沒有維運需求','建立需求，讓服務紀錄保持完整。'))+'</section>';
+}
+async function showOpsForm(op:string,id?:string){
+ let html='',title='',version=1;
+ const input=(name:string,label:string,type='text',value='',extra='')=>'<label>'+label+'<input name="'+name+'" type="'+type+'" value="'+e(value)+'" '+extra+' required></label>';
+ const select=(name:string,label:string,options:string)=>'<label>'+label+'<select name="'+name+'" aria-label="'+label+'" required>'+options+'</select></label>';
+ const option=(id:string,label:string)=>'<option value="'+e(id)+'">'+e(label)+'</option>';
+ if(['contract','renew-contract'].includes(op)){
+  const c=id?opsData.contracts.find((c:Row)=>c.id===id):null;title=c?'建立合約下一期':'新增地址合約';version=c?.version||1;
+  const start=c?after(c.ends_on,1):today();
+  html=(c?'':select('location_id','登記據點','<option value="">請選擇據點</option>'+opsCatalog.locations.filter((l:Row)=>l.active).map((l:Row)=>option(l.id,l.name)).join('')))+'<div class="form-grid">'+input('starts_on','開始日','date',start)+input('ends_on','結束日（含當日）','date',after(start,364))+'</div>'+input('amount','本期合約總額（NT$）','number',String(c?.amount||0),'min="0" max="1000000000"');
+  if(!c)html+='<label>備註<textarea name="note" maxlength="1000"></textarea></label>';
+ }
+ if(['subscription','renew-subscription'].includes(op)){
+  const sub=id?opsData.subscriptions.find((s:Row)=>s.id===id):null;title=sub?'建立續訂':'新增數位訂閱';version=sub?.version||1;
+  html=select('plan_id','數位服務方案','<option value="">請選擇方案</option>'+opsCatalog.plans.filter((p:Row)=>p.active&&(!sub||p.module===sub.module)).map((p:Row)=>option(p.id,p.name+' · '+money(p.amount)+' / '+p.duration_days+' 天')).join(''))+input('starts_on','開始日','date',sub?after(sub.ends_on,1):today())+'<p class="muted">結束日依方案天數計算（含首末日），價格與額度保存為當期快照。建立後為待確認，功能不會自動開通。</p>';
+ }
+ if(op==='invoice'){
+  title='建立應收單';
+  const contracts=opsData.contracts.filter((c:Row)=>c.status==='active'&&c.amount>0&&!opsData.invoices.some((b:Row)=>b.contract_id===c.id));
+  const subs=opsData.subscriptions.filter((s:Row)=>s.status!=='cancelled'&&s.amount>0&&!opsData.invoices.some((b:Row)=>b.subscription_id===s.id));
+  html=select('kind_source','帳款來源','<option value="">請選擇合約或訂閱</option>'+contracts.map((c:Row)=>option('address:'+c.id,'地址服務 · '+c.location_name+' · '+money(c.amount))).join('')+subs.map((s:Row)=>option('digital:'+s.id,'數位訂閱 · '+s.plan_name+' · '+money(s.amount))).join(''))+input('due_on','付款期限','date',after(today(),7))+'<p class="muted">金額沿用來源台帳，每期只建立一張應收，可分次核對收款；不是電子發票。</p>';
+ }
+ if(op==='ledger'){
+  const bill=opsData.invoices.find((r:Row)=>r.id===id);version=bill.version;title='人工收款／退款核對';
+  const rows=await api('/businesses/'+opsBusiness+'/invoices/'+id+'/ledger');
+  html=select('direction','紀錄類型',option('receipt','收款紀錄')+option('refund','退款紀錄'))+input('amount','本次金額（NT$）','number',String(Math.max(1,bill.balance)),'min="1" max="1000000000"')+'<label>退款對應原收款<select name="refund_of" aria-label="退款對應原收款"><option value="">收款時不需選擇</option>'+rows.filter((r:Row)=>r.direction==='receipt').map((r:Row)=>option(r.id,date(r.created_at)+' · '+money(r.amount)+' · '+r.reference)).join('')+'</select></label>'+input('reference','人工核對依據','text','','maxlength="300"')+'<p class="muted">僅保存已由人員核對的紀錄，不執行銀行或金流交易。錯誤收款以對應退款紀錄更正，不能覆寫歷史。</p>';
+ }
+ if(op==='mail'){title='登記信件／包裹';html=select('kind','收件類型',option('letter','信件')+option('package','包裹'))+input('description','收件摘要','text','','maxlength="300"')+'<div class="form-grid"><label>物流（選填）<input name="carrier" maxlength="100"></label><label>來件單號（選填）<input name="tracking_no" maxlength="100"></label></div>';}
+ if(op==='ticket'){title='建立維運需求';html=input('title','需求主旨','text','','maxlength="150"')+'<label>需求內容<textarea name="description" required maxlength="1500"></textarea></label>'+select('priority','優先順序',option('normal','一般')+option('high','高')+option('low','低'));}
+ if(op==='location'){title='新增登記據點';html=input('name','據點名稱','text','','maxlength="100"')+input('address','據點地址','text','','maxlength="300"');}
+ if(op==='plan'){title='新增數位服務方案';html=input('name','方案名稱','text','','maxlength="100"')+select('module','功能類型',Object.entries(moduleNames).map(([id,label])=>option(id,String(label))).join(''))+'<div class="form-grid">'+input('amount','單期價格（NT$）','number','0','min="0" max="1000000000"')+input('duration_days','單期天數','number','30','min="1" max="3660"')+'</div>'+input('quota_limit','單期額度上限','number','0','min="0" max="1000000000"')+'<p class="muted">額度單位待各模組整合定義，目前不計量用量。既有方案價格不覆寫，改價請建立新方案。</p>';}
+ showModal('<p class="eyebrow">TENANT OPERATIONS</p><h2>'+e(title)+'</h2><form id="ops-form" data-op="'+e(op)+'" data-id="'+e(id||'')+'" data-version="'+version+'" data-request-key="'+crypto.randomUUID()+'">'+html+'<p class="form-error" role="alert"></p><button class="primary" type="submit">儲存紀錄</button></form>');
+}
+function showOpsState(value:string){
+ const [kind,id,status]=value.split(':');const group=({contracts:'contracts',subscriptions:'subscriptions',invoices:'invoices',mail:'mail',tickets:'tickets'} as Row)[kind];
+ const row=opsData[group].find((r:Row)=>r.id===id);
+ const labels:Row={contracts:contractLabels,subscriptions:{...subscriptionLabels,resume:'恢復原狀態'},invoices:{void:'作廢'},mail:mailLabels,tickets:ticketLabels};
+ let fields='';
+ if(kind==='contracts')fields='<label>確認／終止依據<input name="reference" maxlength="300" required></label><label>備註<textarea name="note" maxlength="1000"></textarea></label>';
+ if(['subscriptions','invoices'].includes(kind))fields='<label>處理原因<textarea name="note" maxlength="500" required></textarea></label>';
+ if(kind==='mail')fields='<label>交付依據（領取人／轉寄單號／退回原因）<textarea name="handoff_reference" maxlength="500" '+(status==='ready'?'':'required')+'></textarea></label>';
+ if(kind==='tickets')fields='<label>處理說明<textarea name="resolution" maxlength="1500" '+(status==='in_progress'?'':'required')+'></textarea></label>';
+ showModal('<p class="eyebrow">STATUS & HISTORY</p><h2>'+e(labels[kind][status])+'</h2><p class="muted">狀態異動會保留實際操作人員。此操作不會自動收退款、通知客戶或開通數位功能。</p><form id="ops-state-form" data-kind="'+kind+'" data-id="'+e(id)+'" data-status="'+status+'" data-version="'+row.version+'">'+fields+'<p class="form-error" role="alert"></p><button class="primary" type="submit">確認變更</button></form>');
+}
+async function showLedger(id:string){
+ const rows=await api('/businesses/'+opsBusiness+'/invoices/'+id+'/ledger');
+ showModal('<p class="eyebrow">MANUAL LEDGER</p><h2>收退款歷程</h2><p class="muted">只增補紀錄、不覆寫舊資料。付款與退款均為人工核對紀錄。</p>'+(rows.length?'<ol class="history">'+rows.map((r:Row)=>'<li><span class="history-dot"></span><div><b>'+(r.direction==='receipt'?'收款':'退款')+' '+money(r.amount)+'</b><small>'+e(r.actor_name)+' · '+e(date(r.created_at))+'</small><p class="muted">'+e(r.reference)+'</p></div></li>').join('')+'</ol>':empty('尚無收退款紀錄','不會因案件成交而自動當作已收款。')));
+}
+function showCatalog(){
+ showModal('<p class="eyebrow">OPERATOR CATALOG</p><h2>據點與方案設定</h2><p class="muted">本業者專用；示範金額不是正式報價。既有訂閱保留原方案快照。</p><h3 class="section-title">登記據點</h3>'+opsCatalog.locations.map((l:Row)=>'<div class="catalog-row"><div><b>'+e(l.name)+'</b><p class="muted">'+e(l.address)+'</p></div>'+badge(l.active?'使用中':'停用')+'</div>').join('')+'<button data-ops-new="location">＋ 新增據點</button><h3 class="section-title">數位方案</h3>'+opsCatalog.plans.map((p:Row)=>'<div class="catalog-row"><div><b>'+e(p.name)+'</b><p class="muted">'+e(moduleNames[p.module])+' · '+money(p.amount)+' / '+p.duration_days+' 天 · 額度 '+p.quota_limit+'</p></div>'+badge(p.active?'使用中':'已停售')+'<button data-plan-toggle="'+e(p.id)+'" data-active="'+(p.active?'0':'1')+'" data-version="'+p.version+'">'+(p.active?'停售':'恢復')+'</button></div>').join('')+'<button class="primary" data-ops-new="plan">＋ 新增方案</button>');
 }
