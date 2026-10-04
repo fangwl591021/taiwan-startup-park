@@ -1,3 +1,4 @@
+export {};
 type Row=Record<string,any>;
 const root=document.querySelector<HTMLDivElement>('#app')!;
 const dialog=document.querySelector<HTMLDialogElement>('#modal')!;

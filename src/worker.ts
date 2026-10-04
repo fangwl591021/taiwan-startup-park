@@ -298,7 +298,7 @@ async function route(req:Request,env:Env):Promise<Response>{
  if(path==='/api/admin/risk'&&method==='GET'){
   roles(a,['operator_owner']);return json({enabled:false,status:'not_enabled',events:[],message:'AI 與風控規則尚未啟用'});
  }
- fail(404,'找不到此功能');
+ return fail(404,'找不到此功能');
 }
 export default {async fetch(req:Request,env:Env):Promise<Response>{
  let response:Response;
