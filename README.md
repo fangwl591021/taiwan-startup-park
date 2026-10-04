@@ -7,7 +7,7 @@
 
 ## 本機啟動
 
-需 Node.js 22.14+（使用內建 node:sqlite）及 npm：
+需 Node.js 22.23.3+（使用內建 node:sqlite）及 npm：
 
 ```sh
 npm ci
@@ -84,7 +84,8 @@ npm run test:e2e
 ```
 
 GitHub Actions 執行相同流程並保存桌面／手機截圖及測試報告。
-首次 CI 產生 package-lock.json；之後一律 npm ci。
+已完成的驗收與畫面證據：[FOUNDATION_ACCEPTANCE.md](docs/FOUNDATION_ACCEPTANCE.md)。
+套件鎖已提交；CI 一律 npm ci。
 測試涵蓋兩業者與角色隔離、偽造身分、版本衝突、成交冪等、沿用企業／聯絡人、
 回覆歸屬、失敗重試、停權、production 關閉 demo、申請／開通分離及手機溢出。
 測試驗證 D1 相容 SQLite adapter；未對正式 Cloudflare D1 或 LINE 系統做整合驗證。

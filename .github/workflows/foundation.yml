@@ -10,16 +10,13 @@ jobs:
   acceptance:
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install locked dependencies or bootstrap initial lock
-        run: |
-          if test -f package-lock.json; then npm ci; else npm install; fi
+      - name: Install locked dependencies
+        run: npm ci
       - name: Dependency audit report
         run: |
           npm audit --audit-level=high
@@ -36,16 +33,6 @@ jobs:
           sudo apt-get install -y fonts-noto-cjk
       - name: Browser acceptance and desktop/mobile screenshots
         run: npm run test:e2e
-      - name: Save reviewable lockfile and screenshots on feature branch
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/foundation'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json docs/screenshots
-          if ! git diff --cached --quiet; then
-            git commit -m "test: save dependency lock and acceptance screenshots [skip ci]"
-            git push origin HEAD:feature/foundation
-          fi
       - name: Upload acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
