@@ -1,0 +1,25 @@
+{
+  "name": "taiwan-startup-park",
+  "main": "dist/worker.js",
+  "compatibility_date": "2026-10-04",
+  "workers_dev": false,
+  "assets": {
+    "directory": "dist/public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "vars": {
+    "APP_ENV": "production",
+    "DEMO_MODE": "off"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "taiwan-startup-park-local-placeholder",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

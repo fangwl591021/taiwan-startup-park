@@ -1,0 +1,4 @@
+# No production auth provider is configured in foundation.
+APP_ENV=production
+DEMO_MODE=off
+# Real LINE, AI and payment secrets are deliberately not used in round 1.

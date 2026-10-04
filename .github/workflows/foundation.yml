@@ -1,0 +1,56 @@
+name: Foundation acceptance
+on:
+  push:
+    branches: [feature/foundation]
+  pull_request:
+    branches: [main, docs/platform-blueprint]
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies or bootstrap initial lock
+        run: |
+          if test -f package-lock.json; then npm ci; else npm install; fi
+      - name: Typecheck and core permission tests
+        run: |
+          npm run typecheck
+          npm test
+      - name: Bundle Worker without deployment
+        run: npm run worker:check
+      - name: Install browser and Traditional Chinese font
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Browser acceptance and desktop/mobile screenshots
+        run: npm run test:e2e
+      - name: Save reviewable lockfile and screenshots on feature branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/foundation'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json docs/screenshots
+          if ! git diff --cached --quiet; then
+            git commit -m "test: save dependency lock and acceptance screenshots [skip ci]"
+            git push origin HEAD:feature/foundation
+          fi
+      - name: Upload acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation-acceptance
+          path: |
+            docs/screenshots
+            playwright-report
+            test-results
+            package-lock.json
+          if-no-files-found: warn
