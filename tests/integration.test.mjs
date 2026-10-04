@@ -1,4 +1,6 @@
 import test from 'node:test';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {database,seed} from '../scripts/database.mjs';
 import worker from '../dist/worker.js';
@@ -193,4 +195,33 @@ test('late sender result cannot overwrite a newer lease completion',async t=>{
  const row=db.sqlite.prepare('SELECT state,provider_request_id FROM line_outbox WHERE id=?').get(m.id);
  assert.equal(row.state,'accepted');assert.equal(row.provider_request_id,'new-lease-request');
  assert.equal(db.sqlite.prepare('SELECT status FROM messages WHERE id=?').get(m.id).status,'accepted');
+});
+
+test('Foundation migration preserves existing businesses, sessions and message attribution',()=>{
+ const sqlite=new DatabaseSync(':memory:');
+ try{
+ sqlite.exec(readFileSync(new URL('../migrations/0001_foundation.sql',import.meta.url),'utf8'));
+ seed({sqlite});
+ sqlite.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES('legacy','sales-a1','2099-01-01')").run();
+ sqlite.prepare("INSERT INTO messages VALUES('legacy-message','op-a','c-o1','sales-a1','out','保留歷史','human',NULL,'simulated','legacy-key','2026-01-01','2026-01-01')").run();
+ sqlite.exec('BEGIN');sqlite.exec(readFileSync(new URL('../migrations/0002_line_identity.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');
+ assert.equal(sqlite.prepare("SELECT actor_id FROM messages WHERE id='legacy-message'").get().actor_id,'sales-a1');
+ assert.equal(sqlite.prepare("SELECT auth_method FROM sessions WHERE token_hash='legacy'").get().auth_method,'demo');
+ assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM businesses').get().n,5);
+ assert.equal(sqlite.prepare('PRAGMA foreign_key_check').all().length,0);
+ }finally{sqlite.close();}
+});
+test('production HTTP chat route queues real adapter, rejects client simulation and preserves attribution',async t=>{
+ const {linked,production,call,db}=await fixture(t);await linked();
+ const env=production(),token=await jwt(env);
+ const auth=await call('/auth/access',{method:'POST',data:{},token,environment:env,origin:env.APP_ORIGIN});
+ const base={token,environment:env,origin:env.APP_ORIGIN,cookie:auth.cookie};
+ const rejected=await call('/conversations/c-o1/messages',{...base,method:'POST',data:{body:'no simulation',idempotency_key:'prod',simulate_failure:false}});
+ assert.equal(rejected.status,400);
+ const queued=await call('/conversations/c-o1/messages',{...base,method:'POST',data:{body:'production route mock test',idempotency_key:'prod'}});
+ assert.equal(queued.status,202);assert.equal(queued.data.status,'queued');assert.equal(queued.data.actor_id,'owner-a');
+ assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM line_outbox').get().n,1);
+ const cross=await call('/conversations/c-ob/messages',{...base,method:'POST',data:{body:'cross-op',idempotency_key:'forged'}});
+ assert.equal(cross.status,404);
+ const status=await call('/conversations/c-o1/line-status',base);assert.equal(status.data.send_enabled,true);
 });

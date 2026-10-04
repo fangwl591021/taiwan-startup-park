@@ -47,6 +47,7 @@ auth_identities 的 issuer/subject/user_id 必須依驗證過的員工身分配�
 8. 完成保存期限、刪除政策、D1 runtime/備份遷移與正式 rollout，才討論正式部署。
 
 ## 可靠性與運作界線
+工作聊天室提供「更新訊息」手動刷新；本輪沒有 WebSocket／SSE 即時推播。
 Webhook 使用 waitUntil 處理已持久化事件；外送亦由 waitUntil 嘗試 drain。
 提供總管理員「處理待收／待送訊息」回復入口，以及 Worker scheduled handler，
 但 wrangler 沒有 cron trigger，**尚未啟用自動定期恢復**。waitUntil 中斷不會丟失 D1 工作；
