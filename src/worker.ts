@@ -1,4 +1,4 @@
-import type {Actor,Env,Opportunity} from './types.js';
+import type {Actor,Env,Opportunity,Statement} from './types.js';
 import {HttpError,fail,now,uid,stmt,local,digest,audit} from './shared.js';
 import {actor,accessLogin,configured} from './auth.js';
 import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueueLine,dispatchOutbox,retryLine,conversationLineStatus} from './line.js';

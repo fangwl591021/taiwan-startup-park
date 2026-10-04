@@ -55,7 +55,7 @@ export async function processInbox(env:Env,operatorId?:string){
  const rows=(await stmt(env,"SELECT * FROM line_events WHERE state='pending'"+(operatorId?' AND operator_id=?':'')+' ORDER BY event_at,event_id LIMIT 50',...(operatorId?[operatorId]:[])).all<Row>()).results;
  for(const row of rows){
   const linked=await stmt(env,'SELECT conversation_id FROM line_contacts WHERE operator_id=? AND connection_id=? AND user_id=?',row.operator_id,row.connection_id,row.user_id).first<Row>();
-  if(!linked?.conversation_id){await stmt(env,"UPDATE line_events SET state='unmatched' WHERE connection_id=? AND event_id=? AND state='pending'",row.connection_id,row.event_id).run();continue;}
+  if(!linked?.conversation_id){await stmt(env,"UPDATE line_events SET state='unmatched' WHERE connection_id=? AND event_id=? AND state='pending' AND NOT EXISTS(SELECT 1 FROM line_contacts WHERE connection_id=? AND user_id=? AND conversation_id IS NOT NULL)",row.connection_id,row.event_id,row.connection_id,row.user_id).run();continue;}
   const time=new Date(row.event_at).toISOString();
   const removed=await stmt(env,'SELECT 1 FROM line_unsends WHERE connection_id=? AND provider_message_id=?',row.connection_id,row.provider_message_id).first();
   await env.DB.batch([

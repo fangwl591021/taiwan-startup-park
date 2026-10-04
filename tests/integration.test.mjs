@@ -181,3 +181,16 @@ test('expired lease recovers with same provider key and a newer lease fences lat
  db.sqlite.prepare("UPDATE line_outbox SET state='sending',lease_token='old',lease_until=?,attempts=1,first_attempt_at=? WHERE id=?").run(Date.now()-1,Date.now()-1000,m.id);
  await dispatchOutbox(live);assert.deepEqual(keys,[prior]);assert.equal(db.sqlite.prepare('SELECT state FROM line_outbox WHERE id=?').get(m.id).state,'accepted');
 });
+
+test('late sender result cannot overwrite a newer lease completion',async t=>{
+ const {linked,env,a,db}=await fixture(t);const c=await linked();
+ let release,started;const start=new Promise(r=>started=r);const pending=new Promise(r=>release=r);let calls=0;
+ const live={...env,APP_ENV:'staging',LINE_SEND_ENABLED:'on',HTTP:async()=>{calls++;if(calls===1){started();await pending;return new Response('{}',{status:500});}return new Response('{}',{status:200,headers:{'x-line-request-id':'new-lease-request'}});}};
+ const m=await enqueueLine(live,a,c,'lease fence','lease-fence');
+ const first=dispatchOutbox(live);await start;
+ db.sqlite.prepare('UPDATE line_outbox SET lease_until=? WHERE id=?').run(Date.now()-1,m.id);
+ await dispatchOutbox(live);release();await first;
+ const row=db.sqlite.prepare('SELECT state,provider_request_id FROM line_outbox WHERE id=?').get(m.id);
+ assert.equal(row.state,'accepted');assert.equal(row.provider_request_id,'new-lease-request');
+ assert.equal(db.sqlite.prepare('SELECT status FROM messages WHERE id=?').get(m.id).status,'accepted');
+});
