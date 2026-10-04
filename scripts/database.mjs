@@ -1,0 +1,59 @@
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+export function database(path=':memory:'){
+ const sqlite=new DatabaseSync(path);
+ sqlite.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='operators'").get())
+  sqlite.exec(readFileSync(new URL('../migrations/0001_foundation.sql',import.meta.url),'utf8'));
+ function prepare(sql,values=[]){
+  const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return {results:st.all(...values),meta:{changes:0}};
+   const r=st.run(...values);return {results:[],meta:{changes:Number(r.changes)}};};
+  return {bind(...v){return prepare(sql,v);},async first(){return sqlite.prepare(sql).get(...values)??null;},
+   async all(){return {results:sqlite.prepare(sql).all(...values)};},async run(){return execute();},execute};
+ }
+ return {sqlite,prepare,async batch(statements){
+  sqlite.exec('BEGIN IMMEDIATE');
+  try{const results=statements.map(s=>s.execute());sqlite.exec('COMMIT');return results;}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ },close(){sqlite.close();}};
+}
+export function seed(db){
+ const s=db.sqlite;if(s.prepare('SELECT COUNT(*) n FROM operators').get().n)return;
+ const insert=(sql,...values)=>s.prepare(sql).run(...values);
+ const time='2026-10-04T01:00:00.000Z';
+ s.exec('BEGIN');
+ try{
+  insert('INSERT INTO operators VALUES(?,?)','op-a','青禾商務中心（虛構）');
+  insert('INSERT INTO operators VALUES(?,?)','op-b','晴川商務中心（虛構）');
+  for(const [id,op,name,role] of [
+   ['owner-a','op-a','管理員 · 林園長','operator_owner'],
+   ['sales-a1','op-a','業務 S1 · 陳安','operator_sales'],
+   ['sales-a2','op-a','業務 S2 · 李晴','operator_sales'],
+   ['sales-a3','op-a','業務 S3 · 王禾','operator_sales'],
+   ['service-a','op-a','維運 · 張青','operator_service'],
+   ['finance-a','op-a','財務 · 周月','operator_finance'],
+   ['platform','op-a','平台管理（未開放）','platform_admin'],
+   ['business-admin','op-a','企業管理（未開放）','business_admin'],
+   ['owner-b','op-b','B 業者管理員','operator_owner'],
+   ['sales-b','op-b','B 業者業務','operator_sales']]){
+    insert('INSERT INTO staff_users(id,operator_id,name,role) VALUES(?,?,?,?)',id,op,name,role);
+  }
+  const rows=[
+   ['b1','op-a','日和設計工作室','o1','contact','sales-a1',36000,'確認登記需求','2026-10-05T02:00:00.000Z',0,null],
+   ['b2','op-a','森嶼品牌有限公司','o2','onboarding','sales-a2',48000,'安排方案說明','2026-10-06T06:00:00.000Z',0,null],
+   ['b3','op-a','小島選物有限公司','o3','billing','sales-a2',42000,'核對合約與收款','2026-10-07T02:00:00.000Z',0,null],
+   ['b4','op-a','青鳥數位有限公司','o4','won','sales-a3',36000,'追蹤官網申請','2026-10-08T02:00:00.000Z',1,'service-a'],
+   ['bb','op-b','B 業者隔離測試企業','ob','contact','sales-b',18000,'B 業者專用','',0,null]
+  ];
+  for(const [bid,op,name,oid,stage,owner,amount,next,follow,tenant,service] of rows){
+   insert('INSERT INTO businesses(id,operator_id,name,is_tenant,service_owner_id,created_at) VALUES(?,?,?,?,?,?)',bid,op,name,tenant,service,time);
+   insert('INSERT INTO contacts(id,operator_id,business_id,name,phone,email) VALUES(?,?,?,?,?,?)','contact-'+bid,op,bid,'示範聯絡人','0900-000-000','demo@example.invalid');
+   insert('INSERT INTO opportunities(id,operator_id,business_id,title,stage,owner_id,amount,payment_status,next_action,followup_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',oid,op,bid,'借址登記與企業服務',stage,owner,amount,stage==='won'?'paid':'unpaid',next,follow,time,time);
+   insert('INSERT INTO conversations(id,operator_id,business_id,opportunity_id,created_at) VALUES(?,?,?,?,?)','c-'+oid,op,bid,oid,time);
+   insert('INSERT INTO messages(id,operator_id,conversation_id,direction,body,source,status,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)','m-'+oid,op,'c-'+oid,'in','您好，想了解借址登記和後續官網服務。這是一則虛構示範訊息。','customer','received_demo','seed-'+oid,time,time);
+   insert('INSERT INTO activity_events(id,operator_id,business_id,opportunity_id,actor_id,action,detail,created_at) VALUES(?,?,?,?,?,?,?,?)','e-'+oid,op,bid,oid,op==='op-a'?'owner-a':'owner-b','fixture_created',JSON.stringify({demo:true,owner_id:owner}),time);
+  }
+  insert("INSERT INTO service_requests VALUES(?,?,?,?,?,'requested',?,?)",'sr1','op-a','b4','service-a','website',time,time);
+  s.exec('COMMIT');
+ }catch(e){s.exec('ROLLBACK');throw e;}
+}
