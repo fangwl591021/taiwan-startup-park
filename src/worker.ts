@@ -2,6 +2,7 @@ import type {Actor,Env,Opportunity,Statement} from './types.js';
 import {HttpError,fail,now,uid,stmt,local,digest,audit} from './shared.js';
 import {actor,accessLogin,configured} from './auth.js';
 import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueueLine,dispatchOutbox,retryLine,conversationLineStatus} from './line.js';
+import {operationRoute} from './operations.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
@@ -60,7 +61,7 @@ async function agent(env:Env,a:Actor,id:unknown){
 }
 async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  const url=new URL(req.url);const path=url.pathname;const method=req.method;
- if(path==='/api/health')return json({ok:true,version:'0.2.0'});
+ if(path==='/api/health')return json({ok:true,version:'0.3.0'});
  if(path==='/api/bootstrap'&&method==='GET')return json({demo:local(req,env),auth:local(req,env)?'local_demo':configured(env)?'cloudflare_access':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
  const webhook=path.match(/^\/api\/line\/webhook\/([a-zA-Z0-9_-]+)$/);
  if(webhook&&method==='POST'){
@@ -84,6 +85,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/auth/access'&&method==='POST'){await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
+ const operation=await operationRoute(req,env,a,id=>getBusiness(env,a,id));if(operation)return operation;
  if(path==='/api/integrations'&&method==='GET')return json(await integrationStatus(env,a));
  if(path==='/api/line/inbox'&&method==='GET')return json(await inbox(env,a));
  const attach=path.match(/^\/api\/line\/inbox\/([^/]+)\/attach$/);
@@ -305,6 +307,8 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   if(businessId)await getBusiness(env,a,businessId);else roles(a,['operator_owner']);
   let extra='';const args:unknown[]=[a.operator_id];
   if(businessId){extra=' AND e.business_id=?';args.push(businessId);}
+  if(a.role==='operator_service')extra+=" AND e.action NOT IN('receivable_created','receivable_voided','ledger_recorded','payment_recorded')";
+  if(a.role==='operator_finance')extra+=" AND e.action NOT IN('mail_received','mail_status_changed','ticket_created','ticket_status_changed')";
   if(a.role==='operator_sales'){extra+=' AND (e.opportunity_id IS NULL OR EXISTS(SELECT 1 FROM opportunities o WHERE o.id=e.opportunity_id AND o.operator_id=e.operator_id AND o.owner_id=?))';args.push(a.id);}
   return json((await stmt(env,'SELECT e.id,e.action,e.detail,e.created_at,e.business_id,e.opportunity_id,u.name AS actor_name FROM activity_events e JOIN staff_users u ON u.id=e.actor_id WHERE e.operator_id=?'+extra+' ORDER BY e.created_at DESC,e.rowid DESC LIMIT 100',...args).all()).results);
  }

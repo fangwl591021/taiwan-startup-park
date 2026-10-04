@@ -9,6 +9,10 @@ export function database(path=':memory:'){
   sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0002_line_identity.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
   catch(e){sqlite.exec('ROLLBACK');throw e;}
  }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='address_contracts'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0003_tenant_operations.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
  function prepare(sql,values=[]){
   const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return {results:st.all(...values),meta:{changes:0}};
    const r=st.run(...values);return {results:[],meta:{changes:Number(r.changes)}};};
@@ -58,6 +62,21 @@ export function seed(db){
    insert('INSERT INTO activity_events(id,operator_id,business_id,opportunity_id,actor_id,action,detail,created_at) VALUES(?,?,?,?,?,?,?,?)','e-'+oid,op,bid,oid,op==='op-a'?'owner-a':'owner-b','fixture_created',JSON.stringify({demo:true,owner_id:owner}),time);
   }
   insert("INSERT INTO service_requests VALUES(?,?,?,?,?,'requested',?,?)",'sr1','op-a','b4','service-a','website',time,time);
+  if(s.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='address_contracts'").get()){
+   insert('INSERT INTO locations(id,operator_id,name,address,created_at) VALUES(?,?,?,?,?)','loc-a','op-a','青禾台北據點（虛構）','虛構示範地址，非實際登記處',time);
+   insert('INSERT INTO locations(id,operator_id,name,address,created_at) VALUES(?,?,?,?,?)','loc-b','op-b','晴川據點（虛構）','B 業者虛構地址',time);
+   for(const [id,op,name,module,amount,quota] of [
+    ['plan-web','op-a','官網入門方案（示範）','website',1200,100],
+    ['plan-crm','op-a','CRM 服務方案（示範）','crm',800,200],
+    ['plan-b','op-b','B 業者示範方案','website',2000,100]
+   ])insert('INSERT INTO service_plans(id,operator_id,name,module,amount,duration_days,quota_limit,created_at) VALUES(?,?,?,?,?,30,?,?)',id,op,name,module,amount,quota,time);
+   insert("INSERT INTO address_contracts(id,operator_id,business_id,location_id,starts_on,ends_on,amount,status,reference,actor_id,request_key,request_hash,created_at,updated_at) VALUES('contract-demo','op-a','b4','loc-a','2026-10-01','2027-09-30',36000,'active','虛構合約台帳','owner-a','seed-contract','fixture',?,?)",time,time);
+   insert("INSERT INTO subscriptions(id,operator_id,business_id,plan_id,module,plan_name,amount,quota_limit,starts_on,ends_on,actor_id,request_key,request_hash,created_at,updated_at) VALUES('sub-demo','op-a','b4','plan-web','website','官網入門方案（示範）',1200,100,'2026-10-01','2026-10-30','owner-a','seed-sub','fixture',?,?)",time,time);
+   insert("INSERT INTO receivables(id,operator_id,business_id,kind,contract_id,amount,due_on,actor_id,request_key,request_hash,created_at,updated_at) VALUES('bill-address','op-a','b4','address','contract-demo',36000,'2026-10-10','owner-a','seed-bill-address','fixture',?,?)",time,time);
+   insert("INSERT INTO receivables(id,operator_id,business_id,kind,subscription_id,amount,due_on,actor_id,request_key,request_hash,created_at,updated_at) VALUES('bill-digital','op-a','b4','digital','sub-demo',1200,'2026-10-05','owner-a','seed-bill-digital','fixture',?,?)",time,time);
+   insert("INSERT INTO mail_items(id,operator_id,business_id,kind,description,carrier,tracking_no,actor_id,request_key,request_hash,created_at,updated_at) VALUES('mail-demo','op-a','b4','package','示範包裹，等待確認領取','示範物流','DEMO-0001','service-a','seed-mail','fixture',?,?)",time,time);
+   insert("INSERT INTO maintenance_tickets(id,operator_id,business_id,title,description,priority,actor_id,request_key,request_hash,created_at,updated_at) VALUES('ticket-demo','op-a','b4','確認官網申請資料','示範需求：協助整理企業品牌素材。尚未進行 AI 建站。','normal','service-a','seed-ticket','fixture',?,?)",time,time);
+  }
   s.exec('COMMIT');
  }catch(e){s.exec('ROLLBACK');throw e;}
 }
