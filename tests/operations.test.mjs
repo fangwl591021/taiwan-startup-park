@@ -74,7 +74,7 @@ test('partial receipts and linked refunds are immutable, bounded and audited by 
  b=(await f(root+'invoices')).data.find(r=>r.id==='bill-digital');assert.equal(b.net_received,300);assert.equal(b.version,3);
  assert.throws(()=>db.sqlite.prepare("UPDATE ledger_entries SET amount=1 WHERE id=?").run(r.data.id),/ledger_append_only/);
  assert.throws(()=>db.sqlite.prepare("DELETE FROM ledger_entries WHERE id=?").run(r.data.id),/ledger_append_only/);
- const events=(await f('/activity?business_id=b4')).data.filter(e=>e.action==='ledger_recorded');assert.equal(events.length,2);assert(events.every(e=>e.actor_id==='finance-a'));
+ const events=(await f('/activity?business_id=b4')).data.filter(e=>e.action==='ledger_recorded');assert.equal(events.length,2);assert(events.every(e=>e.actor_name==='財務 · 周月'));assert(db.sqlite.prepare("SELECT actor_id FROM activity_events WHERE action='ledger_recorded'").all().every(e=>e.actor_id==='finance-a'));
 });
 test('receipt replay succeeds after version change; changed payload cannot reuse request key',async t=>{
  const {as,db}=await fixture(t);const a=await as('owner-a'),path=root+'invoices/bill-digital/ledger',p=receipt(1,100);
@@ -154,7 +154,7 @@ test('assigned service can receive and hand off mail with version and terminal-s
  assert.equal((await s(path,'PATCH',{version:2,status:'collected'})).status,400);
  assert.equal((await s(path,'PATCH',{version:2,status:'collected',handoff_reference:'示範領取人核對'})).status,200);
  assert.equal((await s(path,'PATCH',{version:3,status:'returned',handoff_reference:'x'})).status,409);
- const events=(await s('/activity?business_id=b4')).data.filter(e=>e.action==='mail_status_changed');assert.equal(events.length,2);assert(events.every(e=>e.actor_id==='service-a'));
+ const events=(await s('/activity?business_id=b4')).data.filter(e=>e.action==='mail_status_changed');assert.equal(events.length,2);assert(events.every(e=>e.actor_name==='維運 · 張青'));
 });
 test('maintenance resolution and financial histories respect staff role scopes',async t=>{
  const {as}=await fixture(t);const s=await as('service-a'),f=await as('finance-a'),p=root+'tickets/ticket-demo';
