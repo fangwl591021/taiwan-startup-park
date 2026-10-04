@@ -2,7 +2,7 @@
 
 借址登記業者的 LINE OA 風格工作台。第一輪 Foundation：從接洽、成交到租戶服務，以及逐則實際操作者歷程。
 
-**本輪為本機可驗收版本，不是正式上線版。未部署或覆蓋任何 Worker，未套用遠端 migration。**
+**目前為可驗收開發版本，不是正式上線版。未部署或覆蓋任何 Worker，未套用遠端 migration。**
 完整產品需求及後續迭代保留於 [PLATFORM_BLUEPRINT.md](docs/PLATFORM_BLUEPRINT.md)。
 
 ## 本機啟動
@@ -21,7 +21,8 @@ npm run dev
 前端為 TypeScript + 原生 DOM/CSS；後端為 Workers 相容 Fetch handler。
 本地 HTTP adapter 使用 SQLite，D1 migration 位於 migrations/。
 未將 Node SQLite 包進 Worker；D1 binding 使用同一套 prepared statement API。
-沒有正式登入供應商，本機 session 使用隨機 token、伺服器雜湊保存、HttpOnly cookie 與停權檢查。
+本機 session 使用隨機 token、伺服器雜湊保存、HttpOnly cookie 與停權檢查。
+第二輪新增 Cloudflare Access 驗證與 LINE 接收／Outbox adapter，尚未配置正式連線；詳見 [LINE_INTEGRATION.md](docs/LINE_INTEGRATION.md)。
 
 ## 驗收流程
 
@@ -40,15 +41,15 @@ npm run dev
 
 | 項目 | 本輪狀態 |
 | --- | --- |
-| 身分驗證 | 僅 local demo；production fail closed，未接正式 IdP |
-| LINE OA | 尚未串接；模擬訊息不會送到 LINE |
+| 身分驗證 | Access adapter 已實作；未設定 issuer/AUD/帳號綁定時 fail closed |
+| LINE OA | Webhook / push adapter 已實作；正式 channel 未串接，本機不對外發訊 |
 | 金流 | 尚未串接；只可保存人工收款核對，不發生交易 |
 | AI / 風控 | 尚未啟用；不產生假分數或告警 |
 | 官網 / 商城 / LINE / CRM 租用 | 只管理開通需求，不啟用權益、不收訂閱款 |
 | 平台管理員 / 企業管理員 | 保留角色，工作台尚未開放；不默認跨業者存取 |
 
 成交與付款各自記錄；成交不代表已付款，申請不代表已開通。
-聊天室來源欄位預留 customer / human / ai_auto / ai_approved，本輪伺服器只產生 human 模擬回覆。
+聊天室來源欄位預留 customer / human / ai_auto / ai_approved，本機只產生 human 模擬回覆；配置完成的正式 LINE 文字外送保留 human 與真實 actor。
 公開 LINE API 不保證能取得原生 OA 後台的實際回覆人員，私人通訊亦不在此資料範圍。
 工作通訊紀錄的目的告知、保存期限與刪除政策仍須在正式導入時落實。
 
@@ -66,7 +67,7 @@ npm run dev
 .dev.vars.example 僅含安全假值；不要加入正式 token 或資料。
 wrangler.jsonc 刻意未配置有效 D1，workers_dev=false。
 **禁止把本地 demo 當作正式登入。** 即使 production 誤設 DEMO_MODE=on 仍會拒絕。
-dev.mjs 不可公開代理或對外部署。正式驗證、Secure cookie、登入限流、受信任 host 與部署設定尚待第二輪。
+dev.mjs 不可公開代理或對外部署。正式環境使用 Access 驗證、Secure cookie 與固定 APP_ORIGIN；仍需完成 Access policy／邊界限流與實際部署接線。
 
 本輪未讀取或修改正式 Cloudflare 帳號、Worker、資料庫、R2、排程、通知或金流。
 Worker URL 僅作目標識別，不代表已驗證部署權限。
@@ -102,3 +103,5 @@ GitHub Actions 執行相同流程並保存桌面／手機截圖及測試報告�
 
 工作事件只提供讀取 API；歷史訊息不因案件轉交或人員停權而改寫。
 本輪沒有匯出、刪除聊天、背景工作或檔案下載 API；之後新增時須同樣套用資料權限與保存政策。
+
+第二輪已通過 30 項後端及 4 項瀏覽器測試，詳見 [LINE_ACCEPTANCE.md](docs/LINE_ACCEPTANCE.md)。正式接線尚未驗證，未部署 Worker。

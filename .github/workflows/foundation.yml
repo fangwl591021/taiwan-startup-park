@@ -1,9 +1,9 @@
-name: Foundation acceptance
+name: Platform acceptance
 on:
   push:
-    branches: [feature/foundation]
+    branches: [feature/foundation, feature/line-integration]
   pull_request:
-    branches: [main, docs/platform-blueprint]
+    branches: [main, docs/platform-blueprint, feature/foundation]
 permissions:
   contents: read
 jobs:

@@ -9,7 +9,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc && node scripts/build.mjs",
-    "test": "npm run build && node --test tests/core.test.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "dev": "npm run build && node scripts/dev.mjs",
     "test:e2e": "playwright test",
     "worker:check": "wrangler deploy --dry-run --outdir .worker-build"
