@@ -1,4 +1,4 @@
-import {Miniflare} from 'miniflare';
+import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {build} from 'esbuild';
 import assert from 'node:assert/strict';
 const bundled=await build({entryPoints:['dist/auth.js'],bundle:true,format:'esm',write:false});
@@ -26,7 +26,7 @@ export default {async fetch(){
  return Response.json(findings);
 }};
 `;
-const mf=new Miniflare({modules:true,script,compatibilityDate:'2026-10-04'});
+const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script,compatibilityDate:'2026-10-04'}));
 try{
  const response=await mf.dispatchFetch('http://localhost');
  const result=await response.json();console.log('WORKER_AUTH_RUNTIME '+JSON.stringify(result));
