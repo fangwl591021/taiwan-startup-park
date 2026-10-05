@@ -2,7 +2,12 @@
 
 借址登記業者的 LINE OA 風格工作台。已涵蓋成交到租戶閉環、登入與 LINE adapter 基礎，以及第三輪合約帳務、信件維運與數位訂閱。
 
-**目前為可驗收開發版本，不是正式上線版。未部署或覆蓋任何 Worker，未套用遠端 migration。**
+**正式工作台已部署，使用 Cloudflare Access 個人身分登入。LINE、金流及 AI 尚未串接／啟用。**
+最新發布結果及驗收證據以 [DEPLOYMENT_STATUS.md](docs/DEPLOYMENT_STATUS.md) 為準。
+
+[正式工作台](https://taiwan-startup-park.fangwl591021.workers.dev/) · [獨立測試帳號模擬](https://taiwan-startup-park-demo.fangwl591021.workers.dev/) · [實際錄影教學](https://taiwan-startup-park.fangwl591021.workers.dev/tutorial.html)
+
+測試區及中文字幕教學由 release workflow 建置、驗證及發布；使用獨立 D1、獨立 Access application 和虛構資料。僅原本指定管理員可以進入，再選擇管理員／業務／維運／財務／B 業者模擬身分。正式資料庫不提供角色切換或示範登入。詳見 [SIMULATION_GUIDE.md](docs/SIMULATION_GUIDE.md)。
 完整產品需求及後續迭代保留於 [PLATFORM_BLUEPRINT.md](docs/PLATFORM_BLUEPRINT.md)。
 
 ## 本機啟動

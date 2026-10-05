@@ -13,3 +13,10 @@ deployment-target-report.json
 wrangler.infrastructure.json
 deployment-resources.json
 wrangler.owner-setup.json
+wrangler.sandbox.json
+sandbox-resources.json
+.sandbox-secrets.json
+.sandbox-seed.sql
+.sandbox-build/
+.tutorial-recording/
+docs/tutorial/

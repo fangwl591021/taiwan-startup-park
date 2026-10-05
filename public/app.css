@@ -17,3 +17,5 @@
 @media(max-width:600px){.catalog-page{padding:20px 16px}.catalog-page h2{font-size:20px}.catalog-page .catalog-row{align-items:flex-start}.empty-actions button{max-width:100%}.staff-row{flex-wrap:wrap}.staff-row>div{min-width:0;overflow-wrap:anywhere}}
 
 .learning-links{display:grid;gap:9px;padding:18px 22px;margin-top:14px;border-top:1px solid #edf0ee}.learning-links a{color:#188c50;font-size:13px;text-decoration:none}.learning-links a:hover{text-decoration:underline}.demo-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.demo-strip .text-button{margin-left:auto;font-size:12px}
+
+.sidebar{overflow-y:auto;overscroll-behavior:contain}.sidebar nav,.learning-links,.sidebar-bottom,.sidebar .brand,.workspace-label{flex-shrink:0}
