@@ -35,6 +35,7 @@ jobs:
       - name: Record actual Chinese-captioned tutorial
         run: |
           sudo apt-get install -y ffmpeg
+          TUTORIAL_REHEARSAL=on node scripts/record-tutorial.mjs
           node scripts/record-tutorial.mjs
       - name: Save tutorial video and transcript
         if: always()

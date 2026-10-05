@@ -2,7 +2,7 @@ import {chromium,expect} from '@playwright/test';
 import {spawn,execFileSync} from 'node:child_process';
 import {mkdir,writeFile,copyFile,stat,rm} from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const OUT='dist/public/tutorial',RAW='.tutorial-recording';
+const OUT='dist/public/tutorial',RAW='.tutorial-recording',FAST=process.env.TUTORIAL_REHEARSAL==='on';
 await mkdir(OUT,{recursive:true});await mkdir(RAW,{recursive:true});
 const server=spawn(process.execPath,['scripts/dev.mjs'],{env:{...process.env,PORT:'8788',DEMO_DB:':memory:'},stdio:['ignore','pipe','pipe']});
 let stderr='';server.stderr.on('data',d=>stderr+=d.toString());
@@ -12,7 +12,7 @@ try{
  let ready=false;for(let i=0;i<120;i++){try{if((await fetch('http://127.0.0.1:8788/api/health')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,250));}
  if(!ready)throw new Error('Tutorial server not ready: '+stderr);
  browser=await chromium.launch({headless:true});
- context=await browser.newContext({viewport:{width:1280,height:900},recordVideo:{dir:RAW,size:{width:1280,height:900}},bypassCSP:true});
+ context=await browser.newContext({viewport:{width:1280,height:900},...(FAST?{}:{recordVideo:{dir:RAW,size:{width:1280,height:900}}}),bypassCSP:true});
  await context.addInitScript(()=>{
   document.addEventListener('DOMContentLoaded',()=>{
    const cursor=document.createElement('div');cursor.id='tutorial-cursor';
@@ -22,16 +22,16 @@ try{
   });
  });
  const p=await context.newPage(),video=p.video(),began=Date.now();
- const pause=ms=>p.waitForTimeout(ms);
+ const pause=ms=>p.waitForTimeout(FAST?10:ms);
  async function caption(title,detail,ms=4200){
   chapters.push({seconds:(Date.now()-began)/1000,title,detail});
   await p.evaluate(({title,detail,number})=>{
-   let el=document.querySelector('#tutorial-caption');if(!el){el=document.createElement('aside');el.id='tutorial-caption';document.body.append(el);}
-   Object.assign(el.style,{position:'fixed',bottom:'16px',left:'28px',right:'28px',zIndex:'2147483647',background:'rgba(20,48,32,.96)',color:'#fff',borderRadius:'12px',padding:'16px 22px',boxShadow:'0 6px 24px #0003',fontFamily:'system-ui,"Noto Sans CJK TC",sans-serif',pointerEvents:'none'});
+   let el=document.querySelector('#tutorial-caption');if(!el){el=document.createElement('aside');el.id='tutorial-caption';el.setAttribute('popover','manual');document.body.append(el);}
+   Object.assign(el.style,{position:'fixed',bottom:'16px',left:'28px',right:'28px',zIndex:'2147483647',background:'rgba(20,48,32,.96)',color:'#fff',borderRadius:'12px',padding:'16px 22px',boxShadow:'0 6px 24px #0003',fontFamily:'system-ui,"Noto Sans CJK TC",sans-serif',pointerEvents:'none',top:'auto',margin:'0',border:'0',maxWidth:'none',boxSizing:'border-box'});
    el.replaceChildren();const heading=document.createElement('div');heading.textContent=String(number).padStart(2,'0')+'  '+title;Object.assign(heading.style,{color:'#8beab0',fontWeight:'700',fontSize:'16px',marginBottom:'4px'});
-   const text=document.createElement('div');text.textContent=detail;Object.assign(text.style,{fontSize:'20px',lineHeight:'1.6'});el.append(heading,text);
+   const text=document.createElement('div');text.textContent=detail;Object.assign(text.style,{fontSize:'20px',lineHeight:'1.6'});el.append(heading,text);if(el.matches(':popover-open'))el.hidePopover();el.showPopover();
   },{title,detail,number:chapters.length});
-  await pause(ms);
+  console.log('TUTORIAL_CHAPTER '+chapters.length+' '+title);await pause(ms);
  }
  async function login(id){
   await p.goto('http://127.0.0.1:8788/');await p.getByLabel('示範身分').selectOption(id);
@@ -49,9 +49,9 @@ try{
  await expect(p.getByRole('heading',{name:'總覽',exact:true})).toBeVisible();
  await caption('工作台總覽','左側切換成交追蹤、租戶與聊天室；上方顯示目前操作人員及 TEST DEMO。',5500);
  await p.getByRole('button',{name:'＋ 建立案件'}).click();
- await p.getByLabel('企業名稱',{exact:true}).pressSequentially(company,{delay:85});
+ await p.getByLabel('企業名稱',{exact:true}).pressSequentially(company,{delay:FAST?0:85});
  await p.getByLabel('聯絡人',{exact:true}).fill('示範窗口');
- await p.getByLabel('案件負責人',{exact:true}).selectOption('sales-a1');
+ await p.locator('#opportunity-form select[name="owner_id"]').selectOption('sales-a1');
  await p.getByLabel('預估金額（NT$）',{exact:true}).fill('36000');
  await p.getByLabel('下一步',{exact:true}).fill('確認借址登記需求與適用方案');
  await caption('建立案件','填企業、聯絡人、負責業務與下一步。新洽談先建案件，服務中的舊客戶可直接新增租戶。',6500);
@@ -107,7 +107,7 @@ try{
  await caption('資格確認 ≠ 功能開通','系統顯示「訂閱資格符合」，仍明確標示「功能未開通」。LINE、金流與 AI 尚未啟用。',6000);
  await nav('工作聊天室');
  await p.locator('[data-chat]').filter({hasText:company}).click();
- await p.getByLabel('回覆內容').pressSequentially('示範回覆：已收到需求，將由維運同仁接續服務。',{delay:55});
+ await p.getByLabel('回覆內容').pressSequentially('示範回覆：已收到需求，將由維運同仁接續服務。',{delay:FAST?0:55});
  await p.getByLabel('模擬失敗',{exact:true}).check();
  await caption('聊天室模擬回覆','勾選「模擬失敗」來練習重試。測試聊天室不會把訊息送到 LINE。',5500);
  await p.getByRole('button',{name:'模擬回覆',exact:true}).click();await expect(p.locator('.messages')).toContainText('模擬發送失敗');
@@ -141,6 +141,7 @@ try{
  await caption('開始練習','從管理員建案，再切換其他角色驗證分工。教學頁可重播與下載；返回正式工作台前確認網址。',7000);
  const end=(Date.now()-began)/1000;
  await context.close();context=null;
+ if(FAST){console.log('TUTORIAL_JOURNEY_REHEARSAL_PASSED');}else{
  const raw=await video.path(),mp4=OUT+'/taiwan-startup-park-tutorial.mp4';
  execFileSync('ffmpeg',['-y','-i',raw,'-an','-c:v','libx264','-preset','veryfast','-crf','30','-pix_fmt','yuv420p','-r','20','-movflags','+faststart',mp4],{stdio:'ignore',timeout:120000});
  const info=JSON.parse(execFileSync('ffprobe',['-v','error','-show_entries','format=duration,size:stream=codec_name,width,height','-of','json',mp4],{encoding:'utf8'}));
@@ -165,6 +166,7 @@ try{
  await desktop.screenshot({path:'docs/screenshots/mobile-tutorial-player.png',fullPage:true});
  await check.close();
  console.log('TUTORIAL_MEDIA_VALIDATED '+JSON.stringify({duration_seconds:duration,bytes:Number(info.format.size),chapters:chapters.length,codec:'h264',actual_recording:true}));
+ }
 }finally{
  if(context)await context.close();if(browser)await browser.close();server.kill('SIGTERM');
 }
