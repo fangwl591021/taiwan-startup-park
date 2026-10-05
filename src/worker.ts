@@ -110,7 +110,18 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/staff'&&method==='GET'){
   roles(a,['operator_owner','operator_sales','operator_service','operator_finance']);
-  return json((await stmt(env,"SELECT id,name,role,active FROM staff_users WHERE operator_id=? AND role IN('operator_owner','operator_sales','operator_service','operator_finance') ORDER BY name",a.operator_id).all()).results);
+  return json((await stmt(env,"SELECT u.id,u.name,u.role,u.active,EXISTS(SELECT 1 FROM auth_identities i WHERE i.user_id=u.id) AS login_bound FROM staff_users u WHERE u.operator_id=? AND u.role IN('operator_owner','operator_sales','operator_service','operator_finance') ORDER BY name",a.operator_id).all()).results);
+ }
+ if(path==='/api/staff'&&method==='POST'){
+  roles(a,['operator_owner']);const d=await body(req,['name','role']);
+  const name=textField(d.name,'人員姓名',100),role=textField(d.role,'角色',30);
+  if(!['operator_sales','operator_service','operator_finance'].includes(role))fail(400,'新增人員僅可選擇業務、維運或財務');
+  const id=uid();
+  await env.DB.batch([
+   stmt(env,'INSERT INTO staff_users(id,operator_id,name,role,active) VALUES(?,?,?,?,0)',id,a.operator_id,name,role),
+   audit(env,a,null,null,'staff_created',{user_id:id,role,login_status:'pending_identity_binding'})
+  ]);
+  return json({id,name,role,active:0,login_bound:0},201);
  }
  const staffMatch=path.match(/^\/api\/staff\/([^/]+)\/status$/);
  if(staffMatch&&method==='PATCH'){
@@ -119,6 +130,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   if(staffMatch[1]===a.id)fail(400,'不能停用自己的帳號');
   const target=await stmt(env,"SELECT id,active FROM staff_users WHERE operator_id=? AND id=? AND role<>'operator_owner'",a.operator_id,staffMatch[1]).first();
   if(!target)fail(404,'找不到可管理的員工');
+  if(d.active&&!local(req,env)&&!await stmt(env,'SELECT user_id FROM auth_identities WHERE user_id=? AND issuer=?',staffMatch[1],env.ACCESS_ISSUER).first())fail(409,'此人員尚未完成企業登入身分綁定，不能啟用');
   await env.DB.batch([stmt(env,'UPDATE staff_users SET active=? WHERE operator_id=? AND id=?',d.active?1:0,a.operator_id,staffMatch[1]),audit(env,a,null,null,'staff_status',{user_id:staffMatch[1],active:d.active},true)]);
   return json({ok:true});
  }
@@ -212,6 +224,26 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
    audit(env,a,o.business_id,o.id,'payment_recorded',{from:o.payment_status,to:status,reference,method:'manual_record_not_gateway'},true)]);
   if(!r[0].meta.changes)fail(409,'案件已更新');
   return json({ok:true});
+ }
+ if(path==='/api/tenants'&&method==='POST'){
+  roles(a,['operator_owner']);
+  const d=await body(req,['business_name','registration_no','contact_name','phone','email','service_owner_id','reference']);
+  const name=textField(d.business_name,'企業名稱',150),contact=textField(d.contact_name,'聯絡人',100);
+  const registration=d.registration_no?textField(d.registration_no,'統編',8):null;
+  if(registration&&!/^\d{8}$/.test(registration))fail(400,'統編應為八位數字');
+  if(registration&&await stmt(env,'SELECT id FROM businesses WHERE operator_id=? AND registration_no=?',a.operator_id,registration).first())fail(409,'統編已存在，請沿用既有企業或案件轉租戶');
+  const phone=textField(d.phone??'','電話',50,true),email=textField(d.email??'','Email',200,true);
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail(400,'Email 格式不正確');
+  const reference=textField(d.reference,'租戶建檔依據',500);
+  const assigned=textField(d.service_owner_id??a.id,'服務承辦人',100);
+  if(!await stmt(env,"SELECT id FROM staff_users WHERE id=? AND operator_id=? AND active=1 AND role IN('operator_owner','operator_sales','operator_service')",assigned,a.operator_id).first())fail(400,'服務承辦人不屬於本業者或已停權');
+  const id=uid(),time=now();
+  await env.DB.batch([
+   stmt(env,'INSERT INTO businesses(id,operator_id,name,registration_no,is_tenant,service_owner_id,created_at) VALUES(?,?,?,?,1,?,?)',id,a.operator_id,name,registration,assigned,time),
+   stmt(env,'INSERT INTO contacts(id,operator_id,business_id,name,phone,email) VALUES(?,?,?,?,?,?)',uid(),a.operator_id,id,contact,phone,email),
+   audit(env,a,id,null,'tenant_created',{method:'manual_existing_tenant',reference,service_owner_id:assigned})
+  ]);
+  return json({business_id:id},201);
  }
  if(path==='/api/tenants'&&method==='GET'){
   const s=bizScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);

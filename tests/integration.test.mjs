@@ -232,3 +232,13 @@ test('Access JWKS redirects fail closed using Workers-supported manual redirect 
  const r=await call('/auth/access',{method:'POST',data:{},token:await jwt(env),environment:env,origin:env.APP_ORIGIN});
  assert.equal(r.status,503);assert.equal(calls,1);
 });
+
+test('production cannot activate a newly created staff profile before Access binding',async t=>{
+ const {call,production,db}=await fixture(t),env=production(),token=await jwt(env);
+ const login=await call('/auth/access',{method:'POST',data:{},token,environment:env,origin:env.APP_ORIGIN});
+ const cookie=login.cookie.split(';')[0];
+ const created=await call('/staff',{method:'POST',data:{name:'待驗證人員',role:'operator_sales'},token,cookie,environment:env,origin:env.APP_ORIGIN});
+ assert.equal(created.status,201);assert.equal(created.data.active,0);
+ const activated=await call('/staff/'+created.data.id+'/status',{method:'PATCH',data:{active:true},token,cookie,environment:env,origin:env.APP_ORIGIN});
+ assert.equal(activated.status,409);assert.equal(db.sqlite.prepare('SELECT active FROM staff_users WHERE id=?').get(created.data.id).active,0);
+});

@@ -163,3 +163,39 @@ test('competing version writes produce one change and one event',async t=>{
  assert.deepEqual(outcomes.map(r=>r.status).sort(),[200,409]);
  assert.equal(db.sqlite.prepare("SELECT COUNT(*) n FROM activity_events WHERE opportunity_id='o1' AND action='opportunity_updated'").get().n,1);
 });
+
+test('owner can onboard an existing tenant without fabricating a sale, payment or entitlement',async t=>{
+ const {as,db}=await fixture(t);const a=await as('owner-a'),b=await as('owner-b');
+ const before=db.sqlite.prepare('SELECT COUNT(*) n FROM opportunities').get().n;
+ const payload={business_name:'既有服務企業',registration_no:'77889900',contact_name:'既有窗口',phone:'02-00000000',email:'contact@example.invalid',service_owner_id:'service-a',reference:'既有地址服務資料轉入'};
+ const r=await a('/tenants','POST',payload);assert.equal(r.status,201);
+ const id=r.data.business_id,detail=await a('/businesses/'+id);
+ assert.equal(detail.data.is_tenant,1);assert.equal(detail.data.service_owner_id,'service-a');
+ assert.equal(detail.data.contacts[0].name,'既有窗口');assert.equal(detail.data.services.length,0);
+ assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM opportunities').get().n,before);
+ assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM receivables WHERE business_id=?').get(id).n,0);
+ assert.equal((await b('/businesses/'+id)).status,404);
+ const activity=(await a('/activity?business_id='+id)).data;assert.equal(activity[0].action,'tenant_created');assert.match(activity[0].detail,/manual_existing_tenant/);
+ assert.equal((await a('/tenants','POST',payload)).status,409);
+});
+test('manual tenant onboarding rejects staff roles, forged fields and other operator assignees',async t=>{
+ const {as,db}=await fixture(t);const payload={business_name:'權限驗收',contact_name:'測試',reference:'人工轉入'};
+ for(const id of ['sales-a1','service-a','finance-a','platform','business-admin'])assert.equal((await (await as(id))('/tenants','POST',payload)).status,403);
+ const a=await as('owner-a'),before=db.sqlite.prepare('SELECT COUNT(*) n FROM businesses').get().n;
+ for(const extra of [{operator_id:'op-b'},{actor_id:'owner-b'},{is_tenant:1}])assert.equal((await a('/tenants','POST',{...payload,...extra})).status,400);
+ assert.equal((await a('/tenants','POST',{...payload,service_owner_id:'sales-b'})).status,400);
+ assert.equal((await a('/tenants','POST',{...payload,email:'bad'})).status,400);
+ assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM businesses').get().n,before);
+});
+test('staff creation is owner scoped, leaves login inactive and cannot grant owner/platform roles',async t=>{
+ const {as,db}=await fixture(t);const a=await as('owner-a'),b=await as('owner-b');
+ const r=await a('/staff','POST',{name:'新建業務',role:'operator_sales'});assert.equal(r.status,201);
+ assert.equal(r.data.active,0);assert.equal(r.data.login_bound,0);
+ const row=db.sqlite.prepare('SELECT * FROM staff_users WHERE id=?').get(r.data.id);assert.equal(row.operator_id,'op-a');assert.equal(row.active,0);
+ assert(!(await b('/staff')).data.some(s=>s.id===r.data.id));
+ assert.equal((await a('/opportunities/o1','PATCH',{version:1,owner_id:r.data.id})).status,400);
+ for(const role of ['operator_owner','platform_admin','business_admin'])assert.equal((await a('/staff','POST',{name:'越權',role})).status,400);
+ for(const extra of [{active:true},{operator_id:'op-b'},{actor_id:'owner-b'}])assert.equal((await a('/staff','POST',{name:'越權',role:'operator_sales',...extra})).status,400);
+ for(const id of ['sales-a1','service-a','finance-a'])assert.equal((await (await as(id))('/staff','POST',{name:'越權',role:'operator_sales'})).status,403);
+ assert.equal(db.sqlite.prepare("SELECT COUNT(*) n FROM activity_events WHERE action='staff_created' AND actor_id='owner-a'").get().n,1);
+});
