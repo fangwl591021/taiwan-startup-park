@@ -88,5 +88,6 @@ test('phase-one address contract, receivable, partial receipt, refund, renewal a
  const bill=(await finance(base+'invoices')).data.find(r=>r.id===b.data.id);assert.equal(bill.net_received,11000);assert.equal(bill.balance,25000);
  assert.equal((await owner(base+'contracts/'+c.data.id+'/renew','POST',{version:2,starts_on:'2029-01-01',ends_on:'2029-12-31',amount:38000,request_key:'phase1-renew'})).status,201);
  const events=(await owner('/activity?business_id=b4')).data.filter(e=>e.action==='ledger_recorded');
- assert(events.every(e=>e.actor_id==='finance-a'));assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM digital_revenue_terms WHERE platform_share_bps IS NOT NULL').get().n,0);
+ assert.equal(events.length,2);assert(events.every(e=>e.actor_name==='財務 · 周月'));
+ assert(db.sqlite.prepare("SELECT actor_id FROM activity_events WHERE action='ledger_recorded'").all().every(e=>e.actor_id==='finance-a'));assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM digital_revenue_terms WHERE platform_share_bps IS NOT NULL').get().n,0);
 });
