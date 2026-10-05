@@ -2,6 +2,7 @@ name: Cloudflare release
 on:
   push:
     branches: [release/cloudflare]
+    paths-ignore: ['docs/DEPLOYMENT_STATUS.md']
   workflow_dispatch:
 permissions:
   contents: read
@@ -95,6 +96,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cloudflare-deployment-metadata
+          name: cloudflare-deployment-metadata-${{ github.run_attempt }}
           path: deployment-target-report.json
           if-no-files-found: ignore
