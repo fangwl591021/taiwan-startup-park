@@ -24,6 +24,7 @@ jobs:
           npm test
           npm audit --audit-level=high
           npm run worker:check
+          node scripts/auth-runtime-check.mjs
       - name: Browser and mobile acceptance
         run: |
           npx playwright install --with-deps chromium
