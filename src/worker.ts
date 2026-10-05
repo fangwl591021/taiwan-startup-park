@@ -34,7 +34,7 @@ function opScope(a:Actor,alias='o'):{sql:string,args:unknown[]}{
 }
 function bizScope(a:Actor,alias='b'):{sql:string,args:unknown[]}{
  roles(a,['operator_owner','operator_sales','operator_service','operator_finance']);
- if(a.role==='operator_sales')return {sql:alias+'.operator_id=? AND EXISTS(SELECT 1 FROM opportunities ao WHERE ao.operator_id='+alias+'.operator_id AND ao.business_id='+alias+'.id AND ao.owner_id=?)',args:[a.operator_id,a.id]};
+ if(a.role==='operator_sales')return {sql:alias+'.operator_id=? AND (EXISTS(SELECT 1 FROM opportunities ao WHERE ao.operator_id='+alias+'.operator_id AND ao.business_id='+alias+'.id AND ao.owner_id=?) OR ('+alias+'.is_tenant=1 AND '+alias+'.service_owner_id=?))',args:[a.operator_id,a.id,a.id]};
  if(a.role==='operator_service')return {sql:alias+'.operator_id=? AND '+alias+'.is_tenant=1 AND '+alias+'.service_owner_id=?',args:[a.operator_id,a.id]};
  return {sql:alias+'.operator_id=?',args:[a.operator_id]};
 }

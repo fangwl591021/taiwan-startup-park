@@ -199,3 +199,12 @@ test('staff creation is owner scoped, leaves login inactive and cannot grant own
  for(const id of ['sales-a1','service-a','finance-a'])assert.equal((await (await as(id))('/staff','POST',{name:'越權',role:'operator_sales'})).status,403);
  assert.equal(db.sqlite.prepare("SELECT COUNT(*) n FROM activity_events WHERE action='staff_created' AND actor_id='owner-a'").get().n,1);
 });
+
+test('manually onboarded tenant is visible only to its assigned service or sales operator',async t=>{
+ const {as}=await fixture(t);const owner=await as('owner-a');
+ const r=await owner('/tenants','POST',{business_name:'指派業務維運租戶',contact_name:'窗口',service_owner_id:'sales-a1',reference:'既有租戶轉入並明確授權業務承辦'});
+ assert.equal(r.status,201);const id=r.data.business_id;
+ const assigned=await as('sales-a1');assert.equal((await assigned('/businesses/'+id)).status,200);
+ assert((await assigned('/tenants')).data.some(b=>b.id===id));
+ for(const user of ['sales-a2','service-a','owner-b'])assert.equal((await (await as(user))('/businesses/'+id)).status,404);
+});
