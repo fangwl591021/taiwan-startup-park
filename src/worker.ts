@@ -1,3 +1,4 @@
+import {digitalPreview,requireDigitalPreview} from './scope.js';
 import type {Actor,Env,Opportunity,Statement} from './types.js';
 import {HttpError,fail,now,uid,stmt,local,sandbox,demo,digest,audit} from './shared.js';
 import {actor,accessLogin,configured,sandboxAccess} from './auth.js';
@@ -110,7 +111,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
 
  if(path==='/api/me'&&method==='GET'){
   const op=await stmt(env,'SELECT name FROM operators WHERE id=?',a.operator_id).first();
-  return json({...a,operator_name:op?.name,demo:demo(req,env),sandbox:sandbox(req,env)});
+  return json({...a,operator_name:op?.name,phase:'address_only',digital_preview:digitalPreview(env),demo:demo(req,env),sandbox:sandbox(req,env)});
  }
  if(path==='/api/logout'&&method==='POST'){
   const token=req.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith('tsp_session='))?.slice(12)||'';
@@ -277,6 +278,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(requestMatch&&method==='POST'){
   roles(a,['operator_owner','operator_sales','operator_service']);const b=await getBusiness(env,a,requestMatch[1]);
   if(!b.is_tenant)fail(409,'請先成交轉為租戶');
+  requireDigitalPreview(env);
   const d=await body(req,['module']);const module=textField(d.module,'功能',30);if(!modules.includes(module))fail(400,'功能不正確');
   const id=uid();const time=now();
   const r=await env.DB.batch([stmt(env,"INSERT OR IGNORE INTO service_requests(id,operator_id,business_id,actor_id,module,status,created_at,updated_at) VALUES(?,?,?,?,?,'requested',?,?)",id,a.operator_id,b.id,a.id,module,time,time),
@@ -286,7 +288,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  const cancelMatch=path.match(/^\/api\/businesses\/([^/]+)\/services\/([^/]+)$/);
  if(cancelMatch&&method==='PATCH'){
-  roles(a,['operator_owner','operator_sales','operator_service']);await getBusiness(env,a,cancelMatch[1]);const d=await body(req,['status']);
+  roles(a,['operator_owner','operator_sales','operator_service']);await getBusiness(env,a,cancelMatch[1]);requireDigitalPreview(env);const d=await body(req,['status']);
   if(d.status!=='cancelled')fail(400,'整合尚未串接，僅可取消申請');
   const r=await env.DB.batch([stmt(env,"UPDATE service_requests SET status='cancelled',updated_at=? WHERE id=? AND operator_id=? AND business_id=? AND status='requested'",now(),cancelMatch[2],a.operator_id,cancelMatch[1]),
   audit(env,a,cancelMatch[1],null,'service_cancelled',{request_id:cancelMatch[2]},true)]);

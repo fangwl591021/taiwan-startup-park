@@ -4,7 +4,7 @@ import worker from '../dist/worker.js';
 import {database,seed} from '../scripts/database.mjs';
 async function fixture(t){
  const db=database();seed(db);t.after(()=>db.close());
- const env={DB:db,APP_ENV:'local',DEMO_MODE:'on'};
+ const env={DB:db,APP_ENV:'local',DEMO_MODE:'on',DIGITAL_PREVIEW:'on'};
  async function request(path,{method='GET',data,cookie='',host='http://localhost',origin=host,environment=env}={}){
   const r=await worker.fetch(new Request(host+'/api'+path,{method,headers:{cookie,origin,'content-type':'application/json','x-requested-with':'tsp'},...(data!==undefined?{body:JSON.stringify(data)}:{})}),environment);
   return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};

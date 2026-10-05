@@ -19,7 +19,7 @@ const server=http.createServer(async(req,res)=>{
  try{
  const chunks=[];for await(const c of req)chunks.push(c);
  const request=new Request('http://'+req.headers.host+req.url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
- const response=await worker.fetch(request,{DB:db,APP_ENV:'local',DEMO_MODE:'on',ASSETS:assets});
+ const response=await worker.fetch(request,{DB:db,APP_ENV:'local',DEMO_MODE:'on',DIGITAL_PREVIEW:process.env.DIGITAL_PREVIEW==='on'?'on':'off',ASSETS:assets});
  res.writeHead(response.status,Object.fromEntries(response.headers));
  res.end(Buffer.from(await response.arrayBuffer()));
  }catch(e){console.error(e);res.writeHead(500);res.end('Local server error');}

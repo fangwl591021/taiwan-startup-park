@@ -4,7 +4,7 @@ import worker from '../dist/worker.js';
 import {database,seed} from '../scripts/database.mjs';
 import {entitlements,taipeiDay} from '../dist/operations.js';
 async function fixture(t){
- const db=database();seed(db);t.after(()=>db.close());const env={DB:db,APP_ENV:'local',DEMO_MODE:'on'};
+ const db=database();seed(db);t.after(()=>db.close());const env={DB:db,APP_ENV:'local',DEMO_MODE:'on',DIGITAL_PREVIEW:'on'};
  async function request(path,method='GET',data,cookie=''){
   const r=await worker.fetch(new Request('http://localhost/api'+path,{method,headers:{cookie,origin:'http://localhost','content-type':'application/json','x-requested-with':'tsp'},...(data===undefined?{}:{body:JSON.stringify(data)})}),env);
   return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};

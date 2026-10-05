@@ -1,3 +1,4 @@
+import {digitalPreview,requireDigitalPreview} from './scope.js';
 import type {Actor,Env} from './types.js';
 import {stmt,fail,now,uid,digest,audit} from './shared.js';
 type Row=Record<string,any>;
@@ -74,15 +75,16 @@ export async function entitlements(env:Env,a:Actor,biz:string,dayNow=taipeiDay()
  for(const s of subscriptions){
   const inPeriod=s.starts_on<=dayNow&&s.ends_on>=dayNow;
   const paid=await paidForSubscription(env,a,s);
-  const eligible=inPeriod&&(s.status==='trial'||s.status==='active'&&paid);
+  const eligible=digitalPreview(env)&&inPeriod&&(s.status==='trial'||s.status==='active'&&paid);
   rows.push({subscription_id:s.id,module:s.module,plan_name:s.plan_name,status:s.status,starts_on:s.starts_on,ends_on:s.ends_on,
    period_status:dayNow<s.starts_on?'scheduled':dayNow>s.ends_on?'expired':'current',
-   commercial_eligible:eligible,reason:!inPeriod?'outside_period':!['active','trial'].includes(s.status)?'subscription_inactive':s.status==='active'&&!paid?'payment_required':'eligible',
+   commercial_eligible:eligible,reason:!digitalPreview(env)?'phase_one_only':!inPeriod?'outside_period':!['active','trial'].includes(s.status)?'subscription_inactive':s.status==='active'&&!paid?'payment_required':'eligible',
    quota_limit:s.quota_limit,usage:null,provisioning_status:'not_connected',enabled:false});
  }
  return rows;
 }
 export async function requireEntitlement(env:Env,a:Actor,biz:string,module:string){
+ requireDigitalPreview(env);
  const rights=await entitlements(env,a,biz);
  if(!rights.some(r=>r.module===module&&r.commercial_eligible))fail(403,'訂閱狀態、期間或收款尚未符合資格');
  // No module provider has been integrated. Commercial eligibility never grants fake functional access.
@@ -90,11 +92,17 @@ export async function requireEntitlement(env:Env,a:Actor,biz:string,module:strin
 }
 export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Access):Promise<Response|null>{
  const url=new URL(req.url),method=req.method,path=url.pathname;
+ if(path==='/api/operations/revenue-terms'){
+  role(a,ownerRoles);
+  if(method!=='GET')fail(409,'分潤標準尚未議定；第一期欄位留空，不計算、不結算');
+  const terms=(await stmt(env,'SELECT module,status,partner_name,settlement_basis,platform_fee_amount,platform_share_bps,operator_share_bps,settlement_cycle,effective_on,agreement_reference FROM digital_revenue_terms WHERE operator_id=? ORDER BY module',a.operator_id).all<Row>()).results;
+  return json({status:'unagreed',settlement_enabled:false,terms});
+ }
  if(path==='/api/operations/catalog'&&method==='GET'){
   role(a,['operator_owner','operator_sales','operator_service','operator_finance']);
   const locations=(await stmt(env,'SELECT * FROM locations WHERE operator_id=? ORDER BY name',a.operator_id).all()).results;
   const plans=(await stmt(env,'SELECT * FROM service_plans WHERE operator_id=? ORDER BY created_at DESC',a.operator_id).all<Row>()).results;
-  return json({locations,plans:a.role==='operator_service'?plans.map(({amount,...p})=>p):plans});
+  return json({phase:'address_only',digital_preview:digitalPreview(env),locations,plans:a.role==='operator_service'?plans.map(({amount,...p})=>p):plans});
  }
  if(path==='/api/operations/locations'&&method==='POST'){
   role(a,ownerRoles);const d=await body(req,['name','address']);const id=uid(),name=text(d.name,'據點名稱',100),address=text(d.address,'地址',300);
@@ -102,7 +110,7 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
   return json({id,name,address},201);
  }
  if(path==='/api/operations/plans'&&method==='POST'){
-  role(a,ownerRoles);const d=await body(req,['name','module','amount','duration_days','quota_limit']);
+  role(a,ownerRoles);requireDigitalPreview(env);const d=await body(req,['name','module','amount','duration_days','quota_limit']);
   const name=text(d.name,'方案名稱',100),module=text(d.module,'功能',20);
   if(!moduleKeys.includes(module))fail(400,'功能不正確');
   const amount=integer(d.amount,'單期金額'),duration=integer(d.duration_days,'期數天數',1,3660),quota=integer(d.quota_limit,'額度上限');
@@ -112,7 +120,7 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
  }
  const plan=path.match(/^\/api\/operations\/plans\/([^/]+)$/);
  if(plan&&method==='PATCH'){
-  role(a,ownerRoles);const d=await body(req,['active','version']);if(typeof d.active!=='boolean')fail(400,'狀態錯誤');
+  role(a,ownerRoles);requireDigitalPreview(env);const d=await body(req,['active','version']);if(typeof d.active!=='boolean')fail(400,'狀態錯誤');
   const r=await commit(env,[stmt(env,'UPDATE service_plans SET active=?,version=version+1 WHERE id=? AND operator_id=? AND version=?',d.active?1:0,plan[1],a.operator_id,integer(d.version,'版本',1)),audit(env,a,null,null,'plan_status_changed',{id:plan[1],active:d.active},true)]);
   if(!r[0].meta.changes)fail(409,'方案已異動或不存在');return json({ok:true});
  }
@@ -155,6 +163,7 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
   }
  }
  if(kind==='subscriptions'){
+  if(method!=='GET')requireDigitalPreview(env);
   if(method==='POST'&&(!id||action==='renew')){
    role(a,salesRoles);const d=await body(req,id?['version','plan_id','starts_on','request_key']:['plan_id','starts_on','request_key']);
    const p=await stmt(env,'SELECT * FROM service_plans WHERE id=? AND operator_id=?',text(d.plan_id,'方案',100),a.operator_id).first<Row>();
@@ -182,6 +191,7 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
   if(method==='POST'&&!id){
    role(a,financeRoles);const d=await body(req,['kind','source_id','due_on','request_key']);
    const bucket=text(d.kind,'帳款類別',20);if(!['address','digital'].includes(bucket))fail(400,'商城商品款尚未開放，不得混入地址或數位服務款');
+   if(bucket==='digital')requireDigitalPreview(env);
    const source=await row(env,a,bucket==='address'?'address_contracts':'subscriptions',biz,text(d.source_id,'來源',100));
    if(bucket==='address'&&source.status!=='active'||bucket==='digital'&&source.status==='cancelled')fail(409,'來源尚未確認或已取消');
    if(source.amount<=0)fail(400,'零元項目不需建立應收');
@@ -190,6 +200,7 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
   }
   if(id){
    const bill=await row(env,a,'receivables',biz,id);
+   if(method!=='GET'&&bill.kind==='digital')requireDigitalPreview(env);
    if(action==='ledger'&&method==='GET'){
     role(a,financeRoles);return json((await stmt(env,'SELECT le.*,u.name AS actor_name FROM ledger_entries le JOIN staff_users u ON u.id=le.actor_id WHERE le.operator_id=? AND le.business_id=? AND le.receivable_id=? ORDER BY le.created_at,le.rowid',a.operator_id,biz,id).all<Row>()).results.map(clean));
    }
