@@ -1,6 +1,6 @@
 # 正式部署狀態
 
-2026-10-05 11:35 UTC：完整工作台已發布至指定 Worker。
+2026-10-05 11:51 UTC：完整工作台已發布至指定 Worker。
 
 ## 已完成
 - 首位管理員已由本人通過 Access 驗證並初始化；發布前以正式 D1 核對有效 operator_owner 與 issuer／subject 綁定。
@@ -14,14 +14,14 @@
 
 ## 發布識別
 - 網址：https://taiwan-startup-park.fangwl591021.workers.dev/
-- 發布來源 commit：e6fe3d806d814fd41ba18a530c559475282485fc
-- Cloudflare Worker version：2bf6d5ec-066e-4f6e-899b-251cdbb195da
-- [完整工作台建置及發布成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37303798554)
-- [部署前資源核對及回復 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37303798554/artifacts/11343291364)
-- [桌面／手機驗收截圖與建置成果](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37303798554/artifacts/11342851592)
+- 發布來源 commit：a0f2c4a54b24ac0abf4d3d5055e9089329cedc39
+- Cloudflare Worker version：a83ba0da-901a-443f-a79d-aacfdb239eaf
+- [完整工作台建置及發布成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37305465164)
+- [部署前資源核對及回復 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37305465164/artifacts/11343209871)
+- [桌面／手機驗收截圖與建置成果](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37305465164/artifacts/11343566122)
 
 ## 驗證與界線
-58 項後端／權限／核心流程／部署測試及 6 項瀏覽器驗收全部通過。workerd 執行環境的 RS256 驗證與實際 Access 公開金鑰取得／匯入皆通過。公開金鑰請求使用 manual redirect 並拒絕 3xx，修正 Workers 不支援 redirect:error 的問題。
+63 項後端／權限／核心流程／部署測試及 8 項瀏覽器驗收全部通過。workerd 執行環境的 RS256 驗證與實際 Access 公開金鑰取得／匯入皆通過。公開金鑰請求使用 manual redirect 並拒絕 3xx，修正 Workers 不支援 redirect:error 的問題。
 
 截圖在建置 artifact 的 docs/screenshots 目錄，含 desktop-dashboard.png、mobile-dashboard.png、成交／租戶／聊天室與維運頁面；使用本地虛構測試資料，非正式客戶資料。本人已完成初始化，但正式工作台發布後的瀏覽器登入確認仍待本人重新開啟頁面；不將未登入檢查或測試 fixture 視為正式使用者登入驗收。
 
@@ -29,3 +29,9 @@ LINE 真實收送尚未串接且發送關閉；金流未串接，帳務為人工
 
 ## 影響與回復
 僅使用 taiwan-startup-park 與本專案專用 D1／Access；未修改其它 Worker 或其它資料庫。回復時核對 artifact 中前一版本的部署記錄及 Worker ID；不自動刪除資料庫或取消 Access 保護。非秘密資源對應保存在 config/production-resources.json，真正憑證只由 GitHub Secrets 提供。
+
+## 新增入口修正
+
+已發布新增既有租戶、新增操作人員資料及獨立據點／方案設定，並補上空資料頁的可點擊建立入口。空租戶工作台、實際建檔、手機入口及承辦人權限已通過測試。直接建檔租戶不製造案件成交、收款或權益；明確指派業務承辦時，僅該員或管理員可查看。人員資料預設停用且待 Access 綁定；不能直接啟用、指派案件或新增 owner/platform 角色。新增操作指引見 CREATION_GUIDE.md。
+
+新增驗收截圖：desktop-empty-tenants.png、desktop-add-staff.png、mobile-add-tenant.png、mobile-catalog.png，保存於上述 build artifact 的 docs/screenshots。
