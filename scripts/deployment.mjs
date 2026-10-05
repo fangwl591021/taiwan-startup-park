@@ -57,6 +57,9 @@ export async function smoke(fetcher=fetch){
 }
 async function main(){
  const mode=process.argv[2];
+ const resources=JSON.parse(await readFile('config/production-resources.json','utf8'));
+ if(resources.worker!=='taiwan-startup-park'||resources.hostname!==new URL(TARGET).hostname)throw new Error('專案資源設定目標不符');
+ for(const key of ['D1_DATABASE_ID','ACCESS_ISSUER','ACCESS_AUD'])if(!process.env[key])process.env[key]=resources[key];
  if(mode==='check'){
   const missing=REQUIRED.filter(k=>!process.env[k]?.trim());
   if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,'## 正式部署設定\n\n'+REQUIRED.map(k=>'- '+k+': '+(missing.includes(k)?'缺少':'已設定')).join('\n')+'\n\n不輸出設定值。建置成功不代表已部署。\n');

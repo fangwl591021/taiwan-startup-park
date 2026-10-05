@@ -10,3 +10,5 @@ playwright-report/
 test-results/
 wrangler.production.json
 deployment-target-report.json
+wrangler.infrastructure.json
+deployment-resources.json
