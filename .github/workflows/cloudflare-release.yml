@@ -53,6 +53,7 @@ jobs:
       D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID || vars.D1_DATABASE_ID }}
       ACCESS_ISSUER: ${{ secrets.ACCESS_ISSUER || vars.ACCESS_ISSUER }}
       ACCESS_AUD: ${{ secrets.ACCESS_AUD || vars.ACCESS_AUD }}
+      INITIAL_OWNER_EMAIL: ${{ secrets.INITIAL_OWNER_EMAIL }}
       CI: 'true'
       WRANGLER_SEND_METRICS: 'false'
     steps:
@@ -66,13 +67,26 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: cloudflare-release-build
-      - name: Verify account, D1, Access and bound owner before any mutation
+      - name: Check owner binding or prepare restricted first-login page
+        id: owner
+        run: node scripts/owner-setup.mjs
+      - name: Validate restricted setup bundle
+        if: steps.owner.outputs.ready == 'false'
+        run: npx wrangler deploy --config wrangler.owner-setup.json --dry-run --outdir .worker-build
+      - name: Publish first-login setup page
+        if: steps.owner.outputs.ready == 'false'
+        run: npx wrangler deploy --config wrangler.owner-setup.json
+      - name: Verify account, D1, Access and bound owner
+        if: steps.owner.outputs.ready == 'true'
         run: node scripts/deployment.mjs inspect
       - name: Validate production bundle
+        if: steps.owner.outputs.ready == 'true'
         run: npx wrangler deploy --config wrangler.production.json --dry-run --outdir .worker-build
       - name: Apply pending migrations to verified project D1
+        if: steps.owner.outputs.ready == 'true'
         run: npx wrangler d1 migrations apply DB --remote --config wrangler.production.json
       - name: Publish verified Worker and assets
+        if: steps.owner.outputs.ready == 'true'
         run: npx wrangler deploy --config wrangler.production.json
       - name: Check unauthenticated boundary
         run: node scripts/deployment.mjs smoke

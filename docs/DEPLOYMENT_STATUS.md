@@ -22,3 +22,9 @@
 
 ## 影響與回復
 目前只新增本專案 D1 及 Access 應用程式並套用 schema；未修改其它 Worker 或其它資料庫。原目標網址開始由 Access 保護，因尚無 allow policy 而不開放登入。若撤銷此次初始化，應先核對資源 ID 後只移除此專案的 Access 應用程式；資料庫不要自動刪除。
+
+## 首位管理員身分設定
+
+管理員登入信箱由 `INITIAL_OWNER_EMAIL` GitHub Secret 提供，不寫入公開原始碼。首次部署僅提供初始化頁，24 小時有效，僅接受經 Access RS256 簽章、issuer、AUD、subject、期限驗證且信箱與預先設定相符的身分。空資料庫的 operator、operator_owner、Access 綁定與歷程在同一交易建立；既有資料拒絕覆寫，不接受客戶端指定角色或業者。初始化頁不包含客戶 API。
+
+本人完成初始化後重新執行 release workflow，原本的正式部署門檻仍會驗證有效管理員，才發布完整工作台。LINE 發送、金流、AI 仍未啟用。正式部署與登入驗收需以 Actions 成功紀錄及本人登入結果確認。

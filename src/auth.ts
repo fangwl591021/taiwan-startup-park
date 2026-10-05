@@ -6,7 +6,7 @@ export function configured(env:Env){
  return !!env.ACCESS_AUD&&!!env.ACCESS_ISSUER&&/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(env.ACCESS_ISSUER)&&!!env.APP_ORIGIN&&/^https:\/\/[^/]+$/.test(env.APP_ORIGIN);
 }
 function decode(part:string){if(!/^[A-Za-z0-9_-]+$/.test(part))fail(401,'身分憑證無效');const s=atob(part.replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(s,c=>c.charCodeAt(0));}
-export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:number;iss:string}>{
+export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:number;iss:string;email?:string}>{
  if(!configured(env))fail(503,'正式登入尚未設定');
  if(new URL(req.url).origin!==env.APP_ORIGIN)fail(403,'非授權服務網址');
  const token=req.headers.get('cf-access-jwt-assertion')||'';
@@ -31,7 +31,7 @@ export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:
   if(!jwk)fail(401,'身分憑證無效');
   const key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
   if(!await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,decode(parts[2]),new TextEncoder().encode(parts[0]+'.'+parts[1])))fail(401,'身分憑證簽章無效');
-  return {sub:payload.sub,exp:payload.exp,iss:payload.iss};
+  return {sub:payload.sub,exp:payload.exp,iss:payload.iss,...(typeof payload.email==='string'&&payload.email.length<=254?{email:payload.email}:{})};
  }catch(error){if(error instanceof Error&&'status' in error)throw error;return fail(401,'身分憑證驗證失敗');}
 }
 export async function accessLogin(req:Request,env:Env){
