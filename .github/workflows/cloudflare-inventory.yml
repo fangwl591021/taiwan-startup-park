@@ -1,0 +1,21 @@
+name: Cloudflare target inventory
+on:
+  push:
+    branches: [release/cloudflare]
+    paths: ['scripts/cloudflare-inventory.mjs', '.github/workflows/cloudflare-inventory.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify only this Worker, D1 and Access configuration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cloudflare-inventory.mjs
