@@ -17,7 +17,7 @@ export default {async fetch(){
  try{const claim=await verifyAccess(request,{...env,HTTP:async()=>Response.json({keys:[jwk]})});findings.runtime_verification=claim.sub==='runtime-sub'?'pass':'fail';}
  catch(e){findings.runtime_verification='fail';findings.runtime_error_name=e.name;findings.runtime_error_message=e.message;}
  try{
-  const r=await fetch('https://fangwl591021.cloudflareaccess.com/cdn-cgi/access/certs',{redirect:'error',signal:AbortSignal.timeout(15000)});
+  const r=await fetch('https://fangwl591021.cloudflareaccess.com/cdn-cgi/access/certs',{redirect:'manual',signal:AbortSignal.timeout(15000)});
   findings.certs_status=r.status;
   const data=await r.json();findings.certs_key_count=Array.isArray(data.keys)?data.keys.length:0;
   for(const k of data.keys||[])await crypto.subtle.importKey('jwk',k,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);

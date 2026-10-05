@@ -225,3 +225,10 @@ test('production HTTP chat route queues real adapter, rejects client simulation 
  assert.equal(cross.status,404);
  const status=await call('/conversations/c-o1/line-status',base);assert.equal(status.data.send_enabled,true);
 });
+
+test('Access JWKS redirects fail closed using Workers-supported manual redirect mode',async t=>{
+ const {call,production}=await fixture(t);const env=production();let calls=0;
+ env.HTTP=async (_url,options)=>{calls++;assert.equal(options.redirect,'manual');return new Response('',{status:302,headers:{location:'https://untrusted.example.invalid/keys'}});};
+ const r=await call('/auth/access',{method:'POST',data:{},token:await jwt(env),environment:env,origin:env.APP_ORIGIN});
+ assert.equal(r.status,503);assert.equal(calls,1);
+});

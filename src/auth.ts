@@ -21,7 +21,7 @@ export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:
   const issuer=env.ACCESS_ISSUER!;
   let cached=keys.get(issuer);
   if(!cached||cached.expires<Date.now()||!cached.value.some(k=>k.kid===header.kid)){
-   const response=await (env.HTTP||fetch)(issuer+'/cdn-cgi/access/certs',{signal:AbortSignal.timeout(5000),redirect:'error'});
+   const response=await (env.HTTP||fetch)(issuer+'/cdn-cgi/access/certs',{signal:AbortSignal.timeout(5000),redirect:'manual'});
    if(!response.ok)fail(503,'身分驗證服務暫時不可用');
    const data=await response.json() as {keys:JWK[]};
    if(!Array.isArray(data.keys)||data.keys.length>10)fail(503,'身分驗證服務暫時不可用');
