@@ -12,7 +12,7 @@ const assets={async fetch(req){
  const path=new URL(req.url).pathname;
  const file=resolve(root,'.'+decodeURIComponent(path==='/'?'/index.html':path));
  if(file!==root&&!file.startsWith(root+'/'))return new Response('Not found',{status:404});
- try{return new Response(await readFile(file),{headers:{'Content-Type':({'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript'})[extname(file)]||'application/octet-stream'}});}
+ try{return new Response(await readFile(file),{headers:{'Content-Type':({'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mp4':'video/mp4','.vtt':'text/vtt; charset=utf-8','.jpg':'image/jpeg','.json':'application/json'})[extname(file)]||'application/octet-stream'}});}
  catch{return new Response('Not found',{status:404});}
 }};
 const server=http.createServer(async(req,res)=>{

@@ -1,5 +1,5 @@
 import type {Env,Actor} from './types.js';
-import {fail,stmt,now,uid,local,digest,cookieToken} from './shared.js';
+import {fail,stmt,now,uid,local,sandbox,digest,cookieToken} from './shared.js';
 type JWK=JsonWebKey&{kid?:string};
 const keys=new Map<string,{expires:number,value:JWK[]}>();
 export function configured(env:Env){
@@ -34,6 +34,12 @@ export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:
   return {sub:payload.sub,exp:payload.exp,iss:payload.iss,...(typeof payload.email==='string'&&payload.email.length<=254?{email:payload.email}:{})};
  }catch(error){if(error instanceof Error&&'status' in error)throw error;return fail(401,'身分憑證驗證失敗');}
 }
+export async function sandboxAccess(req:Request,env:Env){
+ if(!sandbox(req,env)||!env.SANDBOX_OWNER_EMAIL)fail(503,'測試環境尚未安全設定');
+ const claim=await verifyAccess(req,env);
+ if(!claim.email||claim.email.toLowerCase()!==env.SANDBOX_OWNER_EMAIL.toLowerCase())fail(403,'此身分不能進入測試環境');
+ return claim;
+}
 export async function accessLogin(req:Request,env:Env){
  const claim=await verifyAccess(req,env);
  const user=await stmt(env,'SELECT u.id FROM auth_identities i JOIN staff_users u ON u.id=i.user_id WHERE i.issuer=? AND i.subject=? AND u.active=1',claim.iss,claim.sub).first<{id:string}>();
@@ -50,7 +56,11 @@ export async function actor(req:Request,env:Env):Promise<Actor>{
  const row=await stmt(env,'SELECT u.id,u.operator_id,u.name,u.role,u.active,s.auth_method,s.issuer,s.subject FROM sessions s JOIN staff_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1',await digest(token),now()).first<Actor&{auth_method:string;issuer:string;subject:string}>();
  if(!row)fail(401,'登入已失效或帳號已停權');
  if(isLocal){if(row.auth_method!=='demo')fail(401,'登入環境不符');}
- else {
+ else if(sandbox(req,env)){
+  if(row.auth_method!=='demo'||!row.issuer||!row.subject)fail(401,'測試登入環境不符');
+  const claim=await sandboxAccess(req,env);
+  if(row.issuer!==claim.iss||row.subject!==claim.sub)fail(401,'測試登入身分不符');
+ }else {
   if(row.auth_method!=='access')fail(401,'示範登入不可用於正式環境');
   const claim=await verifyAccess(req,env);
   if(claim.iss!==row.issuer||claim.sub!==row.subject)fail(401,'登入身分不符');

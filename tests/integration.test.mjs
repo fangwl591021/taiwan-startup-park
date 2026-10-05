@@ -242,3 +242,56 @@ test('production cannot activate a newly created staff profile before Access bin
  const activated=await call('/staff/'+created.data.id+'/status',{method:'PATCH',data:{active:true},token,cookie,environment:env,origin:env.APP_ORIGIN});
  assert.equal(activated.status,409);assert.equal(db.sqlite.prepare('SELECT active FROM staff_users WHERE id=?').get(created.data.id).active,0);
 });
+
+function sandboxEnvironment(env){
+ return {...env,APP_ENV:'sandbox',DEMO_MODE:'on',LINE_SEND_ENABLED:'off',LINE_CHANNELS_JSON:undefined,
+  APP_ORIGIN:'https://taiwan-startup-park-demo.fangwl591021.workers.dev',
+  SANDBOX_DATABASE_ID:'11111111-2222-4333-8444-555555555555',SANDBOX_OWNER_EMAIL:'simulation@example.invalid',
+  ACCESS_ISSUER:'https://sandbox-'+crypto.randomUUID()+'.cloudflareaccess.com',ACCESS_AUD:'sandbox-aud',
+  HTTP:async()=>Response.json({keys:[pub]})};
+}
+test('hosted simulation requires signed owner Access even for bootstrap, health and account list',async t=>{
+ const {env,call}=await fixture(t),s=sandboxEnvironment(env),opts={environment:s,origin:s.APP_ORIGIN};
+ for(const path of ['/bootstrap','/health','/demo/users'])assert.equal((await call(path,opts)).status,401);
+ const token=await jwt(s,{email:s.SANDBOX_OWNER_EMAIL});
+ const list=await call('/demo/users',{...opts,token});assert.equal(list.status,200);
+ assert.equal(list.data.length,8);assert(!list.data.some(x=>['platform_admin','business_admin'].includes(x.role)));
+ assert.equal((await call('/bootstrap',{...opts,token})).data.sandbox,true);
+ assert.equal((await call('/demo/users',{...opts,token:await jwt(s,{email:'other@example.invalid'})})).status,403);
+ assert.equal((await call('/demo/login',{...opts,token,method:'POST',data:{user_id:'platform'}})).status,401);
+ assert.equal((await call('/line/webhook/la',{...opts,token,method:'POST',data:{}})).status,404);
+});
+test('sandbox sessions bind verified visitor and cannot cross into production or reuse local cookies',async t=>{
+ const {env,call}=await fixture(t),s=sandboxEnvironment(env),opts={environment:s,origin:s.APP_ORIGIN},token=await jwt(s,{email:s.SANDBOX_OWNER_EMAIL});
+ const login=await call('/demo/login',{...opts,token,method:'POST',data:{user_id:'sales-a1'}});
+ assert.equal(login.status,200);assert.match(login.cookie,/HttpOnly.*Secure/);
+ const cookie=login.cookie.split(';')[0];
+ assert.equal((await call('/me',{...opts,token,cookie})).data.id,'sales-a1');
+ assert.equal((await call('/me',{...opts,token:await jwt(s,{email:s.SANDBOX_OWNER_EMAIL,sub:'different-visitor'}),cookie})).status,401);
+ const local=await call('/demo/login',{method:'POST',data:{user_id:'owner-a'}});
+ assert.equal((await call('/me',{...opts,token,cookie:local.cookie})).status,401);
+ const prod={...s,APP_ENV:'production',APP_ORIGIN:'https://production.example.invalid'};
+ assert.equal((await call('/me',{environment:prod,origin:prod.APP_ORIGIN,token,cookie})).status,401);
+ assert.equal((await call('/demo/users',{environment:prod,origin:prod.APP_ORIGIN,token})).status,404);
+});
+test('sandbox rejects production DB marker, wrong domain, missing gate secret and real LINE credentials',async t=>{
+ const {env,call}=await fixture(t),s=sandboxEnvironment(env);
+ for(const patch of [{SANDBOX_DATABASE_ID:'2c2ef714-429f-4ac2-9a4b-417a242627fb'},{SANDBOX_DATABASE_ID:undefined},{SANDBOX_OWNER_EMAIL:undefined},{LINE_SEND_ENABLED:'on'},{LINE_CHANNELS_JSON:'{}'}]){
+  const bad={...s,...patch};assert.equal((await call('/demo/users',{environment:bad,origin:s.APP_ORIGIN,token:await jwt(s,{email:s.SANDBOX_OWNER_EMAIL})})).status,503);
+ }
+ assert.equal((await call('/demo/users',{environment:s,origin:'https://taiwan-startup-park.fangwl591021.workers.dev'})).status,503);
+});
+test('sandbox uses real backend role and operator scopes across simulated accounts',async t=>{
+ const {env,call}=await fixture(t),s=sandboxEnvironment(env),token=await jwt(s,{email:s.SANDBOX_OWNER_EMAIL}),opts={environment:s,origin:s.APP_ORIGIN,token};
+ const as=async user=>{const r=await call('/demo/login',{...opts,method:'POST',data:{user_id:user}});assert.equal(r.status,200);return (path,method='GET',data)=>call(path,{...opts,cookie:r.cookie.split(';')[0],method,data});};
+ const ownerA=await as('owner-a'),ownerB=await as('owner-b'),sales=await as('sales-a1'),service=await as('service-a'),finance=await as('finance-a');
+ assert.deepEqual((await sales('/opportunities')).data.map(x=>x.id),['o1']);
+ assert.equal((await sales('/opportunities/o2')).status,404);
+ assert.equal((await sales('/admin/risk')).status,403);
+ assert.equal((await ownerA('/opportunities/ob')).status,404);
+ assert.equal((await ownerB('/businesses/b4')).status,404);
+ assert.deepEqual((await service('/tenants')).data.map(x=>x.id),['b4']);
+ assert.equal((await service('/opportunities')).status,403);
+ assert.equal((await finance('/conversations')).status,403);
+ assert.equal((await service('/staff','POST',{name:'升級權限',role:'operator_owner'})).status,403);
+});

@@ -1,6 +1,6 @@
 import type {Actor,Env,Opportunity,Statement} from './types.js';
-import {HttpError,fail,now,uid,stmt,local,digest,audit} from './shared.js';
-import {actor,accessLogin,configured} from './auth.js';
+import {HttpError,fail,now,uid,stmt,local,sandbox,demo,digest,audit} from './shared.js';
+import {actor,accessLogin,configured,sandboxAccess} from './auth.js';
 import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueueLine,dispatchOutbox,retryLine,conversationLineStatus} from './line.js';
 import {operationRoute} from './operations.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
@@ -61,10 +61,15 @@ async function agent(env:Env,a:Actor,id:unknown){
 }
 async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  const url=new URL(req.url);const path=url.pathname;const method=req.method;
+ if(env.APP_ENV==='sandbox'){
+  if(!sandbox(req,env))fail(503,'測試環境隔離檢查未通過');
+  if(path.startsWith('/api/'))await sandboxAccess(req,env);
+ }
  if(path==='/api/health')return json({ok:true,version:'0.3.0'});
- if(path==='/api/bootstrap'&&method==='GET')return json({demo:local(req,env),auth:local(req,env)?'local_demo':configured(env)?'cloudflare_access':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
+ if(path==='/api/bootstrap'&&method==='GET')return json({demo:demo(req,env),sandbox:sandbox(req,env),auth:demo(req,env)?'local_demo':configured(env)?'cloudflare_access':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
  const webhook=path.match(/^\/api\/line\/webhook\/([a-zA-Z0-9_-]+)$/);
  if(webhook&&method==='POST'){
+  if(sandbox(req,env))fail(404,'測試環境不接收真實 LINE');
   const response=await receiveWebhook(req,env,webhook[1]);
   ctx?.waitUntil(processInbox(env).catch(()=>console.error('LINE inbox processing needs recovery')));
   return response;
@@ -72,18 +77,22 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(!path.startsWith('/api/'))return env.ASSETS?env.ASSETS.fetch(req):new Response('Not found',{status:404});
  if(!['GET','HEAD','OPTIONS'].includes(method))writes(req);
  if(path==='/api/demo/users'&&method==='GET'){
-  if(!local(req,env))fail(404,'不存在');
-  return json((await stmt(env,'SELECT u.id,u.name,u.role,o.name AS operator_name FROM staff_users u JOIN operators o ON o.id=u.operator_id WHERE u.active=1 ORDER BY u.operator_id,u.id').all()).results);
+  if(!demo(req,env))fail(404,'不存在');
+  const users=(await stmt(env,'SELECT u.id,u.name,u.role,o.name AS operator_name FROM staff_users u JOIN operators o ON o.id=u.operator_id WHERE u.active=1 ORDER BY u.operator_id,u.id').all()).results;
+  return json(sandbox(req,env)?users.filter(u=>['operator_owner','operator_sales','operator_service','operator_finance'].includes(String(u.role))):users);
  }
  if(path==='/api/demo/login'&&method==='POST'){
-  if(!local(req,env))fail(404,'不存在');
+  if(!demo(req,env))fail(404,'不存在');
   const d=await body(req,['user_id']);const id=textField(d.user_id,'使用者',100);
-  const u=await stmt(env,'SELECT id FROM staff_users WHERE id=? AND active=1',id).first();
-  if(!u)fail(401,'帳號不可使用');
-  const token=uid()+uid();await stmt(env,'INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)',await digest(token),id,new Date(Date.now()+8*3600000).toISOString()).run();
-  return json({ok:true},200,{'Set-Cookie':'tsp_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800'});
+  const u=await stmt(env,'SELECT id,role FROM staff_users WHERE id=? AND active=1',id).first();
+  if(!u||sandbox(req,env)&&!['operator_owner','operator_sales','operator_service','operator_finance'].includes(String(u.role)))fail(401,'帳號不可使用');
+  const token=uid()+uid();
+  const claim=sandbox(req,env)?await sandboxAccess(req,env):null;
+  const seconds=claim?Math.max(0,Math.min(28800,claim.exp-Math.floor(Date.now()/1000))):28800;
+  await stmt(env,"INSERT INTO sessions(token_hash,user_id,expires_at,auth_method,issuer,subject) VALUES(?,?,?,'demo',?,?)",await digest(token),id,new Date(Date.now()+seconds*1000).toISOString(),claim?.iss??null,claim?.sub??null).run();
+  return json({ok:true},200,{'Set-Cookie':'tsp_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age='+seconds+(sandbox(req,env)?'; Secure':'')});
  }
- if(path==='/api/auth/access'&&method==='POST'){await body(req,[]);return accessLogin(req,env);}
+ if(path==='/api/auth/access'&&method==='POST'){if(sandbox(req,env))fail(404,'請選擇模擬帳號');await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
  const operation=await operationRoute(req,env,a,id=>getBusiness(env,a,id));if(operation)return operation;
  if(path==='/api/integrations'&&method==='GET')return json(await integrationStatus(env,a));
@@ -101,7 +110,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
 
  if(path==='/api/me'&&method==='GET'){
   const op=await stmt(env,'SELECT name FROM operators WHERE id=?',a.operator_id).first();
-  return json({...a,operator_name:op?.name,demo:local(req,env)});
+  return json({...a,operator_name:op?.name,demo:demo(req,env),sandbox:sandbox(req,env)});
  }
  if(path==='/api/logout'&&method==='POST'){
   const token=req.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith('tsp_session='))?.slice(12)||'';
@@ -130,7 +139,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   if(staffMatch[1]===a.id)fail(400,'不能停用自己的帳號');
   const target=await stmt(env,"SELECT id,active FROM staff_users WHERE operator_id=? AND id=? AND role<>'operator_owner'",a.operator_id,staffMatch[1]).first();
   if(!target)fail(404,'找不到可管理的員工');
-  if(d.active&&!local(req,env)&&!await stmt(env,'SELECT user_id FROM auth_identities WHERE user_id=? AND issuer=?',staffMatch[1],env.ACCESS_ISSUER).first())fail(409,'此人員尚未完成企業登入身分綁定，不能啟用');
+  if(d.active&&!demo(req,env)&&!await stmt(env,'SELECT user_id FROM auth_identities WHERE user_id=? AND issuer=?',staffMatch[1],env.ACCESS_ISSUER).first())fail(409,'此人員尚未完成企業登入身分綁定，不能啟用');
   await env.DB.batch([stmt(env,'UPDATE staff_users SET active=? WHERE operator_id=? AND id=?',d.active?1:0,a.operator_id,staffMatch[1]),audit(env,a,null,null,'staff_status',{user_id:staffMatch[1],active:d.active},true)]);
   return json({ok:true});
  }
@@ -296,7 +305,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   const c=await getConversation(env,a,msgMatch[1]);
   const d=await body(req,['body','idempotency_key','simulate_failure']);
   const message=textField(d.body,'訊息',2000);const key=textField(d.idempotency_key,'請求識別碼',100);
-  if(!local(req,env)){
+  if(!demo(req,env)){
    if(d.simulate_failure!==undefined)fail(400,'正式 LINE 訊息不能指定模擬狀態');
    const result=await enqueueLine(env,a,c,message,key);
    ctx?.waitUntil(dispatchOutbox(env,a.operator_id).catch(()=>console.error('LINE delivery needs recovery')));

@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +32,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y fonts-noto-cjk
           npm run test:e2e
+      - name: Record actual Chinese-captioned tutorial
+        run: |
+          sudo apt-get install -y ffmpeg
+          node scripts/record-tutorial.mjs
+      - name: Save tutorial video and transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tutorial-video
+          path: |
+            dist/public/tutorial
+            docs/tutorial
+          if-no-files-found: warn
       - name: Save build and evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -87,6 +100,31 @@ jobs:
       - name: Apply pending migrations to verified project D1
         if: steps.owner.outputs.ready == 'true'
         run: npx wrangler d1 migrations apply DB --remote --config wrangler.production.json
+      - name: Prepare independently protected simulation resources
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/sandbox-deploy.mjs prepare
+      - name: Validate isolated simulation bundle
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler deploy --config wrangler.sandbox.json --dry-run --outdir .sandbox-build
+      - name: Apply migrations only to named simulation D1
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler d1 migrations apply DB --remote --config wrangler.sandbox.json
+      - name: Prepare fictional seed without importing production
+        id: sandbox_seed
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/sandbox-deploy.mjs seed
+      - name: Initialize empty simulation D1 with fictional fixtures
+        if: steps.owner.outputs.ready == 'true' && steps.sandbox_seed.outputs.seed_required == 'true'
+        run: npx wrangler d1 execute DB --remote --config wrangler.sandbox.json --file .sandbox-seed.sql
+      - name: Publish isolated simulation Worker and private gate
+        if: steps.owner.outputs.ready == 'true'
+        run: |
+          npx wrangler deploy --config wrangler.sandbox.json
+          npx wrangler secret bulk .sandbox-secrets.json --config wrangler.sandbox.json
+          rm -f .sandbox-secrets.json
+      - name: Verify simulation protection and actual database binding
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/sandbox-deploy.mjs verify
       - name: Publish verified Worker and assets
         if: steps.owner.outputs.ready == 'true'
         run: npx wrangler deploy --config wrangler.production.json
@@ -97,5 +135,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cloudflare-deployment-metadata-${{ github.run_attempt }}
-          path: deployment-target-report.json
+          path: |
+            deployment-target-report.json
+            sandbox-resources.json
           if-no-files-found: ignore
