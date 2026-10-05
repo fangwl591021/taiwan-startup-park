@@ -1,6 +1,6 @@
 import {chromium,expect} from '@playwright/test';
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdir,writeFile,copyFile,stat,rm} from 'node:fs/promises';
+import {mkdir,writeFile,readFile,stat} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const OUT='dist/public/tutorial',RAW='.tutorial-recording',FAST=process.env.TUTORIAL_REHEARSAL==='on';
 await mkdir(OUT,{recursive:true});await mkdir(RAW,{recursive:true});
@@ -34,6 +34,8 @@ try{
   console.log('TUTORIAL_CHAPTER '+chapters.length+' '+title);await pause(ms);
  }
  async function login(id){
+  const switcher=p.getByRole('button',{name:'切換測試帳號',exact:true});
+  if(await switcher.count())await switcher.click();
   await p.goto('http://127.0.0.1:8788/');await p.getByLabel('示範身分').selectOption(id);
   await p.getByRole('button',{name:'進入示範工作台'}).click();
   await expect(p.getByRole('heading',{name:'總覽',exact:true})).toBeVisible();
@@ -150,7 +152,8 @@ try{
  assert((await stat(mp4)).size<24*1024*1024,'MP4 exceeds Worker asset limit');
  execFileSync('ffmpeg',['-y','-ss','18','-i',mp4,'-frames:v','1',OUT+'/poster.jpg'],{stdio:'ignore'});
  await mkdir('docs/tutorial',{recursive:true});
- for(const seconds of [18,65,125])execFileSync('ffmpeg',['-y','-ss',String(seconds),'-i',mp4,'-frames:v','1','docs/tutorial/frame-'+seconds+'.jpg'],{stdio:'ignore'});
+ for(const seconds of [18,65,125])execFileSync('ffmpeg',['-y','-ss',String(seconds),'-i',mp4,'-frames:v','1','-q:v','6','docs/tutorial/frame-'+seconds+'.jpg'],{stdio:'ignore'});
+ for(const seconds of [65,125])console.log('TUTORIAL_PREVIEW_'+seconds+' '+(await readFile('docs/tutorial/frame-'+seconds+'.jpg')).toString('base64'));
  const stamp=s=>{const ms=Math.round(s*1000),h=Math.floor(ms/3600000),m=Math.floor(ms/60000)%60,sec=Math.floor(ms/1000)%60;return [h,m,sec].map(x=>String(x).padStart(2,'0')).join(':')+'.'+String(ms%1000).padStart(3,'0');};
  let vtt='WEBVTT\n\n';chapters.forEach((c,i)=>vtt+=(i+1)+'\n'+stamp(c.seconds)+' --> '+stamp(chapters[i+1]?.seconds??end)+'\n'+c.title+'：'+c.detail+'\n\n');
  await writeFile(OUT+'/captions.vtt',vtt);
