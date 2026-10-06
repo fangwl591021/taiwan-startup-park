@@ -14,7 +14,7 @@ permissions:
   actions: read
 concurrency:
   group: taiwan-startup-park-production-release
-  cancel-in-progress: ${{ github.event.head_commit.message == 'ci: defer tutorial recording and preserve published media' }}
+  cancel-in-progress: "${{ startsWith(github.event.head_commit.message, 'ci-defer-tutorial') }}"
 jobs:
   build:
     runs-on: ubuntu-latest
