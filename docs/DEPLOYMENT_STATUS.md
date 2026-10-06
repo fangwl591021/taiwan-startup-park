@@ -1,3 +1,32 @@
+# 目前版本：大字與可收合工作台
+
+2026-10-06 08:26（Asia/Taipei）已更新正式與獨立測試區。
+
+- 桌面頁首可收合／展開側欄；收合為圖示後仍有完整無障礙名稱及提示，手機維持抽屜導航。
+- 工作台主要區塊及彈出視窗段落提供展開／收合；租戶的企業數位服務租用預設收起，先呈現承辦與維運入口。
+- 主要文字與表單為 16–18px，輔助文字至少 14px；手機欄數、換行、表單與關閉按鈕調整。瀏覽器只記住版面偏好，不保存客戶資料或權限。
+- 依使用者指示暫不製作教學影片。先前錄影流程的發布已取消，本次沿用已上線 run 37391789253 的影片與字幕；新的發布 run 明確跳過錄影。一般 push 不再自動重錄。
+- 借址第一期範圍、後端權限與既有資料保持不變；LINE、金流與 AI 尚未串接，數位功能不收費、不開通，分潤欄位全為 NULL／待議定。
+
+## 本次發布證據
+
+- Source commit：89e4cedf093a1c5e8f86e112cb3c9588eb194f13
+- 正式 Worker：607a37e5-7d55-4973-99c1-414b18be0f41（100%）
+- 獨立測試 Worker：12d29316-54f0-4724-97fe-e372982842c7（100%）
+- [建置、驗收及部署全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37393823430)
+- [桌面／手機截圖與驗收報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37393823430/artifacts/11382320856)
+- [實際環境、資料隔離、分潤欄位與部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37393823430/artifacts/11382415838)
+- 72 項後端及 14 項桌面／手機測試通過。新增檢查涵蓋側欄收合增加內容寬度、重新載入保存偏好、區塊收合與恢復、租戶維運入口可操作、字體大小與無橫向溢出。
+- 新截圖：desktop-dashboard-folded.png、mobile-dashboard-folded.png、desktop-sidebar-folded.png、desktop-tenant-large-text.png、mobile-tenant-large-text.png。
+- 第一次版面驗收的教學連結測試使用舊圖示文字名稱，更新為語意名稱後通過；未移除權限檢查或降低驗收。
+- 2026-10-06T00:26:33.661Z 發布後核對：兩區實際 D1 binding 分離、每業者四組數位條件完整且全部空白、LINE 外送關閉、未登入 /api/me 均 Access HTTP 302。
+- UI 驗收使用本機虛構資料；未代替本人完成正式網站已登入的瀏覽器驗收。原始 PLATFORM_BLUEPRINT.md 完整保留。
+- 詳細操作及影片延期決策：[READABLE_LAYOUT.md](READABLE_LAYOUT.md)。
+
+---
+
+## 先前發布紀錄
+
 # 第一期借址版本發布紀錄
 
 2026-10-06 08:07（Asia/Taipei）：正式工作台、獨立測試區及新版借址教學影片已發布完成。
