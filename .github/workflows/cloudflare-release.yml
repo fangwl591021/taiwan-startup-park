@@ -26,6 +26,7 @@ jobs:
           npm audit --audit-level=high
           npm run worker:check
           node scripts/auth-runtime-check.mjs
+          node --check scripts/phase-one-release-check.mjs
       - name: Browser and mobile acceptance
         run: |
           npx playwright install --with-deps chromium
@@ -131,6 +132,9 @@ jobs:
         run: npx wrangler deploy --config wrangler.production.json
       - name: Check unauthenticated boundary
         run: node scripts/deployment.mjs smoke
+      - name: Verify deployed address-only environments and blank revenue terms
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/phase-one-release-check.mjs
       - name: Save deployment metadata
         if: always()
         uses: actions/upload-artifact@v4
@@ -139,4 +143,5 @@ jobs:
           path: |
             deployment-target-report.json
             sandbox-resources.json
+            phase-one-release-report.json
           if-no-files-found: ignore
