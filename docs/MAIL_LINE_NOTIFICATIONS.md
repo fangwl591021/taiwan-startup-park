@@ -11,19 +11,19 @@
 4. 登記信件、公文或包裹後，按「預覽 LINE 收件通知」核對企業、摘要及台北時間。
 5. 更換／解除綁定需留下原因，保留實際操作者及版本歷程。
 
-LINE 搜尋用 ID 和 Messaging API 的 provider 範圍 userId 不同；不接受手動填入 userId。來客需符合 U + 32 個小寫十六進位字元，並存在該 operator／channel／user 的已驗簽 follow 或 message 事件。不把聊天文字中的 ID 當作身分依據。介面只回傳遮罩識別碼及不超過 120 字的最近訊息，候選最多 50 位，管理員可搜尋。同一位來客可代表多家企業，每家租戶先設定一位主要通知聯絡人；後续可擴充多人／角色授權。
+LINE 搜尋用 ID 和 Messaging API 的 provider 範圍 userId 不同；不接受手動填入 userId。來客需符合 U + 32 個小寫十六進位字元，並存在該 operator／channel／user 的已驗簽 follow 或 message 事件。不把聊天文字中的 ID 當作身分依據。介面只回傳遮罩識別碼及不超過 120 字的最近訊息，候選最多 50 位，管理員可搜尋。同一位來客可代表多家企業，每家租戶先設定一位主要通知聯絡人；後續可擴充多人／角色授權。
 
 ## 本次未啟用實際推播
 所有通知狀態固定為 not_enabled／preparation_only，預覽 sent:false。
-沒有呼叫 LINE HTTP、沒有建立外送佇列、沒有假造「已通知」「送達」「已讀」，不改變收件狀態。即使一般聊天室 LINE_SEND_ENABLED=on，郵件預覽仍不发送。
-預覽亦保留已交付／退回件的歷史內容並明確提示。後续正式推播需另外實作：通道憑證與啟用確認、收件通知專用佇列、冪等及重試、recipient/channel/tenant 再核對、封鎖／退訂處理、營運配額及人工回報。LINE API 接受訊息不等於對方收到或已讀。
+沒有呼叫 LINE HTTP、沒有建立外送佇列、沒有假造「已通知」「送達」「已讀」，不改變收件狀態。即使一般聊天室 LINE_SEND_ENABLED=on，郵件預覽仍不發送。
+預覽亦保留已交付／退回件的歷史內容並明確提示。後續正式推播需另外實作：通道憑證與啟用確認、收件通知專用佇列、冪等及重試、recipient/channel/tenant 再核對、封鎖／退訂處理、營運配額及人工回報。LINE API 接受訊息不等於對方收到或已讀。
 
 ## 權限與資料
 新增 0007_mail_line_recipients.sql。無自動回填或通知。
 operator 與 business/contact/actor 使用組合外鍵；每家 tenant 唯一設定，解除不刪除歷程。
 原 tenant 存取範圍先執行；只有 operator_owner 可選擇候選、綁定、更換／解除。具權限的業務／維運可看遮罩聯絡人與預覽；未指派人員及跨業者無法存取。財務／平台管理／企業管理不可讀取此通知端點。
 寫入需有效 JSON、白名單欄位、非空姓名／依據及精確版本；失敗或 stale 不新增假操作紀錄。不向前端、audit detail 暴露完整 LINE userId、channel secret 或 token。
-既有 LINE 接收／聊天室傳送及 AI 模組不作啟用變更。保留完整 PLATFORM_BLUEPRINT.md 後续規劃。
+既有 LINE 接收／聊天室傳送及 AI 模組不作啟用變更。保留完整 PLATFORM_BLUEPRINT.md 後續規劃。
 
 ## 驗收
 新增 5 項使用真實 SQLite 與 HMAC webhook 的後端測試，涵蓋已觀察來源、operator/assignment/role 隔離、版本與 audit、跨租戶收件隔離、零 HTTP／零 outbox 及同聯絡人多企業。
@@ -33,3 +33,12 @@ UI 候選與綁定資料使用局部 route mock，避免在未串接示範環境
 官方參考：
 - https://developers.line.biz/en/docs/messaging-api/getting-user-ids/
 - https://developers.line.biz/en/docs/messaging-api/sending-messages/
+
+## 發布驗收紀錄
+- 2026-10-06 11:14（Asia/Taipei）發布成功，source 48bb738be0a588eb67f0e0e0ec48b5facaf3811a。
+- 建置、型別檢查、84 項後端、20 項桌面／手機驗收、Worker dry run 與發布成功：https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174
+- 桌面／手機綁定與預覽截圖：https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174/artifacts/11387114157
+- 發布後環境檢查與 metadata：https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174/artifacts/11387119312
+- 正式 active：6a45a94a-3c9e-4da9-b55d-eab786785c9f；獨立測試 active：07f625c9-3617-4506-b6dd-e193f601176a。
+- 2026-10-06T03:14:33.973Z 確認兩區實際 D1 分離、LINE 外送 off、分潤全 NULL、未登入 API Access 302。0007 在兩個專用 D1 成功套用。沒有重設／回填正式資料、沒有發送訊息。
+- 正式已登入瀏覽器驗收仍需管理員登入；截圖使用本機虛構資料及通知 UI 的局部 mock，不表示正式 LINE 已連通。教學影片未重錄。

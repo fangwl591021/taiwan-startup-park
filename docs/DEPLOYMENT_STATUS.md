@@ -1,3 +1,22 @@
+# 目前版本：郵件代收 LINE 聯絡人綁定與通知預覽
+
+2026-10-06 11:14（Asia/Taipei）正式與獨立測試區已更新。
+
+- 租戶詳情及「租戶維運台 → 信件包裹」新增主要通知聯絡人設定；使用業者自己的 LINE OA，與租戶後續租用自己的 LINE OA 分開。
+- 管理員從本業者已驗簽接收的來客中選擇，確認姓名與企業授權；更換／解除皆有操作者與版本歷程。一般 LINE ID 不作為推播識別碼，不開放手填 userId。前端與 audit 不暴露完整 LINE 身分或憑證。
+- 每筆收件可預覽企業、摘要及台北時間，固定「僅預覽／未發送」。實際 LINE 接收需先完成業者通道設定；郵件推播尚未啟用，沒有 HTTP 送出或外送佇列，不改收件狀態。
+- 0007_mail_line_recipients.sql 在正式與測試專用 D1 成功套用；新增受 operator／tenant／contact／actor 外鍵約束的綁定表與索引，未回填、清除或導入正式資料。
+- 借址第一期、合約條件、付款台帳、深色大字條列與收合保留。官網／商城／租戶 LINE OA／CRM 仍為後續服務，平台費與分潤全 NULL；完整原始藍圖保留。[規格與驗收界線](MAIL_LINE_NOTIFICATIONS.md)。
+- [84 項後端、20 項桌面／手機驗收與發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174)。
+- [桌面／手機截圖及完整報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174/artifacts/11387114157)：desktop/mobile-mail-line-binding.png、desktop/mobile-mail-notification-preview.png。
+- Source：48bb738be0a588eb67f0e0e0ec48b5facaf3811a；正式 active：6a45a94a-3c9e-4da9-b55d-eab786785c9f；測試 active：07f625c9-3617-4506-b6dd-e193f601176a。
+- 2026-10-06T03:14:33.973Z 發布後確認實際 DB 綁定與隔離、LINE 外送 off、分潤全 NULL、兩區未登入 API Access 302。[發布證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174/artifacts/11387119312)。
+- 未代替管理員登入正式瀏覽器；通知 UI 截圖使用局部 mock，身分來源／權限／零發送由 SQLite 與 HMAC webhook 後端測試驗證。教學影片沿用原版，錄影步驟 skipped。
+
+---
+
+## 先前發布紀錄
+
 # 目前版本：合約服務起迄與付款約定
 
 2026-10-06 10:46（Asia/Taipei）正式與獨立測試區已更新。
