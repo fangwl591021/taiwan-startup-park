@@ -19,6 +19,10 @@ export function database(path=':memory:'){
  }
  if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='businesses_tenant_page'").get())
   sqlite.exec(readFileSync(new URL('../migrations/0005_workspace_paging_indexes.sql',import.meta.url),'utf8'));
+ if(!sqlite.prepare('PRAGMA table_info(address_contracts)').all().some(c=>c.name==='term_kind')){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0006_contract_service_terms.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
  function prepare(sql,values=[]){
   const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return {results:st.all(...values),meta:{changes:0}};
    const r=st.run(...values);return {results:[],meta:{changes:Number(r.changes)}};};

@@ -275,8 +275,12 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/tenants'&&method==='GET'){
   const s=bizScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);
-  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select:"b.*,u.name AS service_owner_name,(SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status='requested') AS request_count",from:'businesses b LEFT JOIN staff_users u ON u.id=b.service_owner_id',where:s.sql+' AND b.is_tenant=1 AND b.name LIKE ?',args:[...s.args,'%'+q+'%'],time:'b.created_at',id:'b.id',timeKey:'created_at'}));
-  return json((await stmt(env,'SELECT b.*,u.name AS service_owner_name,(SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status=\'requested\') AS request_count FROM businesses b LEFT JOIN staff_users u ON u.id=b.service_owner_id WHERE '+s.sql+' AND b.is_tenant=1 AND b.name LIKE ? ORDER BY b.created_at DESC',...s.args,'%'+q+'%').all()).results);
+  const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+  const select="b.*,u.name AS service_owner_name,c.status AS contract_status,c.starts_on AS service_starts_on,c.ends_on AS service_ends_on,c.term_kind,c.payment_cycle,l.name AS location_name,(SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status='requested') AS request_count";
+  const from="businesses b LEFT JOIN staff_users u ON u.id=b.service_owner_id LEFT JOIN address_contracts c ON c.id=(SELECT ac.id FROM address_contracts ac WHERE ac.operator_id=b.operator_id AND ac.business_id=b.id ORDER BY CASE WHEN ac.status='active' AND ac.starts_on<='"+today+"' AND ac.ends_on>='"+today+"' THEN 0 WHEN ac.status='active' AND ac.starts_on>'"+today+"' THEN 1 WHEN ac.status='active' THEN 2 WHEN ac.status='draft' THEN 3 ELSE 4 END,ac.ends_on DESC,ac.id DESC LIMIT 1) AND c.operator_id=b.operator_id LEFT JOIN locations l ON l.id=c.location_id AND l.operator_id=b.operator_id";
+  const where=s.sql+' AND b.is_tenant=1 AND b.name LIKE ?';
+  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select,from,where,args:[...s.args,'%'+q+'%'],time:'b.created_at',id:'b.id',timeKey:'created_at'}));
+  return json((await stmt(env,'SELECT '+select+' FROM '+from+' WHERE '+where+' ORDER BY b.created_at DESC',...s.args,'%'+q+'%').all()).results);
  }
  const bizMatch=path.match(/^\/api\/businesses\/([^/]+)$/);
  if(bizMatch&&method==='GET'){

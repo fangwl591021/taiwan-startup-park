@@ -17,6 +17,13 @@ function integer(v:unknown,label:string,min=0,max=1000000000){if(typeof v!=='num
 function day(v:unknown,label='日期'){const value=text(v,label,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value+'T00:00:00Z').toISOString().slice(0,10)!==value||value<'2000-01-01'||value>'2199-12-31')fail(400,label+'格式不正確');return value;}
 export const taipeiDay=(time=Date.now())=>new Date(time+8*3600000).toISOString().slice(0,10);
 const addDays=(d:string,n:number)=>new Date(Date.parse(d+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
+const termKinds=['monthly','annual','two_year','custom'];
+const paymentCycles=['once','monthly','quarterly','half_yearly','yearly','custom'];
+const mailServices=['included','excluded','by_agreement'];
+function contractTerms(d:Row,fallback:Row={}){
+ const pick=(key:string,allowed:string[])=>{const v=d[key]===undefined?fallback[key]:d[key];if(v===undefined||v===null||v==='')return null;if(typeof v!=='string'||!allowed.includes(v))fail(400,'合約服務條件不正確');return v;};
+ return {term_kind:pick('term_kind',termKinds),payment_cycle:pick('payment_cycle',paymentCycles),mail_service:pick('mail_service',mailServices)};
+}
 function period(start:unknown,end:unknown){const s=day(start,'開始日'),e=day(end,'結束日');if(e<s)fail(400,'結束日不可早於開始日');return [s,e];}
 async function body(req:Request,keys:string[]):Promise<Row>{
  if(!req.headers.get('content-type')?.includes('application/json'))fail(415,'請使用 JSON');
@@ -128,9 +135,20 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
   const r=await commit(env,[stmt(env,'UPDATE service_plans SET active=?,version=version+1 WHERE id=? AND operator_id=? AND version=?',d.active?1:0,plan[1],a.operator_id,integer(d.version,'版本',1)),audit(env,a,null,null,'plan_status_changed',{id:plan[1],active:d.active},true)]);
   if(!r[0].meta.changes)fail(409,'方案已異動或不存在');return json({ok:true});
  }
- const match=path.match(/^\/api\/businesses\/([^/]+)\/(operations|contracts|subscriptions|invoices|mail|tickets|entitlements)(?:\/([^/]+))?(?:\/(renew|ledger|check))?$/);
+ const match=path.match(/^\/api\/businesses\/([^/]+)\/(operations|service-summary|contracts|subscriptions|invoices|mail|tickets|entitlements)(?:\/([^/]+))?(?:\/(renew|ledger|check|terms))?$/);
  if(!match)return null;
  const [,biz,kind,id,action]=match;const b=await tenant(getBusiness,biz);
+ if(kind==='service-summary'&&method==='GET'&&!id){
+  const today=taipeiDay();
+  const contracts=(await stmt(env,"SELECT c.*,l.name AS location_name,l.address FROM address_contracts c JOIN locations l ON l.id=c.location_id AND l.operator_id=c.operator_id WHERE c.operator_id=? AND c.business_id=? ORDER BY CASE WHEN c.status='active' AND c.starts_on<=? AND c.ends_on>=? THEN 0 WHEN c.status='active' AND c.starts_on>? THEN 1 WHEN c.status='active' THEN 2 WHEN c.status='draft' THEN 3 ELSE 4 END,c.ends_on DESC,c.id DESC LIMIT 5",a.operator_id,biz,today,today,today).all<Row>()).results;
+  const visible=contracts.map(c=>{
+   const r=clean(c);if(!financialRead.includes(a.role))delete r.amount;
+   return {...r,period_status:today<c.starts_on?'scheduled':today>c.ends_on?'expired':'current',
+    remaining_days:Math.round((Date.parse(c.ends_on+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000)};
+  });
+  const records=(await stmt(env,'SELECT id,module,plan_name,status,starts_on,ends_on FROM subscriptions WHERE operator_id=? AND business_id=? ORDER BY created_at DESC,id DESC LIMIT 20',a.operator_id,biz).all<Row>()).results;
+  return json({contracts:visible,digital_records:records,digital:{status:'not_connected',pricing:'unagreed',enabled:false},as_of:today});
+ }
  if(kind==='operations'&&method==='GET'&&!id){
   const none=()=>stmt(env,'SELECT NULL WHERE 0');
   const [results,rights]=await Promise.all([env.DB.batch([
@@ -151,18 +169,24 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
  }
  if(kind==='contracts'){
   if(method==='POST'&&!id){
-   role(a,salesRoles);const d=await body(req,['location_id','starts_on','ends_on','amount','note','request_key']);
+   role(a,salesRoles);const d=await body(req,['location_id','starts_on','ends_on','amount','note','request_key','term_kind','payment_cycle','mail_service']);
    const location=text(d.location_id,'據點',100),[start,end]=period(d.starts_on,d.ends_on);
-   const data={location_id:location,starts_on:start,ends_on:end,amount:integer(d.amount,'合約總額'),note:text(d.note??'','備註',1000,true)};
+   const data={location_id:location,starts_on:start,ends_on:end,amount:integer(d.amount,'合約總額'),...contractTerms(d),note:text(d.note??'','備註',1000,true)};
    if(!await stmt(env,'SELECT id FROM locations WHERE id=? AND operator_id=? AND active=1',location,a.operator_id).first())fail(400,'據點不屬於本業者或已停用');
    return create(env,a,biz,'address_contracts',data,d.request_key,'contract_created');
   }
   if(id){
    const c=await row(env,a,'address_contracts',biz,id);
    if(method==='POST'&&action==='renew'){
-    role(a,salesRoles);const d=await body(req,['version','starts_on','ends_on','amount','request_key']);
+    role(a,salesRoles);const d=await body(req,['version','starts_on','ends_on','amount','request_key','term_kind','payment_cycle','mail_service']);
     const [start,end]=period(d.starts_on,d.ends_on);if(c.status==='draft'||start<=c.ends_on)fail(409,'續約須接續既有確認合約，期間不可重疊');
-    return create(env,a,biz,'address_contracts',{location_id:c.location_id,starts_on:start,ends_on:end,amount:integer(d.amount,'合約總額'),renewal_of:c.id},d.request_key,'contract_renewal_created',{sql:"EXISTS(SELECT 1 FROM address_contracts WHERE id=? AND operator_id=? AND version=?)",args:[c.id,a.operator_id,integer(d.version,'版本',1)]});
+    return create(env,a,biz,'address_contracts',{location_id:c.location_id,starts_on:start,ends_on:end,amount:integer(d.amount,'合約總額'),...contractTerms(d,c),renewal_of:c.id},d.request_key,'contract_renewal_created',{sql:"EXISTS(SELECT 1 FROM address_contracts WHERE id=? AND operator_id=? AND version=?)",args:[c.id,a.operator_id,integer(d.version,'版本',1)]});
+   }
+   if(method==='PATCH'&&action==='terms'){
+    role(a,ownerRoles);if(c.status==='ended')fail(409,'已終止合約只保留歷程，不可修改服務條件');
+    const d=await body(req,['version','term_kind','payment_cycle','mail_service','note']);
+    const note=text(d.note,'變更依據',1000);if(integer(d.version,'版本',1)!==c.version)fail(409,'合約已異動，請重新整理');
+    return change(env,a,biz,'address_contracts',c,d.version,{...contractTerms(d,c),note},'contract_terms_changed');
    }
    if(method==='PATCH'&&!action){
     role(a,ownerRoles);const d=await body(req,['version','status','reference','note']);

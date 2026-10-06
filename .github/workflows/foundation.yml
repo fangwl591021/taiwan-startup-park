@@ -1,7 +1,7 @@
 name: Platform acceptance
 on:
   push:
-    branches: [feature/foundation, feature/line-integration, feature/tenant-operations, feature/phase1-address-scope, feature/workspace-performance]
+    branches: [feature/foundation, feature/line-integration, feature/tenant-operations, feature/phase1-address-scope, feature/workspace-performance, feature/tenant-service-clarity]
   pull_request:
     branches: [main, docs/platform-blueprint, feature/foundation, feature/line-integration]
 permissions:

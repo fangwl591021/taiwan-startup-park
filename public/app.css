@@ -145,3 +145,37 @@ button:disabled{opacity:1;color:#46594c;background:#edf1ee}
 .list-pagination>div{display:flex;gap:8px}.list-pagination button{font-size:16px;padding:7px 12px}
 .chat-list .list-pagination{padding:12px;min-width:175px;align-content:center}
 @media(max-width:600px){.list-pagination{padding:12px 14px}.list-pagination button{padding:7px 10px}}
+
+/* Contract-first tenant detail, compact lists, dark readable labels. */
+.tenant-row-period{display:block;width:100%;font-size:14px;color:#35483d;overflow-wrap:anywhere}
+.tenant-contract-list{margin:0}.tenant-contract{padding:16px 0;border-bottom:1px solid #dfe7e2}
+.tenant-contract-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.tenant-contract-heading>div{min-width:0}.tenant-contract h4{margin:0 0 6px;font-size:21px;color:#203329}
+.tenant-contract-heading p{margin:0;color:#35483d;overflow-wrap:anywhere}
+.tenant-service-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:14px 0}
+.tenant-service-facts>div{display:grid;grid-template-columns:145px minmax(0,1fr);gap:10px;padding:9px 12px 9px 0;border-bottom:1px solid #e3e9e5;align-items:start;min-width:0}
+.tenant-service-facts dt{font-size:16px;color:#35483d}.tenant-service-facts dd{margin:0;font-size:18px;font-weight:600;color:#203329;overflow-wrap:anywhere}
+.tenant-service-facts .fact-wide{grid-column:1 / -1}
+.tenant-detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.tenant-missing{padding:16px;border:1px solid #d8e3dc;border-radius:8px;background:#f7faf8;color:#203329}
+.tenant-missing p{margin:8px 0 12px;color:#35483d}.tenant-missing b{font-size:20px}
+.tenant-contact-list>div{display:flex;gap:12px;flex-wrap:wrap;padding:8px 0;color:#203329}
+.tenant-assignee{display:flex;gap:12px;align-items:end}.tenant-assignee label{flex:1}.tenant-assignee button{margin-bottom:2px}
+.tenant-digital-list.service-grid{display:block;margin:0}
+.tenant-digital-list>article{display:block;box-shadow:none;padding:14px 0;border:0;border-radius:0;border-bottom:1px solid #dfe7e2}
+.tenant-digital-list>article>div{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tenant-digital-list h4{margin:0;font-size:20px;color:#203329}
+.tenant-digital-list p{margin:6px 0;color:#35483d!important}
+.tenant-digital-list dl{margin:6px 0}.tenant-digital-list dl>div{display:flex;gap:12px;padding:4px 0}
+.tenant-digital-list dt{min-width:85px;color:#35483d;font-size:16px}.tenant-digital-list dd{margin:0;color:#203329;font-size:17px;overflow-wrap:anywhere}
+.tenant-overview-contracts{margin-bottom:20px}.tenant-overview-contracts .tenant-contract-list,.tenant-overview-contracts .tenant-missing{margin:0 20px 16px}
+.tenant-overview-contracts .tenant-contract:last-child{border-bottom:0}
+@media(max-width:1100px){.tenant-row{min-height:95px}.tenant-row-period{font-size:13px}}
+@media(max-width:600px){
+ .tenant-row{gap:5px 8px;padding:10px 14px}.tenant-row-period{font-size:13px}
+ .tenant-service-facts{grid-template-columns:1fr}.tenant-service-facts>div{grid-template-columns:135px minmax(0,1fr);padding:8px 0;gap:8px}
+ .tenant-service-facts dd{font-size:17px}.tenant-service-facts dt{font-size:16px}
+ .tenant-contract-heading{flex-wrap:wrap}.tenant-assignee{flex-wrap:wrap}.tenant-assignee label{flex-basis:100%}
+ .tenant-digital-list dl>div{align-items:flex-start}.tenant-digital-list dd{font-size:16px}
+ .tenant-overview-contracts .tenant-contract-list,.tenant-overview-contracts .tenant-missing{margin-inline:16px}
+}
