@@ -34,4 +34,10 @@
 新增後端驗收：未知舊資料、服務條件獨立、enum 白名單、跨業者／承辦隔離、維運角色金額遮蔽、版控與實際操作人員、續約沿用及重試、終止只讀、摘要數量上限及索引。
 新增桌面／手機驗收：日期優先、未知條件、年約／月繳、郵件內容、數位後續狀態、月底起迄建議與畫面無橫向溢出。
 截圖：desktop/mobile-tenant-service-summary.png、desktop/mobile-tenant-contract-terms.png。
-驗收與發布結果以 GitHub Actions 執行結果補登。
+- 正式與獨立測試工作台已於 2026-10-06T02:46:42.673Z 更新，0006_contract_service_terms.sql 在兩個專用 D1 成功套用；未重設或匯入正式資料。
+- [發布建置、79 後端及 18 桌面／手機驗收全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113)。
+- [桌面／手機截圖與完整報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113/artifacts/11387071367)。
+- Source：fcb9d7b02b830cf0e796bf8730320c9595df9d6b。
+- 正式 Worker active：111b9d82-fe7e-44be-8c9b-9feaf3b0cc2d；測試 Worker active：fb82f36a-d691-427e-a56e-624183edc2c8。
+- 發布後檢查兩區實際 DB 綁定及環境隔離、分潤值全 NULL、LINE 外送 off、未登入 API Access 302。未以使用者的企業身分代登入正式瀏覽器；畫面驗收使用虛構本機資料。
+- 教學錄製步驟 skipped，沿用已發布媒體。

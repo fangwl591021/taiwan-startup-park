@@ -1,3 +1,23 @@
+# 目前版本：合約服務起迄與付款約定
+
+2026-10-06 10:46（Asia/Taipei）正式與獨立測試區已更新。
+
+- 租戶清單依實際合約顯示起迄與服務狀態，未建合約不再一律顯示服務中。詳情先呈現據點、地址、日期、合約類型、付款週期、郵件內容與到期／續約提示，聯絡及承辦紀錄置後；保留條列、深色大字及收合。
+- 合約類型與付款週期獨立，支持年約按月付款等約定。舊條件為 NULL／待補；管理員可依版本及變更依據補登，保留實際操作者。續約可沿用，終止紀錄只讀。
+- 0006_contract_service_terms.sql 在正式與測試專用 D1 成功套用；只新增 nullable 欄位與索引，未刪除、重設或導入正式資料。
+- 一次性代辦與借址年約明確區分；獨立代辦／押金台帳尚未提供。付款週期本輪是約定紀錄，現有應收仍是本期總額台帳，可分次人工記錄實收，不自動拆月帳單、扣款或續約。
+- 數位服務逐項呈現期間與收費規劃。第一期不開放數位收費或開通，分潤與平台費全 NULL／待議定。原始藍圖及後續需求保留；[研究與驗收界線](TENANT_SERVICE_CLARITY.md)。
+- [建置、79 後端及 18 桌面／手機驗收、發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113)。
+- [桌面／手機截圖及完整報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113/artifacts/11387071367)：desktop/mobile-tenant-service-summary.png、desktop/mobile-tenant-contract-terms.png。
+- Source：fcb9d7b02b830cf0e796bf8730320c9595df9d6b。
+- 正式 Worker active：111b9d82-fe7e-44be-8c9b-9feaf3b0cc2d；測試 Worker active：fb82f36a-d691-427e-a56e-624183edc2c8。
+- 2026-10-06T02:46:42.673Z 發布後已確認實際 DB 綁定與環境隔離、LINE 外送 off、分潤全 NULL、兩區未登入 API Access 302；[部署證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113/artifacts/11387616244)。未代替使用者登入正式瀏覽器；畫面驗收使用本機虛構資料。
+- 教學影片沿用原版，錄影步驟 skipped。
+
+---
+
+## 先前發布紀錄
+
 # 目前版本：按需載入、快取與列表分頁
 
 2026-10-06 08:55（Asia/Taipei）正式與獨立測試區已更新。
