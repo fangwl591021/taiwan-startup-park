@@ -288,7 +288,7 @@ function digitalServiceRows(b:Row,id:string){
  return '<div class="service-grid tenant-digital-list" role="list">'+Object.entries(moduleNames).map(([key,name])=>{
   const req=b.services.find((s:Row)=>s.module===key&&s.status==='requested');
   const record=(b.digital_records||[]).find((r:Row)=>r.module===key);
-  return '<article role="listitem"><div><h4>'+e(name)+'</h4>'+badge(req?(futureDigital()?'申請中':'既有需求紀錄'):'後續功能',req?'amber':'')+'</div><p>尚未串接 · 未開通 · 分潤待議定</p><dl><div><dt>服務起迄</dt><dd>'+e(record?'既有預覽紀錄：'+record.starts_on+' ～ '+record.ends_on+'（未開通）':'未訂閱，尚無服務期間')+'</dd></div><div><dt>收費方式</dt><dd>月租／年租與平台分潤待議定</dd></div></dl>'+(canRequest()?req?'<button data-cancel="'+e(req.id)+'" data-business="'+e(id)+'">取消申請</button>':'<button data-module="'+key+'" data-business="'+e(id)+'">提出需求</button>':'')+'</article>';
+  return '<article role="listitem"><div><h4>'+e(name)+'</h4>'+badge(req?(futureDigital()?'申請中':'既有需求紀錄'):'後續功能',req?'amber':'')+'</div><p>尚未串接 · 未開通 · 分潤待議定</p><dl><div><dt>服務起迄</dt><dd>'+e(record?'既有預覽紀錄：'+record.starts_on+' ～ '+record.ends_on+'（未開通）':'尚未開通，服務期間待確認')+'</dd></div><div><dt>收費方式</dt><dd>月租／年租與平台分潤待議定</dd></div></dl>'+(canRequest()?req?'<button data-cancel="'+e(req.id)+'" data-business="'+e(id)+'">取消申請</button>':'<button data-module="'+key+'" data-business="'+e(id)+'">提出需求</button>':'')+'</article>';
  }).join('')+'</div>';
 }
 async function showTenant(id:string){
