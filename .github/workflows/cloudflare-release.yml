@@ -4,11 +4,17 @@ on:
     branches: [release/cloudflare]
     paths-ignore: ['docs/DEPLOYMENT_STATUS.md']
   workflow_dispatch:
+    inputs:
+      record_tutorial:
+        description: 'Only record a new tutorial when explicitly requested'
+        type: boolean
+        default: false
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: taiwan-startup-park-production-release
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event.head_commit.message == 'ci: defer tutorial recording and preserve published media' }}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,7 +39,23 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y fonts-noto-cjk
           npm run test:e2e
+      - name: Download previously published tutorial without recording
+        if: github.event_name != 'workflow_dispatch' || inputs.record_tutorial != true
+        uses: actions/download-artifact@v4
+        with:
+          name: tutorial-video
+          run-id: 37391789253
+          github-token: ${{ github.token }}
+          path: .retained-tutorial
+      - name: Preserve published tutorial media
+        if: github.event_name != 'workflow_dispatch' || inputs.record_tutorial != true
+        run: |
+          test -s .retained-tutorial/dist/public/tutorial/taiwan-startup-park-tutorial.mp4
+          mkdir -p dist/public docs
+          cp -a .retained-tutorial/dist/public/tutorial dist/public/
+          cp -a .retained-tutorial/docs/tutorial docs/
       - name: Record actual Chinese-captioned tutorial
+        if: github.event_name == 'workflow_dispatch' && inputs.record_tutorial == true
         run: |
           sudo apt-get install -y ffmpeg
           TUTORIAL_REHEARSAL=on node scripts/record-tutorial.mjs
