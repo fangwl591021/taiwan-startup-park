@@ -24,6 +24,22 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
    await page.getByRole('button',{name:'展開側欄',exact:true}).click();
   }
   await nav('租戶管理');
+  const rows=page.locator('.tenant-list .tenant-row');
+  await expect(rows.first()).toBeVisible();
+  const firstName=await rows.first().locator('.tenant-name').innerText();
+  const bounds=await rows.first().boundingBox();expect(bounds.height).toBeLessThanOrEqual(width>760?110:200);
+  const contrast=await rows.first().locator('.tenant-field-label').first().evaluate(el=>{
+   const c=getComputedStyle(el).color.match(/[\d.]+/g).slice(0,3).map(Number).map(n=>{const x=n/255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4});
+   return 1.05/(c[0]*.2126+c[1]*.7152+c[2]*.0722+.05);
+  });expect(contrast).toBeGreaterThanOrEqual(7);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:'docs/screenshots/'+name+'-tenant-compact-dark.png',fullPage:true});
+  await page.getByRole('textbox',{name:'搜尋租戶'}).fill('不存在的租戶條列驗收');
+  await page.getByRole('button',{name:'搜尋',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'尚無符合的租戶'})).toBeVisible();
+  await page.getByRole('textbox',{name:'搜尋租戶'}).fill(firstName);
+  await page.getByRole('button',{name:'搜尋',exact:true}).click();
+  await expect(page.locator('.tenant-list .tenant-row')).toHaveCount(1);
   await page.locator('.tenant-card').first().click();
   const dialog=page.getByRole('dialog');
   await expect(dialog.getByRole('button',{name:'開啟租戶維運台 →'})).toBeVisible();
