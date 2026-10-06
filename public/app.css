@@ -140,3 +140,8 @@ button:disabled{opacity:1;color:#46594c;background:#edf1ee}
  .tenant-open{grid-column:3;grid-row:1 / span 3;font-size:15px}
  .tenant-name{font-size:18px}.tenant-row .company-icon{width:30px;height:30px}
 }
+
+.list-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid #dfe7e2;font-size:15px;color:#35483d;flex-wrap:wrap}
+.list-pagination>div{display:flex;gap:8px}.list-pagination button{font-size:16px;padding:7px 12px}
+.chat-list .list-pagination{padding:12px;min-width:175px;align-content:center}
+@media(max-width:600px){.list-pagination{padding:12px 14px}.list-pagination button{padding:7px 10px}}

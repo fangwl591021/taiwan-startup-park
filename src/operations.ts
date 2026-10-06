@@ -62,19 +62,16 @@ async function change(env:Env,a:Actor,biz:string,table:string,current:Row,versio
  return json({ok:true,version:v+1});
 }
 const balanceSQL="COALESCE((SELECT SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END) FROM ledger_entries le WHERE le.receivable_id=r.id AND le.operator_id=r.operator_id),0)";
+const billView=(r:Row)=>({...clean(r),balance:r.amount-r.net_received,payment_status:r.status==='void'?'void':r.net_received===r.amount?'paid':r.net_received>0?'partial':'unpaid',overdue:r.status==='open'&&r.net_received<r.amount&&r.due_on<taipeiDay()});
 async function bills(env:Env,a:Actor,biz:string){
- return (await stmt(env,'SELECT r.*,'+balanceSQL+' AS net_received FROM receivables r WHERE r.operator_id=? AND r.business_id=? ORDER BY r.created_at DESC',a.operator_id,biz).all<Row>()).results.map(r=>({...clean(r),balance:r.amount-r.net_received,payment_status:r.status==='void'?'void':r.net_received===r.amount?'paid':r.net_received>0?'partial':'unpaid',overdue:r.status==='open'&&r.net_received<r.amount&&r.due_on<taipeiDay()}));
-}
-async function paidForSubscription(env:Env,a:Actor,s:Row){
- if(s.amount===0)return true;
- return !!await stmt(env,"SELECT r.id FROM receivables r WHERE r.operator_id=? AND r.business_id=? AND r.subscription_id=? AND r.kind='digital' AND r.status='open' AND r.amount=? AND "+balanceSQL+">=r.amount",a.operator_id,s.business_id,s.id,s.amount).first();
+ return (await stmt(env,'SELECT r.*,'+balanceSQL+' AS net_received FROM receivables r WHERE r.operator_id=? AND r.business_id=? ORDER BY r.created_at DESC',a.operator_id,biz).all<Row>()).results.map(billView);
 }
 export async function entitlements(env:Env,a:Actor,biz:string,dayNow=taipeiDay()){
- const subscriptions=(await stmt(env,'SELECT * FROM subscriptions WHERE operator_id=? AND business_id=? ORDER BY starts_on DESC,created_at DESC',a.operator_id,biz).all<Row>()).results;
+ const subscriptions=(await stmt(env,'SELECT s.*,CASE WHEN s.amount=0 OR EXISTS(SELECT 1 FROM receivables r WHERE r.operator_id=s.operator_id AND r.business_id=s.business_id AND r.subscription_id=s.id AND r.kind=\'digital\' AND r.status=\'open\' AND r.amount=s.amount AND '+balanceSQL+'>=r.amount) THEN 1 ELSE 0 END AS payment_covered FROM subscriptions s WHERE s.operator_id=? AND s.business_id=? ORDER BY s.starts_on DESC,s.created_at DESC',a.operator_id,biz).all<Row>()).results;
  const rows=[];
  for(const s of subscriptions){
   const inPeriod=s.starts_on<=dayNow&&s.ends_on>=dayNow;
-  const paid=await paidForSubscription(env,a,s);
+  const paid=!!s.payment_covered;
   const eligible=digitalPreview(env)&&inPeriod&&(s.status==='trial'||s.status==='active'&&paid);
   rows.push({subscription_id:s.id,module:s.module,plan_name:s.plan_name,status:s.status,starts_on:s.starts_on,ends_on:s.ends_on,
    period_status:dayNow<s.starts_on?'scheduled':dayNow>s.ends_on?'expired':'current',
@@ -100,8 +97,11 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
  }
  if(path==='/api/operations/catalog'&&method==='GET'){
   role(a,['operator_owner','operator_sales','operator_service','operator_finance']);
-  const locations=(await stmt(env,'SELECT * FROM locations WHERE operator_id=? ORDER BY name',a.operator_id).all()).results;
-  const plans=(await stmt(env,'SELECT * FROM service_plans WHERE operator_id=? ORDER BY created_at DESC',a.operator_id).all<Row>()).results;
+  const results=await env.DB.batch([
+   stmt(env,'SELECT * FROM locations WHERE operator_id=? ORDER BY name',a.operator_id),
+   stmt(env,'SELECT * FROM service_plans WHERE operator_id=? ORDER BY created_at DESC',a.operator_id)
+  ]);
+  const locations=results[0].results,plans=results[1].results;
   return json({phase:'address_only',digital_preview:digitalPreview(env),locations,plans:a.role==='operator_service'?plans.map(({amount,...p})=>p):plans});
  }
  if(path==='/api/operations/locations'&&method==='POST'){
@@ -128,12 +128,18 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
  if(!match)return null;
  const [,biz,kind,id,action]=match;const b=await tenant(getBusiness,biz);
  if(kind==='operations'&&method==='GET'&&!id){
-  const contracts=(await stmt(env,'SELECT c.*,l.name AS location_name,l.address FROM address_contracts c JOIN locations l ON l.id=c.location_id AND l.operator_id=c.operator_id WHERE c.operator_id=? AND c.business_id=? ORDER BY c.created_at DESC',a.operator_id,biz).all<Row>()).results;
-  const subs=(await stmt(env,'SELECT * FROM subscriptions WHERE operator_id=? AND business_id=? ORDER BY created_at DESC',a.operator_id,biz).all<Row>()).results;
-  const mail=serviceRoles.includes(a.role)?(await stmt(env,'SELECT * FROM mail_items WHERE operator_id=? AND business_id=? ORDER BY created_at DESC',a.operator_id,biz).all<Row>()).results:[];
-  const tickets=serviceRoles.includes(a.role)?(await stmt(env,'SELECT * FROM maintenance_tickets WHERE operator_id=? AND business_id=? ORDER BY created_at DESC',a.operator_id,biz).all<Row>()).results:[];
+  const none=()=>stmt(env,'SELECT NULL WHERE 0');
+  const [results,rights]=await Promise.all([env.DB.batch([
+   stmt(env,'SELECT c.*,l.name AS location_name,l.address FROM address_contracts c JOIN locations l ON l.id=c.location_id AND l.operator_id=c.operator_id WHERE c.operator_id=? AND c.business_id=? ORDER BY c.created_at DESC',a.operator_id,biz),
+   stmt(env,'SELECT * FROM subscriptions WHERE operator_id=? AND business_id=? ORDER BY created_at DESC',a.operator_id,biz),
+   serviceRoles.includes(a.role)?stmt(env,'SELECT * FROM mail_items WHERE operator_id=? AND business_id=? ORDER BY created_at DESC',a.operator_id,biz):none(),
+   serviceRoles.includes(a.role)?stmt(env,'SELECT * FROM maintenance_tickets WHERE operator_id=? AND business_id=? ORDER BY created_at DESC',a.operator_id,biz):none(),
+   financialRead.includes(a.role)?stmt(env,'SELECT r.*,'+balanceSQL+' AS net_received FROM receivables r WHERE r.operator_id=? AND r.business_id=? ORDER BY r.created_at DESC',a.operator_id,biz):none()
+  ]),entitlements(env,a,biz)]);
+  const [contracts,subs,mail,tickets,invoices]=results.map(r=>r.results);
   const visible=(r:Row)=>{const x=clean(r);if(a.role==='operator_service')delete x.amount;return x;};
-  return json({business:{id:b.id,name:b.name,service_owner_id:b.service_owner_id},contracts:contracts.map(r=>({...visible(r),period_status:taipeiDay()<r.starts_on?'scheduled':taipeiDay()>r.ends_on?'expired':'current'})),subscriptions:subs.map(visible),invoices:financialRead.includes(a.role)?await bills(env,a,biz):null,mail:mail.map(clean),tickets:tickets.map(clean),entitlements:await entitlements(env,a,biz)});
+  return json({business:{id:b.id,name:b.name,service_owner_id:b.service_owner_id},contracts:contracts.map(r=>({...visible(r),period_status:taipeiDay()<r.starts_on?'scheduled':taipeiDay()>r.ends_on?'expired':'current'})),subscriptions:subs.map(visible),invoices:financialRead.includes(a.role)?invoices.map(billView):null,mail:mail.map(clean),tickets:tickets.map(clean),entitlements:rights});
+
  }
  if(kind==='entitlements'&&method==='GET'){
   if(id&&action==='check'){if(!moduleKeys.includes(id))fail(400,'功能不正確');await requireEntitlement(env,a,biz,id);return json({enabled:false});}

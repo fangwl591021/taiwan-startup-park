@@ -55,15 +55,90 @@ function enhanceLayout(container:HTMLElement){
   makeFold(section,heading,[me?.id||'visitor',page,container===dialog?'modal':'page',name].join(':'),name!=='企業數位服務租用'||futureDigital());
  });
 }
-const layoutObserver=new MutationObserver(()=>{enhanceLayout(root);enhanceLayout(dialog);});
+const layoutObserver=new MutationObserver(records=>{
+ let mainChanged=false,modalChanged=false;
+ for(const record of records)for(const node of record.addedNodes){
+  if(!(node instanceof HTMLElement))continue;
+  if(!node.matches('.shell,.modal-inner,.panel:not([data-fold-ready]),.section-title:not([data-fold-title])')&&!node.querySelector('.panel:not([data-fold-ready]),.section-title:not([data-fold-title])'))continue;
+  if(dialog.contains(node))modalChanged=true;else if(root.contains(node))mainChanged=true;
+ }
+ if(mainChanged)enhanceLayout(root);if(modalChanged)enhanceLayout(dialog);
+});
 layoutObserver.observe(root,{childList:true,subtree:true});
 layoutObserver.observe(dialog,{childList:true,subtree:true});
 
+
+let readEpoch=0,viewRevision=0;
+const readCache=new Map<string,{until:number;data:any}>();
+const pendingReads=new Map<string,{epoch:number;promise:Promise<any>}>();
+const READ_TTL=15000;
+function clearReads(){readEpoch++;readCache.clear();pendingReads.clear();}
 async function api(path:string,method='GET',data?:Row):Promise<any>{
- const response=await fetch('/api'+path,{method,headers:method==='GET'?{}:{'Content-Type':'application/json','X-Requested-With':'tsp'},...(data?{body:JSON.stringify(data)}:{})});
- const value=await response.json();
- if(!response.ok)throw new Error(value.error||'操作失敗');return value;
+ const reading=method==='GET';
+ if(!reading)clearReads();
+ const epoch=readEpoch;
+ if(reading){
+  const hit=readCache.get(path);if(hit&&hit.until>Date.now())return hit.data;
+  const pending=pendingReads.get(path);if(pending&&pending.epoch===epoch)return pending.promise;
+ }
+ const task=(async()=>{
+  try{
+   const response=await fetch('/api'+path,{method,headers:reading?{}:{'Content-Type':'application/json','X-Requested-With':'tsp'},...(data?{body:JSON.stringify(data)}:{})});
+   const value=await response.json();
+   if(!response.ok){if(response.status===401||response.status===403)clearReads();throw new Error(value.error||'操作失敗');}
+   if(reading){
+    if(epoch!==readEpoch)throw new DOMException('資料已更新','AbortError');
+    readCache.delete(path);while(readCache.size>=48)readCache.delete(readCache.keys().next().value!);readCache.set(path,{until:Date.now()+READ_TTL,data:value});
+   }
+   return value;
+  }finally{if(!reading)clearReads();}
+ })();
+ const promise:Promise<any>=task.finally(()=>{if(pendingReads.get(path)?.promise===promise)pendingReads.delete(path);});
+ if(reading)pendingReads.set(path,{epoch,promise});
+ return promise;
 }
+let dashboardSnapshot:Row;
+const listMeta:Row={},listIndex:Row={pipeline:0,tenants:0,chat:0},listCursors:Row={pipeline:[null],tenants:[null],chat:[null]};
+function resetList(kind:string){if(listCursors[kind]){listCursors[kind]=[null];listIndex[kind]=0;}}
+function listPath(kind:string){
+ const base=({pipeline:'/opportunities',tenants:'/tenants',chat:'/conversations'} as Row)[kind];
+ const params=new URLSearchParams({paged:'1',limit:'50'});
+ const cursor=listCursors[kind][listIndex[kind]];if(cursor)params.set('cursor',cursor);
+ if(kind!=='chat'&&search)params.set('q',search);
+ if(kind==='pipeline'&&filter)params.set('stage',filter);
+ return base+'?'+params.toString();
+}
+function pagination(kind:string){
+ const meta=listMeta[kind];if(!meta)return '';
+ return '<div class="list-pagination" aria-label="列表分頁"><span>共 '+e(meta.total)+' 筆 · 第 '+(listIndex[kind]+1)+' 頁</span><div><button data-list-page="'+kind+'" data-direction="previous" '+(listIndex[kind]===0?'disabled':'')+'>上一頁</button><button data-list-page="'+kind+'" data-direction="next" '+(!meta.next_cursor?'disabled':'')+'>下一頁</button></div></div>';
+}
+async function loadPageData(){
+ const current=page,revision=++viewRevision;
+ if(current==='dashboard'){
+  const result=await api('/dashboard');if(revision!==viewRevision||page!==current)return false;
+  dashboardSnapshot=result.stats;opps=result.opportunities;
+ }else if(['pipeline','tenants','chat'].includes(current)){
+  const [result,summary]=await Promise.all([api(listPath(current)),current==='pipeline'?api('/dashboard'):Promise.resolve(null)]);
+  if(revision!==viewRevision||page!==current)return false;
+  listMeta[current]=result;
+  if(current==='pipeline'){opps=result.items;dashboardSnapshot=summary.stats;}
+  if(current==='tenants')tenants=result.items;
+  if(current==='chat')chats=result.items;
+ }else if(current==='operations'||current==='integrations'){
+  const result=await api('/tenants?paged=1&limit=50');
+  if(revision!==viewRevision||page!==current)return false;tenants=result.items;
+  if(current==='operations'&&opsBusiness&&!tenants.some(t=>t.id===opsBusiness)){
+   const selected=await api('/businesses/'+encodeURIComponent(opsBusiness));
+   if(revision!==viewRevision||page!==current)return false;tenants=[selected,...tenants];
+  }
+  if(current==='integrations'&&chatView()){
+   const result=await api('/conversations?paged=1&limit=50');
+   if(revision!==viewRevision||page!==current)return false;chats=result.items;
+  }
+ }
+ return revision===viewRevision&&page===current;
+}
+
 function toast(message:string){const el=document.querySelector('#toast')!;el.textContent=message;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4500);}
 function badge(label:string,tone=''){return '<span class="badge '+e(tone)+'">'+e(label)+'</span>';}
 function empty(title:string,detail:string,action=''){return '<div class="empty"><span class="empty-icon">＋</span><h3>'+e(title)+'</h3><p>'+e(detail)+'</p>'+action+'</div>';}
@@ -82,18 +157,32 @@ async function loginScreen(){
  root.innerHTML='<main class="login"><div class="brand-mark">園</div><p class="eyebrow">TAIWAN STARTUP PARK</p><h1>讓每一次成交<br>成為長期的服務關係</h1><p>業者工作台 · 租戶維運驗收版</p><form id="login-form"><label>選擇測試身分<select name="user_id" aria-label="示範身分">'+users.map((u:Row)=>'<option value="'+e(u.id)+'" '+(u.id==='owner-a'?'selected':'')+'>'+e(u.operator_name+' / '+u.name)+'</option>').join('')+'</select></label><button class="primary" type="submit">進入示範工作台</button><p class="form-error" role="alert"></p></form><div class="notice">純虛構資料 · '+(config.sandbox?'獨立測試資料庫，僅限授權管理員':'僅限本機')+'<br>LINE、金流與 AI 尚未串接。</div><p><a href="/tutorial.html">觀看操作教學影片 →</a></p><p class="fine">公司工作通訊將記錄操作人員與服務歷程，供授權管理與服務品質核查；不包含私人通訊。</p></main>';
 }
 async function start(){
- try{me=await api('/me');staff=await api('/staff');await refresh();}
+ try{const identity=await Promise.all([api('/me'),api('/staff')]);me=identity[0];staff=identity[1];await refresh();}
  catch(err){if(me&&['platform_admin','business_admin'].includes(me.role)){root.innerHTML='<main class="login"><h1>此角色尚未開放工作台</h1><p>目前不提供跨業者存取。</p><button data-action="logout">登出</button></main>';}else await loginScreen();}
 }
-async function refresh(){
- const [o,t,c]=await Promise.all([salesView()?api('/opportunities'):Promise.resolve([]),api('/tenants'),chatView()?api('/conversations'):Promise.resolve([])]);
- opps=o;tenants=t;chats=c;render();
+async function refresh(force=false){
+ if(force)clearReads();
+ if(await loadPageData())render();
 }
-function render(){
+function render(loading=false){
  const nav=[['dashboard','▦','總覽'],...(salesView()?[['pipeline','↗','成交追蹤']]:[]),['tenants','▤','租戶管理'],...(chatView()?[['chat','◌','工作聊天室']]:[]),...(owner()?[['catalog','▣','據點與方案'],['activity','≡','操作歷程'],['staff','♙','操作人員'],['integrations','⇄','整合中心'],['risk','◇','管理員專區']]:[])];
  const title=page==='operations'?'租戶維運':nav.find(n=>n[0]===page)?.[2]||'總覽';
- root.innerHTML='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar" id="workspace-sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span class="brand-label">台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]||page==='operations'&&n[0]==='tenants'?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+' aria-label="'+n[2]+'" title="'+n[2]+'"><span aria-hidden="true">'+n[1]+'</span><b class="nav-label">'+n[2]+'</b></button>').join('')+'</nav><div class="learning-links"><a href="/tutorial.html" aria-label="操作教學影片" title="操作教學影片"><span aria-hidden="true">▶</span><span class="link-label">操作教學影片</span></a>'+(me.sandbox?'<a href="https://taiwan-startup-park.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="返回正式工作台" title="返回正式工作台"><span aria-hidden="true">↗</span><span class="link-label">返回正式工作台</span></a>':owner()?'<a href="https://taiwan-startup-park-demo.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="開啟測試帳號模擬" title="開啟測試帳號模擬"><span aria-hidden="true">↗</span><span class="link-label">開啟測試帳號模擬</span></a>':'')+'</div><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'獨立測試環境':'企業工作環境')+'<small>Operations · 借址第一期</small></div></aside><div class="workspace"><header class="topbar"><button class="sidebar-toggle" data-action="sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="收合側欄" title="收合側欄">⇤</button><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>TEST DEMO</span>虛構示範資料 · '+(futureDigital()?'後續數位流程本機預覽 · ':'第一期借址 · ')+(me.sandbox?'與正式資料分開 · ':'')+'LINE／金流尚未串接 · AI 尚未啟用 <button class="text-button" data-action="logout">切換測試帳號</button>':'<span>WORKSPACE</span>第一期 · 借址服務 · LINE／金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',operations:'合約、帳務與日常服務，一次掌握。',catalog:'第一期管理登記據點；數位合作與分潤欄位預留。',risk:'僅總管理員可存取的獨立工作區。'} as Row)[page])+'</p></div>' +headingActions()+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
+ const shellHtml='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar" id="workspace-sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span class="brand-label">台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]||page==='operations'&&n[0]==='tenants'?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+' aria-label="'+n[2]+'" title="'+n[2]+'"><span aria-hidden="true">'+n[1]+'</span><b class="nav-label">'+n[2]+'</b></button>').join('')+'</nav><div class="learning-links"><a href="/tutorial.html" aria-label="操作教學影片" title="操作教學影片"><span aria-hidden="true">▶</span><span class="link-label">操作教學影片</span></a>'+(me.sandbox?'<a href="https://taiwan-startup-park.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="返回正式工作台" title="返回正式工作台"><span aria-hidden="true">↗</span><span class="link-label">返回正式工作台</span></a>':owner()?'<a href="https://taiwan-startup-park-demo.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="開啟測試帳號模擬" title="開啟測試帳號模擬"><span aria-hidden="true">↗</span><span class="link-label">開啟測試帳號模擬</span></a>':'')+'</div><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'獨立測試環境':'企業工作環境')+'<small>Operations · 借址第一期</small></div></aside><div class="workspace"><header class="topbar"><button class="sidebar-toggle" data-action="sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="收合側欄" title="收合側欄">⇤</button><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>TEST DEMO</span>虛構示範資料 · '+(futureDigital()?'後續數位流程本機預覽 · ':'第一期借址 · ')+(me.sandbox?'與正式資料分開 · ':'')+'LINE／金流尚未串接 · AI 尚未啟用 <button class="text-button" data-action="logout">切換測試帳號</button>':'<span>WORKSPACE</span>第一期 · 借址服務 · LINE／金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',operations:'合約、帳務與日常服務，一次掌握。',catalog:'第一期管理登記據點；數位合作與分潤欄位預留。',risk:'僅總管理員可存取的獨立工作區。'} as Row)[page])+'</p></div>' +headingActions()+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
+ if(!root.querySelector('.shell'))root.innerHTML=shellHtml;
+ else {
+  const template=document.createElement('template');template.innerHTML=shellHtml;
+  root.querySelector('.crumb')!.innerHTML=template.content.querySelector('.crumb')!.innerHTML;
+  root.querySelector('.page-heading')!.innerHTML=template.content.querySelector('.page-heading')!.innerHTML;
+  root.querySelectorAll<HTMLElement>('.nav-item').forEach(item=>{
+   const active=item.dataset.page===page||page==='operations'&&item.dataset.page==='tenants';
+   item.classList.toggle('active',active);if(active)item.setAttribute('aria-current','page');else item.removeAttribute('aria-current');
+  });
+  root.querySelector('.shell')?.classList.remove('menu-open');
+ }
+ applySidebar();
+
  const content=document.querySelector('#content')!;
+ if(loading){content.innerHTML='<p class="loading">正在載入資料…</p>';return;}
  if(page==='dashboard')content.innerHTML=dashboard();
  if(page==='pipeline')content.innerHTML=pipeline();
  if(page==='tenants')content.innerHTML=tenantList();
@@ -115,24 +204,24 @@ function headingActions(){
 function dashboard(){
  const open=opps.filter(o=>!['won','lost'].includes(o.stage));
  const stages=['contact','onboarding','billing','won'];
- return '<div class="metrics"><article><span>進行中案件</span><strong>'+open.length+'<small>件</small></strong><p>持續跟進每一次機會</p></article><article><span>待核對收款</span><strong>'+opps.filter(o=>o.payment_status==='unpaid'&&['billing','won'].includes(o.stage)).length+'<small>件</small></strong><p>案件階段與收款分開管理</p></article><article><span>服務中租戶</span><strong>'+tenants.length+'<small>家</small></strong><p>沿用成交企業與聯絡人</p></article><article><span>功能申請中</span><strong>'+tenants.reduce((s,t)=>s+t.request_count,0)+'<small>項</small></strong><p>整合未串接，尚未開通</p></article></div><div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>成交進度</h2><button class="text-button" data-page="pipeline" '+(!salesView()?'disabled':'')+'>查看全部 →</button></div><div class="funnel">'+stages.map((s,i)=>'<div><span class="step-number">0'+(i+1)+'</span><b>'+stageNames[s]+'</b><strong>'+opps.filter(o=>o.stage===s).length+'</strong><small>件案件</small></div>').join('')+'</div><div class="panel-heading"><h2>下一步，值得關注</h2><span class="muted">依跟進時間</span></div>'+caseRows(open.slice().sort((a,b)=>(a.followup_at||'z').localeCompare(b.followup_at||'z')).slice(0,4))+'</section><section class="panel service-intro"><span class="section-icon">✧</span><p class="eyebrow">CONTINUING THE CONNECTION</p><h2>先做好借址登記<br>接續長期服務</h2><p>第一期管理借址成交、合約、收款與租戶維運；官網、商城及 LINE OA 串接保留為後續功能。</p><div class="mini-services"><span>品牌官網</span><span>獨立商城</span><span>LINE OA</span><span>CRM</span></div><button data-page="tenants">管理租戶與申請 →</button><small>數位分潤標準待議定，不收費、不開通。</small></section></div><section class="integration-panel"><div><h2>整合狀態</h2><p>連線設定完成前，所有操作均為本地驗收。</p></div><div>'+badge(me.demo?'LINE OA · 尚未串接':'LINE OA · 依對話設定')+badge('金流 · 尚未串接')+badge('AI · 尚未啟用')+'</div></section>';
+ return '<div class="metrics"><article><span>進行中案件</span><strong>'+(dashboardSnapshot?.open_count||0)+'<small>件</small></strong><p>持續跟進每一次機會</p></article><article><span>待核對收款</span><strong>'+(dashboardSnapshot?.pending_payment_count||0)+'<small>件</small></strong><p>案件階段與收款分開管理</p></article><article><span>服務中租戶</span><strong>'+(dashboardSnapshot?.tenant_count||0)+'<small>家</small></strong><p>沿用成交企業與聯絡人</p></article><article><span>功能申請中</span><strong>'+(dashboardSnapshot?.request_count||0)+'<small>項</small></strong><p>整合未串接，尚未開通</p></article></div><div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>成交進度</h2><button class="text-button" data-page="pipeline" '+(!salesView()?'disabled':'')+'>查看全部 →</button></div><div class="funnel">'+stages.map((s,i)=>'<div><span class="step-number">0'+(i+1)+'</span><b>'+stageNames[s]+'</b><strong>'+(dashboardSnapshot?.stage_counts[s]||0)+'</strong><small>件案件</small></div>').join('')+'</div><div class="panel-heading"><h2>下一步，值得關注</h2><span class="muted">依跟進時間</span></div>'+caseRows(open.slice().sort((a,b)=>(a.followup_at||'z').localeCompare(b.followup_at||'z')).slice(0,4))+'</section><section class="panel service-intro"><span class="section-icon">✧</span><p class="eyebrow">CONTINUING THE CONNECTION</p><h2>先做好借址登記<br>接續長期服務</h2><p>第一期管理借址成交、合約、收款與租戶維運；官網、商城及 LINE OA 串接保留為後續功能。</p><div class="mini-services"><span>品牌官網</span><span>獨立商城</span><span>LINE OA</span><span>CRM</span></div><button data-page="tenants">管理租戶與申請 →</button><small>數位分潤標準待議定，不收費、不開通。</small></section></div><section class="integration-panel"><div><h2>整合狀態</h2><p>連線設定完成前，所有操作均為本地驗收。</p></div><div>'+badge(me.demo?'LINE OA · 尚未串接':'LINE OA · 依對話設定')+badge('金流 · 尚未串接')+badge('AI · 尚未啟用')+'</div></section>';
 }
 function caseRows(rows:Row[]){
  if(!rows.length)return empty('目前沒有案件','建立客戶與案件，或調整搜尋與階段篩選。',seller()?'<button class="primary" data-action="new">新增第一筆案件</button>':'');
  return '<div class="case-list">'+rows.map(o=>'<button class="case-row" data-opp="'+e(o.id)+'"><span class="company-icon">'+e(o.business_name.slice(0,1))+'</span><span class="case-main"><strong>'+e(o.business_name)+'</strong><small>'+e(o.next_action||o.title)+'</small></span><span class="case-owner">'+e(o.owner_name)+'<small>'+e(date(o.followup_at))+'</small></span>'+badge(stageNames[o.stage],o.stage==='won'?'green':'')+'<span class="row-arrow">›</span></button>').join('')+'</div>';
 }
 function pipeline(){
- const rows=opps.filter(o=>(!filter||o.stage===filter)&&(!search||(o.business_name+o.title).toLowerCase().includes(search.toLowerCase())));
- return '<section class="panel"><div class="list-toolbar"><div class="tabs">'+['',...Object.keys(stageNames)].map(s=>'<button data-filter="'+s+'" class="'+(filter===s?'selected':'')+'">'+(s?stageNames[s]:'全部')+' <small>'+opps.filter(o=>!s||o.stage===s).length+'</small></button>').join('')+'</div><form id="search-form" class="search"><input name="q" aria-label="搜尋案件" placeholder="搜尋企業或案件" value="'+e(search)+'"><button type="submit" aria-label="搜尋">⌕</button></form></div><div class="list-caption"><span>企業 / 下一步</span><span>負責人 · 跟進時間 · 階段</span></div>'+caseRows(rows)+'</section>';
+ const rows=opps;
+ return '<section class="panel"><div class="list-toolbar"><div class="tabs">'+['',...Object.keys(stageNames)].map(s=>'<button data-filter="'+s+'" class="'+(filter===s?'selected':'')+'">'+(s?stageNames[s]:'全部')+' <small>'+(s?dashboardSnapshot?.stage_counts[s]||0:Object.values(dashboardSnapshot?.stage_counts||{}).reduce((n:number,v:any)=>n+Number(v),0))+'</small></button>').join('')+'</div><form id="search-form" class="search"><input name="q" aria-label="搜尋案件" placeholder="搜尋企業或案件" value="'+e(search)+'"><button type="submit" aria-label="搜尋">⌕</button></form></div><div class="list-caption"><span>企業 / 下一步</span><span>負責人 · 跟進時間 · 階段</span></div>'+caseRows(rows)+pagination('pipeline')+'</section>';
 }
 function tenantList(){
- const rows=tenants.filter(t=>!search||t.name.toLowerCase().includes(search.toLowerCase()));
- return '<section class="panel tenant-panel"><div class="panel-heading"><h2>租戶企業 <span class="count">'+tenants.length+'</span></h2>'+(tenants.length?'<button data-operations="'+e(tenants[0].id)+'">租戶維運台 →</button>':'')+'<form id="search-form" class="search"><input name="q" aria-label="搜尋租戶" placeholder="搜尋企業" value="'+e(search)+'"><button type="submit" aria-label="搜尋">⌕</button></form></div>'+(rows.length?'<ul class="tenant-list" aria-label="租戶企業列表">'+rows.map(t=>'<li><button class="tenant-card tenant-row" data-tenant="'+e(t.id)+'"><span class="tenant-company"><span class="company-icon" aria-hidden="true">'+e(t.name.slice(0,1))+'</span><strong class="tenant-name">'+e(t.name)+'</strong></span><span class="tenant-status">'+badge('服務中租戶','green')+badge('功能未開通')+'</span><span class="tenant-owner"><span class="tenant-field-label">服務承辦</span><strong>'+e(t.service_owner_name||'尚未指派')+'</strong></span><span class="tenant-requests"><span class="tenant-field-label">功能申請</span><strong>'+e(t.request_count)+' 項</strong></span><span class="tenant-open" aria-hidden="true">查看 ›</span></button></li>').join('')+'</ul>':empty('尚無符合的租戶','可建檔既有租戶；新成交客戶仍透過案件轉為租戶。',owner()?'<div class="empty-actions"><button class="primary" data-action="new-tenant">新增既有租戶</button><button data-page="catalog">設定據點與方案</button></div>':seller()?'<button class="primary" data-action="new">建立客戶案件</button>':''))+'</section>';
+ const rows=tenants;
+ return '<section class="panel tenant-panel"><div class="panel-heading"><h2>租戶企業 <span class="count">'+(listMeta.tenants?.total??tenants.length)+'</span></h2>'+(tenants.length?'<button data-operations="'+e(tenants[0].id)+'">租戶維運台 →</button>':'')+'<form id="search-form" class="search"><input name="q" aria-label="搜尋租戶" placeholder="搜尋企業" value="'+e(search)+'"><button type="submit" aria-label="搜尋">⌕</button></form></div>'+(rows.length?'<ul class="tenant-list" aria-label="租戶企業列表">'+rows.map(t=>'<li><button class="tenant-card tenant-row" data-tenant="'+e(t.id)+'"><span class="tenant-company"><span class="company-icon" aria-hidden="true">'+e(t.name.slice(0,1))+'</span><strong class="tenant-name">'+e(t.name)+'</strong></span><span class="tenant-status">'+badge('服務中租戶','green')+badge('功能未開通')+'</span><span class="tenant-owner"><span class="tenant-field-label">服務承辦</span><strong>'+e(t.service_owner_name||'尚未指派')+'</strong></span><span class="tenant-requests"><span class="tenant-field-label">功能申請</span><strong>'+e(t.request_count)+' 項</strong></span><span class="tenant-open" aria-hidden="true">查看 ›</span></button></li>').join('')+'</ul>':empty('尚無符合的租戶','可建檔既有租戶；新成交客戶仍透過案件轉為租戶。',owner()?'<div class="empty-actions"><button class="primary" data-action="new-tenant">新增既有租戶</button><button data-page="catalog">設定據點與方案</button></div>':seller()?'<button class="primary" data-action="new">建立客戶案件</button>':''))+pagination('tenants')+'</section>';
 }
 function chatShell(){
  if(!chats.length)return empty('目前沒有可存取的對話','建立案件後即可管理工作對話。LINE 未串接時不會發送訊息。',seller()?'<button class="primary" data-action="new">建立案件與對話</button>':'');
  if(!chats.some(c=>c.id===selectedChat))selectedChat=chats[0].id;
- return '<section class="panel chat-layout"><div class="chat-list"><h2>工作對話 <span class="count">'+chats.length+'</span></h2>'+chats.map(c=>'<button data-chat="'+e(c.id)+'" class="'+(selectedChat===c.id?'selected':'')+'"><span class="company-icon">'+e(c.business_name.slice(0,1))+'</span><span><b>'+e(c.business_name)+'</b><small>'+e(c.preview||'尚無訊息')+'</small></span></button>').join('')+'</div><div id="chat-detail" class="chat-detail"><p class="loading">載入對話…</p></div></section>';
+ return '<section class="panel chat-layout"><div class="chat-list"><h2>工作對話 <span class="count">'+(listMeta.chat?.total??chats.length)+'</span></h2>'+chats.map(c=>'<button data-chat="'+e(c.id)+'" class="'+(selectedChat===c.id?'selected':'')+'"><span class="company-icon">'+e(c.business_name.slice(0,1))+'</span><span><b>'+e(c.business_name)+'</b><small>'+e(c.preview||'尚無訊息')+'</small></span></button>').join('')+pagination('chat')+'</div><div id="chat-detail" class="chat-detail"><p class="loading">載入對話…</p></div></section>';
 }
 async function loadChat(){
  if(!selectedChat)return;
@@ -164,12 +253,12 @@ function newStaff(){
  showModal('<p class="eyebrow">STAFF PROFILE</p><h2>新增操作人員</h2><p class="muted">先建立人員資料。新增後為待綁定登入，完成企業身分綁定前不能登入或負責案件。</p><form id="staff-form"><label>人員姓名<input name="name" required maxlength="100"></label><label>人員角色<select name="role"><option value="operator_sales">業務</option><option value="operator_service">維運</option><option value="operator_finance">財務</option></select></label><p class="form-error" role="alert"></p><button class="primary" type="submit">新增人員資料</button></form>');
 }
 async function showOpportunity(id:string){
- const o=await api('/opportunities/'+id);const events=await api('/activity?business_id='+encodeURIComponent(o.business_id));const business=await api('/businesses/'+o.business_id);
+ const o=await api('/opportunities/'+id);const [events,business]=await Promise.all([api('/activity?business_id='+encodeURIComponent(o.business_id)),api('/businesses/'+o.business_id)]);
  const canEdit=seller();const canPay=['operator_owner','operator_finance'].includes(me.role);
  showModal('<p class="eyebrow">OPPORTUNITY</p><h2>'+e(business.name)+'</h2><p>'+e(o.title)+'</p><div class="detail-badges">'+badge(stageNames[o.stage],'green')+badge(o.payment_status==='paid'?'人工核對已收款':'尚未收款',o.payment_status==='paid'?'green':'amber')+badge('LINE／金流尚未串接')+'</div><p class="muted">'+o.contacts.map((c:Row)=>e(c.name)+' · '+e(c.phone)+' · '+e(c.email)).join('<br>')+'</p><form id="edit-form" data-id="'+e(o.id)+'" data-version="'+o.version+'"><div class="form-grid"><label>階段<select aria-label="階段" name="stage" '+(!canEdit||o.stage==='won'?'disabled':'')+'>'+Object.entries(stageNames).filter(([s])=>s!=='won'||o.stage==='won').map(([s,n])=>'<option value="'+s+'" '+(o.stage===s?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>案件負責人<select name="owner_id" '+(!canEdit?'disabled':'')+'>'+options(staff.filter(s=>['operator_owner','operator_sales'].includes(s.role)&&(s.active||s.id===o.owner_id)),o.owner_id)+'</select></label><label>預估金額（NT$）<input name="amount" type="number" min="0" max="1000000000" value="'+o.amount+'" '+(!canEdit?'disabled':'')+' required></label><label>下次跟進（台北時間）<input name="followup_at" type="datetime-local" value="'+e(o.followup_at?new Date(new Date(o.followup_at).getTime()+8*3600000).toISOString().slice(0,16):'')+'" '+(!canEdit?'disabled':'')+'></label></div><label>下一步<input name="next_action" maxlength="500" value="'+e(o.next_action)+'" '+(!canEdit?'disabled':'')+'></label><label>原因／備註<textarea name="note" maxlength="1000" '+(!canEdit?'disabled':'')+'>'+e(o.note)+'</textarea></label><p class="form-error" role="alert"></p>'+(canEdit?'<button class="primary" type="submit">儲存案件</button>':'')+'</form>'+(canEdit&&o.stage==='billing'?'<div class="handoff"><h3>完成成交，接續租戶服務</h3><p>沿用企業與聯絡人。成交不代表已收款或功能已開通。</p><button class="primary" data-win="'+e(o.id)+'" data-version="'+o.version+'">成交轉租戶</button></div>':'')+(o.stage==='won'?'<div class="handoff"><p>已成交 · 數位功能尚未開通</p><button data-tenant="'+e(o.business_id)+'">查看租戶與功能申請 →</button></div>':'')+(canPay?'<details class="payment"><summary>人工收款核對（未串接金流）</summary><form id="payment-form" data-id="'+e(o.id)+'" data-version="'+o.version+'"><label>付款紀錄<select name="payment_status"><option value="unpaid" '+(o.payment_status==='unpaid'?'selected':'')+'>尚未收款</option><option value="paid" '+(o.payment_status==='paid'?'selected':'')+'>人工核對已收款</option></select></label><label>核對依據<input name="reference" required maxlength="300" placeholder="填寫人工確認依據，不填真實敏感帳號"></label><p class="form-error" role="alert"></p><button type="submit">儲存核對紀錄</button></form></details>':'')+'<h3 class="section-title">操作歷程</h3>'+history(events));
 }
 async function showTenant(id:string){
- const b=await api('/businesses/'+id);const events=await api('/activity?business_id='+encodeURIComponent(id));
+ const [b,events]=await Promise.all([api('/businesses/'+id),api('/activity?business_id='+encodeURIComponent(id))]);
  showModal('<p class="eyebrow">TENANT SERVICES</p><h2>'+e(b.name)+'</h2><div class="detail-badges">'+badge('服務中租戶','green')+badge('數位服務尚未開通')+'</div><p class="muted">'+b.contacts.map((c:Row)=>e(c.name)+' · '+e(c.phone)).join('<br>')+'</p>'+(owner()?'<form id="assignee-form" data-id="'+e(id)+'"><label>服務承辦人<select name="service_owner_id">'+options(staff.filter(s=>s.active&&['operator_owner','operator_sales','operator_service'].includes(s.role)),b.service_owner_id)+'</select></label><p class="form-error" role="alert"></p><button type="submit">指派承辦人</button></form>':'')+'<button class="primary" data-operations="'+e(id)+'">開啟租戶維運台 →</button><h3 class="section-title">企業數位服務租用</h3><p class="muted">第一期僅提供借址服務；官網、商城與 LINE OA／CRM 留待後續。分潤標準待與合作平台商議定，尚未開放收費或開通。</p><div class="service-grid">'+Object.entries(moduleNames).map(([key,name])=>{const req=b.services.find((s:Row)=>s.module===key&&s.status==='requested');return '<article><h3>'+name+'</h3>'+badge(req?(futureDigital()?'申請中':'既有需求紀錄'):futureDigital()?'未申請':'後續功能',req?'amber':'')+'<p>尚未串接 · 未開通 · 分潤待議定</p>'+(canRequest()?req?'<button data-cancel="'+e(req.id)+'" data-business="'+e(id)+'">取消申請</button>':'<button data-module="'+key+'" data-business="'+e(id)+'">提出需求</button>':'')+'</article>';}).join('')+'</div>'+(seller()&&futureDigital()?'<button class="primary" data-upsell="'+e(id)+'">＋ 建立加購案件</button>':'')+'<h3 class="section-title">服務與操作歷程</h3>'+history(events));
 }
 function formData(form:HTMLFormElement):Row{return Object.fromEntries(new FormData(form));}
@@ -205,7 +294,7 @@ document.addEventListener('submit',async event=>{
    dialog.close();await renderOperations();toast('狀態已更新，實際操作者已記錄');
   }
   if(form.id==='login-form'){await api('/demo/login','POST',d);await start();}
-  if(form.id==='search-form'){search=d.q;render();}
+  if(form.id==='search-form'){search=d.q;resetList(page);render(true);await refresh();}
   if(form.id==='tenant-form'){const result=await api('/tenants','POST',d);dialog.close();page='tenants';search='';await refresh();await showTenant(result.business_id);toast('既有租戶已建檔，未自動成交、收款或開通功能');}
   if(form.id==='staff-form'){await api('/staff','POST',d);dialog.close();staff=await api('/staff');render();toast('人員資料已新增，待完成登入身分綁定');}
   if(form.id==='opportunity-form'){
@@ -234,7 +323,7 @@ document.addEventListener('submit',async event=>{
 document.addEventListener('click',async event=>{
  const target=(event.target as HTMLElement).closest<HTMLElement>('button,a');if(!target)return;
  const d=target.dataset;try{
- if(d.operations){opsBusiness=d.operations;opsTab='overview';dialog.close();page='operations';render();}
+ if(d.operations){opsBusiness=d.operations;opsTab='overview';dialog.close();page='operations';render(true);await refresh();}
  if(d.opsTab){opsTab=d.opsTab;void renderOperations();}
  if(d.opsNew)await showOpsForm(d.opsNew,d.id);
  if(d.opsState)showOpsState(d.opsState);
@@ -247,12 +336,13 @@ document.addEventListener('click',async event=>{
  if(d.action==='menu')document.querySelector('.shell')?.classList.add('menu-open');
  if(d.action==='menu-close')document.querySelector('.shell')?.classList.remove('menu-open');
  if(d.action==='close')dialog.close();
- if(d.action==='logout'){await api('/logout','POST',{});me=undefined as unknown as Row;page='dashboard';search='';filter='';dialog.close();await loginScreen();}
- if(d.page){event.preventDefault();page=d.page;search='';filter='';render();}
+ if(d.action==='logout'){viewRevision++;clearReads();await api('/logout','POST',{});opps=[];tenants=[];chats=[];staff=[];for(const kind of ['pipeline','tenants','chat'])resetList(kind);me=undefined as unknown as Row;page='dashboard';search='';filter='';dialog.close();await loginScreen();}
+ if(d.page){event.preventDefault();page=d.page;search='';filter='';resetList(page);render(true);await refresh();}
  if(d.action==='new')await newOpportunity();
  if(d.action==='new-tenant'&&owner())await newTenant();
  if(d.action==='new-staff'&&owner())newStaff();
- if(d.filter!==undefined){filter=d.filter;render();}
+ if(d.filter!==undefined){filter=d.filter;resetList('pipeline');render(true);await refresh();}
+ if(d.listPage){const kind=d.listPage;if(d.direction==='next'&&listMeta[kind]?.next_cursor){listCursors[kind][listIndex[kind]+1]=listMeta[kind].next_cursor;listIndex[kind]++;}else if(d.direction==='previous'&&listIndex[kind]>0)listIndex[kind]--;render(true);await refresh();}
  if(d.opp)await showOpportunity(d.opp);
  if(d.tenant)await showTenant(d.tenant);
  if(d.chat){selectedChat=d.chat;render();}
@@ -263,11 +353,11 @@ document.addEventListener('click',async event=>{
  if(d.retry){await api('/conversations/'+selectedChat+'/messages/'+d.retry+'/retry','POST',{});await refresh();toast(me.demo?'本地重試完成；沒有新增重複訊息':'已請求原訊息重試，沒有另建訊息');}
  if(d.action==='recover'){target.setAttribute('disabled','');const result=await api('/line/recover','POST',{});await refresh();toast('已處理 '+result.received+' 筆接收事件，外送'+(result.disabled?'未啟用':result.processed+' 筆')+'');}
  if(d.attach){const select=document.querySelector<HTMLSelectElement>('[data-contact-select="'+d.attach+'"]');if(!select?.value)throw new Error('請先選擇案件');await api('/line/inbox/'+d.attach+'/attach','POST',{conversation_id:select.value});await refresh();toast('來客已分派，歷史訊息已加入案件對話');}
- if(d.action==='refresh'){await refresh();}
+ if(d.action==='refresh'){await refresh(true);}
  if(d.staff){await api('/staff/'+d.staff+'/status','PATCH',{active:d.active==='1'});staff=await api('/staff');render();toast('人員狀態已更新');}
  }catch(err){toast((err as Error).message);target.removeAttribute('disabled');}
 });
-window.addEventListener('unhandledrejection',event=>{event.preventDefault();toast(event.reason?.message||'載入失敗，請重新整理');});
+window.addEventListener('unhandledrejection',event=>{event.preventDefault();if(event.reason?.name==='AbortError')return;toast(event.reason?.message||'載入失敗，請重新整理');});
 void start().catch(err=>{root.innerHTML='<main class="login"><h1>暫時無法載入</h1><p>'+e(err.message)+'</p><p>請重新整理頁面後再試。</p></main>';});
 
 async function renderIntegrations(){
@@ -298,7 +388,7 @@ async function renderOperations(){
  if(page!=='operations'||opsBusiness!==businessId)return;opsData=data;opsCatalog=catalog;
  const tabs=[['overview','服務總覽'],['contracts','地址合約'],...(opsMoney()?[['billing','應收與收退款']]:[]),['subscriptions',futureDigital()?'數位訂閱':'數位服務（後續）'],...(opsService()?[['mail','信件包裹'],['tickets','維運需求']]:[])];
  if(!tabs.some(t=>t[0]===opsTab))opsTab='overview';
- target.innerHTML='<div class="ops-toolbar"><label>目前租戶<select id="operations-business" aria-label="目前租戶">'+tenants.map(t=>'<option value="'+e(t.id)+'" '+(t.id===opsBusiness?'selected':'')+'>'+e(t.name)+'</option>').join('')+'</select></label><div>'+badge('資料持久保存','green')+(owner()?'<button data-ops-catalog="1">據點與方案設定</button>':'')+'</div></div><div class="ops-tabs tabs" role="navigation" aria-label="租戶維運分類">'+tabs.map(t=>'<button data-ops-tab="'+t[0]+'" class="'+(opsTab===t[0]?'selected':'')+'">'+t[1]+'</button>').join('')+'</div><div id="ops-panel">'+({overview:opsOverview,contracts:opsContracts,billing:opsBilling,subscriptions:opsSubscriptions,mail:opsMail,tickets:opsTickets} as Row)[opsTab]()+'</div><div class="ops-note">人工管理台帳 · 金流／物流尚未串接 · 數位功能尚未開通。地址合約與數位訂閱各自管理。</div>';
+ target.innerHTML='<div class="ops-toolbar"><label>目前租戶<select id="operations-business" aria-label="目前租戶">'+tenants.map(t=>'<option value="'+e(t.id)+'" '+(t.id===opsBusiness?'selected':'')+'>'+e(t.name)+'</option>').join('')+'</select></label><div><button data-page="tenants">選擇其他租戶</button>'+badge('資料持久保存','green')+(owner()?'<button data-ops-catalog="1">據點與方案設定</button>':'')+'</div></div><div class="ops-tabs tabs" role="navigation" aria-label="租戶維運分類">'+tabs.map(t=>'<button data-ops-tab="'+t[0]+'" class="'+(opsTab===t[0]?'selected':'')+'">'+t[1]+'</button>').join('')+'</div><div id="ops-panel">'+({overview:opsOverview,contracts:opsContracts,billing:opsBilling,subscriptions:opsSubscriptions,mail:opsMail,tickets:opsTickets} as Row)[opsTab]()+'</div><div class="ops-note">人工管理台帳 · 金流／物流尚未串接 · 數位功能尚未開通。地址合約與數位訂閱各自管理。</div>';
 }
 function opsOverview(){
  const b=opsData.invoices||[];const address=b.filter((r:Row)=>r.kind==='address'&&r.status==='open').reduce((n:number,r:Row)=>n+r.balance,0);
@@ -386,7 +476,7 @@ async function showCatalog(){revenueTerms=(await api('/operations/revenue-terms'
 async function renderCatalog(){
  const target=document.querySelector('#content');if(!target||page!=='catalog'||!owner())return;
  target.innerHTML='<p class="loading">正在載入據點與方案…</p>';
- opsCatalog=await api('/operations/catalog');
- revenueTerms=(await api('/operations/revenue-terms')).terms;
+ const [catalog,terms]=await Promise.all([api('/operations/catalog'),api('/operations/revenue-terms')]);
+ opsCatalog=catalog;revenueTerms=terms.terms;
  if(page==='catalog')target.innerHTML='<section class="panel catalog-page">'+catalogMarkup()+'</section>';
 }

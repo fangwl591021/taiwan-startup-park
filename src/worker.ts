@@ -3,6 +3,7 @@ import type {Actor,Env,Opportunity,Statement} from './types.js';
 import {HttpError,fail,now,uid,stmt,local,sandbox,demo,digest,audit} from './shared.js';
 import {actor,accessLogin,configured,sandboxAccess} from './auth.js';
 import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueueLine,dispatchOutbox,retryLine,conversationLineStatus} from './line.js';
+import {listPage} from './paging.js';
 import {operationRoute} from './operations.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
@@ -60,6 +61,21 @@ async function agent(env:Env,a:Actor,id:unknown){
  const u=await stmt(env,"SELECT id FROM staff_users WHERE id=? AND operator_id=? AND active=1 AND role IN('operator_owner','operator_sales')",value,a.operator_id).first();
  if(!u)fail(400,'承辦人不屬於本業者或已停權');return value;
 }
+
+async function dashboardData(env:Env,a:Actor){
+ const b=bizScope(a),canSales=['operator_owner','operator_sales','operator_finance'].includes(a.role);
+ const o=canSales?opScope(a):null;
+ const statements=[stmt(env,"SELECT COUNT(*) AS tenant_count,COALESCE(SUM((SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status='requested')),0) AS request_count FROM businesses b WHERE "+b.sql+" AND b.is_tenant=1",...b.args)];
+ if(o)statements.push(
+  stmt(env,"SELECT o.stage,COUNT(*) AS total,SUM(CASE WHEN o.payment_status='unpaid' AND o.stage IN('billing','won') THEN 1 ELSE 0 END) AS pending FROM opportunities o WHERE "+o.sql+' GROUP BY o.stage',...o.args),
+  stmt(env,"SELECT o.*,b.name AS business_name,u.name AS owner_name FROM opportunities o JOIN businesses b ON b.id=o.business_id AND b.operator_id=o.operator_id JOIN staff_users u ON u.id=o.owner_id WHERE "+o.sql+" AND o.stage NOT IN('won','lost') ORDER BY CASE WHEN o.followup_at='' THEN 1 ELSE 0 END,o.followup_at,o.updated_at DESC,o.id DESC LIMIT 4",...o.args)
+ );
+ const results=await env.DB.batch(statements),groups=o?results[1].results:[];
+ const stage_counts=Object.fromEntries(stages.map(s=>[s,0]));let open_count=0,pending_payment_count=0;
+ for(const r of groups){stage_counts[String(r.stage)]=Number(r.total);if(!['won','lost'].includes(String(r.stage)))open_count+=Number(r.total);pending_payment_count+=Number(r.pending);}
+ return {stats:{...results[0].results[0],stage_counts,open_count,pending_payment_count},opportunities:o?results[2].results:[]};
+}
+
 async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  const url=new URL(req.url);const path=url.pathname;const method=req.method;
  if(env.APP_ENV==='sandbox'){
@@ -144,6 +160,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   await env.DB.batch([stmt(env,'UPDATE staff_users SET active=? WHERE operator_id=? AND id=?',d.active?1:0,a.operator_id,staffMatch[1]),audit(env,a,null,null,'staff_status',{user_id:staffMatch[1],active:d.active},true)]);
   return json({ok:true});
  }
+ if(path==='/api/dashboard'&&method==='GET')return json(await dashboardData(env,a));
  if(path==='/api/businesses'&&method==='GET'){
   const s=bizScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);
   return json((await stmt(env,'SELECT b.* FROM businesses b WHERE '+s.sql+' AND b.name LIKE ? ORDER BY b.created_at DESC',...s.args,'%'+q+'%').all()).results);
@@ -151,6 +168,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(path==='/api/opportunities'&&method==='GET'){
   const s=opScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);const stage=url.searchParams.get('stage');
   if(stage&&!stages.includes(stage))fail(400,'階段不正確');
+  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select:'o.*,b.name AS business_name,u.name AS owner_name',from:'opportunities o JOIN businesses b ON b.id=o.business_id AND b.operator_id=o.operator_id JOIN staff_users u ON u.id=o.owner_id',where:s.sql+' AND (o.title LIKE ? OR b.name LIKE ?)'+(stage?' AND o.stage=?':''),args:[...s.args,'%'+q+'%','%'+q+'%',...(stage?[stage]:[])],time:'o.updated_at',id:'o.id',timeKey:'updated_at'}));
   return json((await stmt(env,'SELECT o.*,b.name AS business_name,u.name AS owner_name FROM opportunities o JOIN businesses b ON b.id=o.business_id AND b.operator_id=o.operator_id JOIN staff_users u ON u.id=o.owner_id WHERE '+s.sql+' AND (o.title LIKE ? OR b.name LIKE ?)'+(stage?' AND o.stage=?':'')+' ORDER BY o.updated_at DESC',...s.args,'%'+q+'%','%'+q+'%',...(stage?[stage]:[])).all()).results);
  }
  if(path==='/api/opportunities'&&method==='POST'){
@@ -257,6 +275,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/tenants'&&method==='GET'){
   const s=bizScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);
+  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select:"b.*,u.name AS service_owner_name,(SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status='requested') AS request_count",from:'businesses b LEFT JOIN staff_users u ON u.id=b.service_owner_id',where:s.sql+' AND b.is_tenant=1 AND b.name LIKE ?',args:[...s.args,'%'+q+'%'],time:'b.created_at',id:'b.id',timeKey:'created_at'}));
   return json((await stmt(env,'SELECT b.*,u.name AS service_owner_name,(SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status=\'requested\') AS request_count FROM businesses b LEFT JOIN staff_users u ON u.id=b.service_owner_id WHERE '+s.sql+' AND b.is_tenant=1 AND b.name LIKE ? ORDER BY b.created_at DESC',...s.args,'%'+q+'%').all()).results);
  }
  const bizMatch=path.match(/^\/api\/businesses\/([^/]+)$/);
@@ -296,6 +315,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/conversations'&&method==='GET'){
   roles(a,['operator_owner','operator_sales','operator_service']);const s=bizScope(a);
+  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select:'c.*,b.name AS business_name,o.title,o.owner_id,u.name AS owner_name,(SELECT body FROM messages m WHERE m.operator_id=c.operator_id AND m.conversation_id=c.id ORDER BY m.created_at DESC,m.rowid DESC LIMIT 1) AS preview',from:'conversations c JOIN businesses b ON b.id=c.business_id AND b.operator_id=c.operator_id JOIN opportunities o ON o.id=c.opportunity_id AND o.operator_id=c.operator_id JOIN staff_users u ON u.id=o.owner_id',where:s.sql+(a.role==='operator_sales'?' AND o.owner_id=?':''),args:[...s.args,...(a.role==='operator_sales'?[a.id]:[])],time:'c.created_at',id:'c.id',timeKey:'created_at'}));
   return json((await stmt(env,'SELECT c.*,b.name AS business_name,o.title,o.owner_id,u.name AS owner_name,(SELECT body FROM messages m WHERE m.operator_id=c.operator_id AND m.conversation_id=c.id ORDER BY m.created_at DESC,m.rowid DESC LIMIT 1) AS preview FROM conversations c JOIN businesses b ON b.id=c.business_id AND b.operator_id=c.operator_id JOIN opportunities o ON o.id=c.opportunity_id AND o.operator_id=c.operator_id JOIN staff_users u ON u.id=o.owner_id WHERE '+s.sql+(a.role==='operator_sales'?' AND o.owner_id=?':'')+' ORDER BY c.created_at DESC',...s.args,...(a.role==='operator_sales'?[a.id]:[])).all()).results);
  }
  const msgMatch=path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
