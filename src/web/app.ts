@@ -16,6 +16,49 @@ const salesView=()=>['operator_owner','operator_sales','operator_finance'].inclu
 const chatView=()=>['operator_owner','operator_sales','operator_service'].includes(me?.role);
 const futureDigital=()=>me?.digital_preview===true;
 const canRequest=()=>futureDigital()&&['operator_owner','operator_sales','operator_service'].includes(me?.role);
+
+/** Browser-only layout preferences; no customer data or permissions stored here. */
+const layoutKey='tsp-layout-v1';
+let layoutPrefs:{sidebar:boolean;sections:Record<string,boolean>}={sidebar:false,sections:{}};
+try{const stored=JSON.parse(localStorage.getItem(layoutKey)||'null');if(stored&&typeof stored.sidebar==='boolean'&&stored.sections&&typeof stored.sections==='object')layoutPrefs=stored;}catch{}
+function saveLayout(){try{localStorage.setItem(layoutKey,JSON.stringify(layoutPrefs));}catch{}}
+function applySidebar(){
+ const shell=root.querySelector('.shell');shell?.classList.toggle('sidebar-collapsed',layoutPrefs.sidebar);
+ const toggle=root.querySelector<HTMLButtonElement>('[data-action="sidebar-toggle"]');
+ if(toggle){toggle.setAttribute('aria-expanded',String(!layoutPrefs.sidebar));toggle.setAttribute('aria-label',layoutPrefs.sidebar?'展開側欄':'收合側欄');toggle.title=layoutPrefs.sidebar?'展開側欄':'收合側欄';const icon=layoutPrefs.sidebar?'☰':'⇤';if(toggle.textContent!==icon)toggle.textContent=icon;}
+}
+let foldSequence=0;
+function makeFold(section:HTMLElement,heading:HTMLElement,key:string,initialOpen=true){
+ const title=heading.querySelector('h2,h3')?.textContent?.trim()||heading.textContent?.trim()||'內容';
+ const body=document.createElement('div');body.className='fold-body';body.id='fold-body-'+(++foldSequence);
+ const nodes=Array.from(section.childNodes).filter(n=>n!==heading);nodes.forEach(n=>body.append(n));section.append(body);
+ const toggle=document.createElement('button');toggle.type='button';toggle.className='section-toggle';toggle.dataset.action='fold';toggle.dataset.foldKey=key;toggle.dataset.foldTitle=title;toggle.setAttribute('aria-controls',body.id);
+ heading.append(toggle);section.dataset.foldReady='true';
+ const open=typeof layoutPrefs.sections[key]==='boolean'?layoutPrefs.sections[key]:initialOpen;
+ function update(expanded:boolean){body.hidden=!expanded;toggle.setAttribute('aria-expanded',String(expanded));toggle.setAttribute('aria-label',(expanded?'收合':'展開')+title);toggle.textContent=expanded?'收合 ▴':'展開 ▾';}
+ update(open);
+}
+function enhanceLayout(container:HTMLElement){
+ applySidebar();
+ container.querySelectorAll<HTMLElement>('.panel:not([data-fold-ready])').forEach(panel=>{
+  if(panel.classList.contains('chat-layout'))return;
+  const heading=Array.from(panel.children).find(el=>el.classList.contains('panel-heading')) as HTMLElement|undefined;
+  if(!heading)return;const title=heading.querySelector('h2')?.textContent?.trim()||'內容';
+  makeFold(panel,heading,[me?.id||'visitor',page,container===dialog?'modal':'page',title].join(':'),true);
+ });
+ container.querySelectorAll<HTMLElement>('.section-title:not([data-fold-title])').forEach(title=>{
+  title.dataset.foldTitle='true';const parent=title.parentElement;if(!parent)return;
+  const section=document.createElement('section');section.className='fold-section';
+  parent.insertBefore(section,title);const heading=document.createElement('div');heading.className='fold-heading';section.append(heading);heading.append(title);
+  while(section.nextSibling){const node=section.nextSibling;if(node instanceof HTMLElement&&(node.matches('.section-title,.revenue-terms')||node.tagName==='SECTION'))break;section.append(node);}
+  const name=title.textContent?.trim()||'內容';
+  makeFold(section,heading,[me?.id||'visitor',page,container===dialog?'modal':'page',name].join(':'),name!=='企業數位服務租用'||futureDigital());
+ });
+}
+const layoutObserver=new MutationObserver(()=>{enhanceLayout(root);enhanceLayout(dialog);});
+layoutObserver.observe(root,{childList:true,subtree:true});
+layoutObserver.observe(dialog,{childList:true,subtree:true});
+
 async function api(path:string,method='GET',data?:Row):Promise<any>{
  const response=await fetch('/api'+path,{method,headers:method==='GET'?{}:{'Content-Type':'application/json','X-Requested-With':'tsp'},...(data?{body:JSON.stringify(data)}:{})});
  const value=await response.json();
@@ -49,7 +92,7 @@ async function refresh(){
 function render(){
  const nav=[['dashboard','▦','總覽'],...(salesView()?[['pipeline','↗','成交追蹤']]:[]),['tenants','▤','租戶管理'],...(chatView()?[['chat','◌','工作聊天室']]:[]),...(owner()?[['catalog','▣','據點與方案'],['activity','≡','操作歷程'],['staff','♙','操作人員'],['integrations','⇄','整合中心'],['risk','◇','管理員專區']]:[])];
  const title=page==='operations'?'租戶維運':nav.find(n=>n[0]===page)?.[2]||'總覽';
- root.innerHTML='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span>台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]||page==='operations'&&n[0]==='tenants'?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+'><span>'+n[1]+'</span>'+n[2]+'</button>').join('')+'</nav><div class="learning-links"><a href="/tutorial.html">▶ 操作教學影片</a>'+(me.sandbox?'<a href="https://taiwan-startup-park.fangwl591021.workers.dev/" target="_blank" rel="noopener">返回正式工作台 ↗</a>':owner()?'<a href="https://taiwan-startup-park-demo.fangwl591021.workers.dev/" target="_blank" rel="noopener">開啟測試帳號模擬 ↗</a>':'')+'</div><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'獨立測試環境':'企業工作環境')+'<small>Operations · 借址第一期</small></div></aside><div class="workspace"><header class="topbar"><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>TEST DEMO</span>虛構示範資料 · '+(futureDigital()?'後續數位流程本機預覽 · ':'第一期借址 · ')+(me.sandbox?'與正式資料分開 · ':'')+'LINE／金流尚未串接 · AI 尚未啟用 <button class="text-button" data-action="logout">切換測試帳號</button>':'<span>WORKSPACE</span>第一期 · 借址服務 · LINE／金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',operations:'合約、帳務與日常服務，一次掌握。',catalog:'第一期管理登記據點；數位合作與分潤欄位預留。',risk:'僅總管理員可存取的獨立工作區。'} as Row)[page])+'</p></div>' +headingActions()+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
+ root.innerHTML='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar" id="workspace-sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span class="brand-label">台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]||page==='operations'&&n[0]==='tenants'?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+' aria-label="'+n[2]+'" title="'+n[2]+'"><span aria-hidden="true">'+n[1]+'</span><b class="nav-label">'+n[2]+'</b></button>').join('')+'</nav><div class="learning-links"><a href="/tutorial.html" aria-label="操作教學影片" title="操作教學影片"><span aria-hidden="true">▶</span><span class="link-label">操作教學影片</span></a>'+(me.sandbox?'<a href="https://taiwan-startup-park.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="返回正式工作台" title="返回正式工作台"><span aria-hidden="true">↗</span><span class="link-label">返回正式工作台</span></a>':owner()?'<a href="https://taiwan-startup-park-demo.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="開啟測試帳號模擬" title="開啟測試帳號模擬"><span aria-hidden="true">↗</span><span class="link-label">開啟測試帳號模擬</span></a>':'')+'</div><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'獨立測試環境':'企業工作環境')+'<small>Operations · 借址第一期</small></div></aside><div class="workspace"><header class="topbar"><button class="sidebar-toggle" data-action="sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="收合側欄" title="收合側欄">⇤</button><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>TEST DEMO</span>虛構示範資料 · '+(futureDigital()?'後續數位流程本機預覽 · ':'第一期借址 · ')+(me.sandbox?'與正式資料分開 · ':'')+'LINE／金流尚未串接 · AI 尚未啟用 <button class="text-button" data-action="logout">切換測試帳號</button>':'<span>WORKSPACE</span>第一期 · 借址服務 · LINE／金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',operations:'合約、帳務與日常服務，一次掌握。',catalog:'第一期管理登記據點；數位合作與分潤欄位預留。',risk:'僅總管理員可存取的獨立工作區。'} as Row)[page])+'</p></div>' +headingActions()+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
  const content=document.querySelector('#content')!;
  if(page==='dashboard')content.innerHTML=dashboard();
  if(page==='pipeline')content.innerHTML=pipeline();
@@ -199,6 +242,8 @@ document.addEventListener('click',async event=>{
  if(d.opsCatalog)await showCatalog();
  if(d.planToggle){await api('/operations/plans/'+d.planToggle,'PATCH',{active:d.active==='1',version:Number(d.version)});if(page==='catalog')await renderCatalog();else {await renderOperations();await showCatalog();}toast('方案狀態已更新；既有訂閱快照不變');}
  if(d.action==='access-login'){await api('/auth/access','POST',{});await start();}
+ if(d.action==='sidebar-toggle'){layoutPrefs.sidebar=!layoutPrefs.sidebar;saveLayout();applySidebar();}
+ if(d.action==='fold'){const body=document.getElementById(target.getAttribute('aria-controls')||'');if(body){const open=target.getAttribute('aria-expanded')!=='true';body.hidden=!open;target.setAttribute('aria-expanded',String(open));target.setAttribute('aria-label',(open?'收合':'展開')+(d.foldTitle||'內容'));target.textContent=open?'收合 ▴':'展開 ▾';layoutPrefs.sections[d.foldKey!]=open;saveLayout();}}
  if(d.action==='menu')document.querySelector('.shell')?.classList.add('menu-open');
  if(d.action==='menu-close')document.querySelector('.shell')?.classList.remove('menu-open');
  if(d.action==='close')dialog.close();
