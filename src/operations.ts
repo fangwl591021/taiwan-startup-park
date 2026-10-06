@@ -140,7 +140,7 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
  const [,biz,kind,id,action]=match;const b=await tenant(getBusiness,biz);
  if(kind==='service-summary'&&method==='GET'&&!id){
   const today=taipeiDay();
-  const contracts=(await stmt(env,"SELECT c.*,l.name AS location_name,l.address FROM address_contracts c JOIN locations l ON l.id=c.location_id AND l.operator_id=c.operator_id WHERE c.operator_id=? AND c.business_id=? ORDER BY CASE WHEN c.status='active' AND c.starts_on<=? AND c.ends_on>=? THEN 0 WHEN c.status='active' AND c.starts_on>? THEN 1 WHEN c.status='active' THEN 2 WHEN c.status='draft' THEN 3 ELSE 4 END,c.ends_on DESC,c.id DESC LIMIT 5",a.operator_id,biz,today,today,today).all<Row>()).results;
+  const contracts=(await stmt(env,"SELECT c.*,l.name AS location_name,l.address FROM address_contracts c JOIN locations l ON l.id=c.location_id AND l.operator_id=c.operator_id WHERE c.operator_id=? AND c.business_id=? ORDER BY CASE WHEN c.status='active' AND c.starts_on<=? AND c.ends_on>=? THEN 0 WHEN c.status='active' AND c.starts_on>? THEN 1 WHEN c.status='active' THEN 2 WHEN c.status='draft' THEN 3 ELSE 4 END,CASE WHEN c.status='active' AND c.starts_on>? THEN c.starts_on ELSE NULL END ASC,c.ends_on DESC,c.id DESC LIMIT 5",a.operator_id,biz,today,today,today,today).all<Row>()).results;
   const visible=contracts.map(c=>{
    const r=clean(c);if(!financialRead.includes(a.role))delete r.amount;
    return {...r,period_status:today<c.starts_on?'scheduled':today>c.ends_on?'expired':'current',
