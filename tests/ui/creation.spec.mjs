@@ -10,7 +10,7 @@ async function navigate(page,name){
 }
 test('empty tenant page provides independent catalog setup, manual tenant onboarding and staff creation',async({page})=>{
  await page.setViewportSize({width:1440,height:1050});await login(page);
- await page.route('**/api/tenants',async route=>{if(route.request().method()==='GET')await route.fulfill({json:[]});else await route.continue();});
+ await page.route('**/api/tenants**',async route=>{if(route.request().method()==='GET')await route.fulfill({json:new URL(route.request().url()).searchParams.get('paged')==='1'?{items:[],total:0,limit:50,next_cursor:null}:[]});else await route.continue();});
  await page.reload();await expect(page.getByRole('heading',{name:'總覽',exact:true})).toBeVisible();
  await navigate(page,'租戶管理');
  await expect(page.getByRole('button',{name:'＋ 新增租戶',exact:true})).toBeVisible();
@@ -28,7 +28,7 @@ test('empty tenant page provides independent catalog setup, manual tenant onboar
  await expect(page.getByRole('dialog')).not.toBeVisible();await expect(page.locator('.catalog-page')).toContainText('入口驗收官網方案');
  await navigate(page,'租戶管理');await page.getByRole('button',{name:'＋ 新增租戶',exact:true}).click();
  await page.getByLabel('企業名稱',{exact:true}).fill('入口驗收既有租戶');await page.getByLabel('聯絡人',{exact:true}).fill('測試窗口');
- await page.getByLabel('建檔依據',{exact:true}).fill('既有借址服務轉入，虛構驗收資料');await page.unroute('**/api/tenants');
+ await page.getByLabel('建檔依據',{exact:true}).fill('既有借址服務轉入，虛構驗收資料');await page.unroute('**/api/tenants**');
  await page.getByRole('button',{name:'新增租戶',exact:true}).click();
  await expect(page.getByRole('dialog')).toContainText('入口驗收既有租戶');
  await expect(page.getByRole('dialog')).toContainText('數位服務尚未開通');await page.getByRole('button',{name:'關閉',exact:true}).click();
