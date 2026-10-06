@@ -1,3 +1,23 @@
+# 目前版本：緊湊租戶條列與深色文字
+
+2026-10-06 08:36（Asia/Taipei）已更新正式與獨立測試區。
+
+- 租戶企業由大型卡片改為條列：企業、服務狀態、服務承辦、功能申請數及查看入口；整列可點選。桌面列高約 78px，手機分行呈現，保留大字、搜尋、側欄及區塊收合。
+- 全站原本偏淡的輔助文字調深；表單 placeholder、停用欄位、歷程與狀態標籤同樣調深，維持綠色按鈕與白字。
+- [建置、72 項後端及 14 項桌面／手機驗收、發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37394706074)
+- [桌面／手機截圖及驗收報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37394706074/artifacts/11383210927)：新增 desktop-tenant-compact-dark.png、mobile-tenant-compact-dark.png；驗收列高、輔助文字對比至少 7:1（對白色背景）、搜尋的空結果與正確篩選、點選租戶及維運入口、無橫向溢出。
+- Source commit：c3461e8361576e09fc2b1d432a45ac43de93472d
+- 正式 Worker version：63a9e8a2-b259-49b0-9fb9-22ecf45dc0ba
+- 測試 Worker active version：b48b7513-a411-486a-92d2-058875862102
+- [遠端核對與部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37394706074/artifacts/11383275860)：2026-10-06T00:36:20.917Z 確認實際 D1 binding 分離、分潤欄位全部 NULL、LINE 外送關閉，兩區未登入 /api/me 均 Access HTTP 302。
+- 本輪僅前端與 UI 驗收變更，不改動後端權限、資料庫 schema 或借址第一期範圍；原始藍圖完整保留。LINE、金流、AI 尚未串接。
+- 教學影片保留原版，錄影步驟 skipped；沒有重製影片。
+- UI 與截圖使用本機虛構資料，未代替本人完成正式網址已登入的瀏覽器驗收。
+
+---
+
+## 先前發布紀錄
+
 # 目前版本：大字與可收合工作台
 
 2026-10-06 08:26（Asia/Taipei）已更新正式與獨立測試區。
