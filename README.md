@@ -2,7 +2,7 @@
 
 借址登記業者的 LINE OA 風格工作台。第一期提供借址成交到租戶閉環、地址合約與人工帳務、續約、信件與維運，以及操作人員歷程。
 
-**最新分期決策：第一期只到借址。官網與 LINE OA 等數位服務保留後續程式，平台費與分潤條件均留空、待議定，不計算、不結算。** 詳見 [PHASE_ONE_SCOPE.md](docs/PHASE_ONE_SCOPE.md)。本功能分支的變更與教學錄影尚未發布至正式網址；已發布版本以 DEPLOYMENT_STATUS.md 為準。
+**最新分期決策：第一期只到借址。官網與 LINE OA 等數位服務保留後續程式，平台費與分潤條件均留空、待議定，不計算、不結算。** 詳見 [PHASE_ONE_SCOPE.md](docs/PHASE_ONE_SCOPE.md)。借址第一期版本及新版教學錄影已於 2026-10-06 發布至正式與獨立測試區；版本與驗收證據以 DEPLOYMENT_STATUS.md 為準。
 
 **正式工作台已部署，使用 Cloudflare Access 個人身分登入。LINE、金流及 AI 尚未串接／啟用。**
 最新發布結果及驗收證據以 [DEPLOYMENT_STATUS.md](docs/DEPLOYMENT_STATUS.md) 為準。
@@ -61,7 +61,9 @@ npm run dev
 公開 LINE API 不保證能取得原生 OA 後台的實際回覆人員，私人通訊亦不在此資料範圍。
 工作通訊紀錄的目的告知、保存期限與刪除政策仍須在正式導入時落實。
 
-## 環境與部署界線
+## 原始 foundation 本機環境與部署界線（歷史）
+
+以下為第一輪本機設定；目前正式與測試發布使用 release workflow 產生的專用設定及 Access 保護，實際資源與狀態以 [DEPLOYMENT_STATUS.md](docs/DEPLOYMENT_STATUS.md) 為準。
 
 | 欄位 | 本輪值 | 用途 |
 | --- | --- | --- |
@@ -77,8 +79,8 @@ wrangler.jsonc 刻意未配置有效 D1，workers_dev=false。
 **禁止把本地 demo 當作正式登入。** 即使 production 誤設 DEMO_MODE=on 仍會拒絕。
 dev.mjs 不可公開代理或對外部署。正式環境使用 Access 驗證、Secure cookie 與固定 APP_ORIGIN；仍需完成 Access policy／邊界限流與實際部署接線。
 
-本輪未讀取或修改正式 Cloudflare 帳號、Worker、資料庫、R2、排程、通知或金流。
-Worker URL 僅作目標識別，不代表已驗證部署權限。
+原始 foundation 階段未讀取或修改正式 Cloudflare 資源；目前已依使用者授權發布至本專案專用 Worker、D1 及 Access，未啟用通知、金流或排程。
+目前正式網址與發布權限已由 release workflow 核對。
 worker:check 只執行 wrangler deploy --dry-run，不發佈。
 正式資源盤點與 staging 建立依第 10 節另行執行。
 
@@ -97,7 +99,7 @@ GitHub Actions 執行相同流程並保存桌面／手機截圖及測試報告�
 套件鎖已提交；CI 一律 npm ci。
 測試涵蓋兩業者與角色隔離、偽造身分、版本衝突、成交冪等、沿用企業／聯絡人、
 回覆歸屬、失敗重試、停權、production 關閉 demo、申請／開通分離及手機溢出。
-測試驗證 D1 相容 SQLite adapter；未對正式 Cloudflare D1 或 LINE 系統做整合驗證。
+核心流程測試使用 D1 相容 SQLite adapter；發布後另以唯讀查詢核對遠端 D1 分潤欄位、Worker binding 與 Access 邊界，未對真實 LINE 做整合驗證。
 
 ## 檔案與設計
 
@@ -112,11 +114,11 @@ GitHub Actions 執行相同流程並保存桌面／手機截圖及測試報告�
 工作事件只提供讀取 API；歷史訊息不因案件轉交或人員停權而改寫。
 沒有一般使用者的聊天匯出／刪除或檔案下載 API；LINE 收回事件處理與 inbox/outbox 基礎延續第二輪，尚未啟用正式排程。後續新增功能須同樣套用資料權限與保存政策。
 
-第二輪已通過 30 項後端及 4 項瀏覽器測試，詳見 [LINE_ACCEPTANCE.md](docs/LINE_ACCEPTANCE.md)。正式接線尚未驗證，未部署 Worker。
+第二輪已通過 30 項後端及 4 項瀏覽器測試，詳見 [LINE_ACCEPTANCE.md](docs/LINE_ACCEPTANCE.md)。該輪未正式串接 LINE；目前 Worker 發布狀態以 DEPLOYMENT_STATUS.md 為準。
 
 
 ## 第三輪租戶維運
 
-本分支新增地址合約、應收與人工收退款、信件包裹、維運需求、數位訂閱與後端權益檢查。參見 [租戶維運範圍](docs/TENANT_OPERATIONS.md)。原始藍圖保持完整；金流、物流、模組開通及 AI 仍未串接，沒有正式部署。
+本分支新增地址合約、應收與人工收退款、信件包裹、維運需求、數位訂閱與後端權益檢查。參見 [租戶維運範圍](docs/TENANT_OPERATIONS.md)。原始藍圖保持完整；租戶維運已隨第一期發布，數位功能依最新分期關閉。金流、物流、模組開通及 AI 仍未串接。
 
 第三輪驗收結果與桌面／手機截圖：[TENANT_ACCEPTANCE.md](docs/TENANT_ACCEPTANCE.md)。

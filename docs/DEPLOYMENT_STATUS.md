@@ -1,3 +1,54 @@
+# 第一期借址版本發布紀錄
+
+2026-10-06 08:07（Asia/Taipei）：正式工作台、獨立測試區及新版借址教學影片已發布完成。
+
+## 可使用入口
+
+- [正式工作台](https://taiwan-startup-park.fangwl591021.workers.dev/)
+- [獨立測試帳號模擬](https://taiwan-startup-park-demo.fangwl591021.workers.dev/)
+- [新版實際操作教學影片](https://taiwan-startup-park.fangwl591021.workers.dev/tutorial.html)
+
+## 本次生效範圍
+
+第一期只到借址：成交追蹤、成交轉租戶、地址合約、人工應收／收退款、續約、信件包裹、維運、工作聊天室基礎與操作人員歷程保持可操作。既有資料與數位歷程保留。
+
+官網、商城、LINE OA 與 CRM 的後續程式保留；正式與測試區均不開放數位需求、訂閱、數位收費或功能開通。合作平台商、平台費、雙方分潤、結算基準與週期、生效日及議定依據欄位全部留空（NULL）、待議定，沒有分潤計算、撥款或結算。LINE、金流及 AI 尚未串接／啟用。
+
+## 版本與驗收證據
+
+- 發布來源 commit：96bc332a9101de140ef9d59003db70cd4e03114a
+- 正式 Worker version：2a5114af-2dd3-43ba-9d39-7fdc84ba81c9（100%）
+- 測試 Worker active version：04799136-d75e-4358-b138-1f26d19515af（100%，包含原有私有入口 secret 設定）
+- [建置、測試、錄影及正式發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253)
+- [桌面／手機截圖與建置證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253/artifacts/11381846232)
+- [新版影片、中文字幕與逐步教學](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253/artifacts/11381816187)
+- [遠端核對報告與部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253/artifacts/11381483295)
+- Typecheck、建置、72 項後端／權限／核心流程測試、12 項桌面／手機驗收、Worker dry run 及 Access runtime 驗證通過。
+- 實際 UI 錄影：146.1 秒、25 個步驟、1280 × 900、H.264、1,418,023 bytes，中文字幕、無旁白；播放器驗證通過。新版已替換線上教學。
+- docs/screenshots 含 desktop-phase1-revenue-terms.png、mobile-phase1-revenue-terms.png、desktop-phase1-address-billing.png、mobile-phase1-address-billing.png。
+
+## 遠端發布後核對
+
+2026-10-06 00:07:00 UTC 的 phase-one-release-report.json 確認：
+
+- 正式 D1 為 taiwan-startup-park-prod，測試 D1 為 taiwan-startup-park-demo；核對遠端 Worker 真實 binding，兩區獨立。
+- 兩個專用 D1 均成功套用 0004_digital_revenue_placeholders.sql；未刪除原有租戶、合約、收款或操作歷程，未重設測試資料。
+- 每家業者四種模組的預留資料完整，商業欄位全部為 NULL、狀態 unagreed。
+- 正式 production／DEMO_MODE=off，測試 sandbox／DEMO_MODE=on；兩者 LINE_SEND_ENABLED=off。
+- 兩區未登入 /api/me 均 HTTP 302 至 Cloudflare Access；原有管理員綁定及 Access 保護保留，無公開示範登入。
+- 原始 PLATFORM_BLUEPRINT.md 完整保留。
+- 自動化 UI 與影片使用本機虛構資料；未代替本人完成正式網址已登入的瀏覽器驗收。遠端資料庫、實際發布版本、環境旗標與未登入邊界已核對。
+
+## 回復與後續
+
+部署 metadata 保留前一正式版本 e71f3748-5c73-401f-b865-bc56b3535af6 及測試版本，供人工核對回復。0004 為新增資料表與 trigger，不以 Worker 回復自動刪除資料；舊版本仍含本期關閉前的數位流程，回復時須重新核對第一期限制，不可直接視為可對外收費。
+
+後續數位串接須先議定合作條件，再另行實作設定、核准、當期標準快照及結算對帳。詳見 [第一期範圍](PHASE_ONE_SCOPE.md) 與 [測試操作指引](SIMULATION_GUIDE.md)。
+
+---
+
+## 歷史發布紀錄（以下為過往版本，不代表目前功能範圍）
+
 # 正式工作台、測試帳號模擬與教學影片
 
 2026-10-05 12:42 UTC：本輪更新已發布成功。
@@ -68,3 +119,4 @@ LINE 真實收送尚未串接且發送關閉；金流未串接，帳務為人工
 已發布新增既有租戶、新增操作人員資料及獨立據點／方案設定，並補上空資料頁的可點擊建立入口。空租戶工作台、實際建檔、手機入口及承辦人權限已通過測試。直接建檔租戶不製造案件成交、收款或權益；明確指派業務承辦時，僅該員或管理員可查看。人員資料預設停用且待 Access 綁定；不能直接啟用、指派案件或新增 owner/platform 角色。新增操作指引見 CREATION_GUIDE.md。
 
 新增驗收截圖：desktop-empty-tenants.png、desktop-add-staff.png、mobile-add-tenant.png、mobile-catalog.png，保存於上述 build artifact 的 docs/screenshots。
+

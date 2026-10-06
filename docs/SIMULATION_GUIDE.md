@@ -4,7 +4,7 @@
 獨立測試區： https://taiwan-startup-park-demo.fangwl591021.workers.dev/
 教學：正式／測試區側欄的「操作教學影片」，或 /tutorial.html。
 
-本功能分支依 [PHASE_ONE_SCOPE.md](PHASE_ONE_SCOPE.md) 改為借址第一期，功能分支與更新錄影尚未部署。正式與測試區網站仍以已發布版本為準。新版本不提供數位需求、訂閱或數位收費，預留分潤欄位全部為空白待議定；既有虛構數位紀錄保留唯讀。
+正式與測試區已於 2026-10-06 依 [PHASE_ONE_SCOPE.md](PHASE_ONE_SCOPE.md) 發布借址第一期，教學影片同步更新；發布版本與驗收證據見 [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md)。新版本不提供數位需求、訂閱或數位收費，預留分潤欄位全部為空白待議定；既有虛構數位紀錄保留唯讀。
 
 ## 使用方式
 
