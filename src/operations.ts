@@ -1,3 +1,4 @@
+import {mailLineRoute} from './mail-notifications.js';
 import {digitalPreview,requireDigitalPreview} from './scope.js';
 import type {Actor,Env} from './types.js';
 import {stmt,fail,now,uid,digest,audit} from './shared.js';
@@ -135,9 +136,10 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
   const r=await commit(env,[stmt(env,'UPDATE service_plans SET active=?,version=version+1 WHERE id=? AND operator_id=? AND version=?',d.active?1:0,plan[1],a.operator_id,integer(d.version,'版本',1)),audit(env,a,null,null,'plan_status_changed',{id:plan[1],active:d.active},true)]);
   if(!r[0].meta.changes)fail(409,'方案已異動或不存在');return json({ok:true});
  }
- const match=path.match(/^\/api\/businesses\/([^/]+)\/(operations|service-summary|contracts|subscriptions|invoices|mail|tickets|entitlements)(?:\/([^/]+))?(?:\/(renew|ledger|check|terms))?$/);
+ const match=path.match(/^\/api\/businesses\/([^/]+)\/(operations|service-summary|contracts|subscriptions|invoices|mail|tickets|entitlements|mail-line|mail-preview)(?:\/([^/]+))?(?:\/(renew|ledger|check|terms))?$/);
  if(!match)return null;
  const [,biz,kind,id,action]=match;const b=await tenant(getBusiness,biz);
+ if(['mail-line','mail-preview'].includes(kind)){if(action)fail(404,'找不到此通知操作');return mailLineRoute(req,env,a,b,kind,id);}
  if(kind==='service-summary'&&method==='GET'&&!id){
   const today=taipeiDay();
   const contracts=(await stmt(env,"SELECT c.*,l.name AS location_name,l.address FROM address_contracts c JOIN locations l ON l.id=c.location_id AND l.operator_id=c.operator_id WHERE c.operator_id=? AND c.business_id=? ORDER BY CASE WHEN c.status='active' AND c.starts_on<=? AND c.ends_on>=? THEN 0 WHEN c.status='active' AND c.starts_on>? THEN 1 WHEN c.status='active' THEN 2 WHEN c.status='draft' THEN 3 ELSE 4 END,CASE WHEN c.status='active' AND c.starts_on>? THEN c.starts_on ELSE NULL END ASC,c.ends_on DESC,c.id DESC LIMIT 5",a.operator_id,biz,today,today,today,today).all<Row>()).results;

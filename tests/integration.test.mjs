@@ -295,3 +295,84 @@ test('sandbox uses real backend role and operator scopes across simulated accoun
  assert.equal((await finance('/conversations')).status,403);
  assert.equal((await service('/staff','POST',{name:'升級權限',role:'operator_owner'})).status,403);
 });
+
+const mailPath='/businesses/b4/';
+const actualLineUser='U'+'a'.repeat(32);
+async function observedMailContact(f,user=actualLineUser,id='mail-line'){
+ assert.equal((await f.webhook([message(id,id+'-text','我是企業收件聯絡人',Date.now(),user)])).status,200);
+ return f.db.sqlite.prepare("SELECT id FROM line_contacts WHERE connection_id='la' AND user_id=?").get(user).id;
+}
+const mailBind=(id,version=0)=>({version,line_contact_id:id,recipient_name:'企業收件聯絡人',reference:'已由管理員核對本人及企業授權'});
+test('mail LINE binding uses only observed valid user identities and never accepts manual or foreign IDs',async t=>{
+ const f=await fixture(t),a=await f.as('owner-a'),id=await observedMailContact(f);
+ await f.webhook([message('foreign','foreign-text','外部業者',Date.now(),actualLineUser)],{connection:'lb',destination:'dest-b',secret:'test-secret-b'});
+ const foreign=f.db.sqlite.prepare("SELECT id FROM line_contacts WHERE connection_id='lb'").get().id;
+ await f.webhook([message('invalid','invalid-text','一般 LINE ID',Date.now(),'ordinary-line-id')]);
+ f.db.sqlite.prepare("INSERT INTO line_contacts(id,operator_id,connection_id,user_id,created_at) VALUES('unobserved','op-a','la',?,'2026-10-06T00:00:00Z')").run('U'+'c'.repeat(32));
+ const c=await a(mailPath+'mail-line/candidates');assert.equal(c.status,200);assert.equal(c.data.limit,50);assert.deepEqual(c.data.items.map(x=>x.id),[id]);
+ assert(!JSON.stringify(c.data).includes(actualLineUser));assert(!JSON.stringify(c.data).includes('channelAccessToken'));
+ for(const forged of [{...mailBind(id),user_id:actualLineUser},{...mailBind(id),operator_id:'op-b'},mailBind(foreign),mailBind('unobserved'),{...mailBind(id),recipient_name:''},{...mailBind(id),reference:''}])
+  assert.equal((await a(mailPath+'mail-line','POST',forged)).status,400);
+ assert.equal((await a(mailPath+'mail-line/candidates?q='+encodeURIComponent('x'.repeat(101)))).status,400);
+ assert.equal((await a(mailPath+'mail-line/candidates/renew')).status,404);
+ assert.equal((await a(mailPath+'mail-line','POST',mailBind(id))).status,200);
+ assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM tenant_mail_line_recipients').get().n,1);
+});
+test('mail LINE tenant scope and owner-only changes exclude foreign operators, unassigned staff and finance',async t=>{
+ const f=await fixture(t),a=await f.as('owner-a'),id=await observedMailContact(f);
+ await a(mailPath+'mail-line','POST',mailBind(id));
+ for(const user of ['owner-b','sales-a1']){const u=await f.as(user);assert.equal((await u(mailPath+'mail-line')).status,404);assert.equal((await u(mailPath+'mail-preview/mail-demo')).status,404);}
+ for(const user of ['service-a','sales-a3']){
+  const u=await f.as(user),view=await u(mailPath+'mail-line');assert.equal(view.status,200);assert.equal(view.data.recipient.name,'企業收件聯絡人');
+  assert(!JSON.stringify(view.data).includes('reference'));assert(!JSON.stringify(view.data).includes(id));assert(!JSON.stringify(view.data).includes(actualLineUser));
+  assert.equal((await u(mailPath+'mail-line/candidates')).status,403);assert.equal((await u(mailPath+'mail-line','POST',mailBind(id,1))).status,403);
+  assert.equal((await u(mailPath+'mail-preview/mail-demo')).status,200);
+ }
+ for(const user of ['finance-a','platform','business-admin']){const u=await f.as(user);assert.equal((await u(mailPath+'mail-line')).status,403);assert.equal((await u(mailPath+'mail-preview/mail-demo')).status,403);}
+ assert.equal((await a('/businesses/b1/mail-line')).status,409);
+ f.db.sqlite.prepare("UPDATE businesses SET service_owner_id=NULL WHERE id='b4'").run();
+ const service=await f.as('service-a');assert.equal((await service(mailPath+'mail-line')).status,404);
+});
+test('mail recipient changes are versioned and audited; stale requests cannot overwrite or create false history',async t=>{
+ const f=await fixture(t),a=await f.as('owner-a'),id=await observedMailContact(f);
+ assert.equal((await a(mailPath+'mail-line')).data.version,0);
+ let r=await a(mailPath+'mail-line','POST',mailBind(id));assert.equal(r.data.version,1);
+ assert.equal((await a(mailPath+'mail-line','POST',mailBind(id))).status,409);
+ assert.equal(f.db.sqlite.prepare("SELECT count(*) n FROM activity_events WHERE action='mail_line_recipient_linked'").get().n,1);
+ r=await a(mailPath+'mail-line','POST',{action:'unlink',version:1,reference:'聯絡人離職，先解除'});
+ assert.equal(r.status,200);assert.equal(r.data.status,'unbound');assert.equal(r.data.version,2);assert.equal(r.data.recipient,null);
+ assert.equal((await a(mailPath+'mail-line','POST',{action:'unlink',version:2,reference:'重複解除'})).status,409);
+ r=await a(mailPath+'mail-line','POST',mailBind(id,2));assert.equal(r.data.version,3);
+ const history=f.db.sqlite.prepare("SELECT actor_id,action,detail FROM activity_events WHERE action LIKE 'mail_line_recipient_%' ORDER BY rowid").all();
+ assert.deepEqual(history.map(x=>x.action),['mail_line_recipient_linked','mail_line_recipient_unlinked','mail_line_recipient_linked']);
+ assert(history.every(x=>x.actor_id==='owner-a'));assert(!JSON.stringify(history).includes(actualLineUser));
+});
+test('mail notification preview is scoped and preparation-only even when ordinary LINE sending is enabled',async t=>{
+ const f=await fixture(t),a=await f.as('owner-a');
+ const original=f.db.sqlite.prepare("SELECT status,version FROM mail_items WHERE id='mail-demo'").get();
+ const unbound=await a(mailPath+'mail-preview/mail-demo');assert.equal(unbound.data.binding.status,'unbound');assert.equal(unbound.data.sent,false);
+ const id=await observedMailContact(f);await a(mailPath+'mail-line','POST',mailBind(id));
+ f.env.LINE_SEND_ENABLED='on';let requests=0;f.env.HTTP=async()=>{requests++;throw Error('mail preview must not send');};
+ const before=f.db.sqlite.prepare('SELECT count(*) n FROM line_outbox').get().n;
+ const r=await a(mailPath+'mail-preview/mail-demo');assert.equal(r.status,200);assert.equal(r.data.status,'preview_only');assert.equal(r.data.sent,false);
+ assert.equal(r.data.binding.send_status,'not_enabled');assert.equal(r.data.binding.preparation_only,true);assert.match(r.data.text,/青鳥數位.*您好/);assert.match(r.data.text,/包裹/);assert.match(r.data.text,/2026/);
+ assert.equal(requests,0);assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM line_outbox').get().n,before);
+ assert.deepEqual(f.db.sqlite.prepare("SELECT status,version FROM mail_items WHERE id='mail-demo'").get(),original);
+ assert.equal((await a(mailPath+'mail-preview/no-such-mail')).status,404);
+ f.db.sqlite.prepare("UPDATE businesses SET is_tenant=1 WHERE id='b1'").run();
+ assert.equal((await a('/businesses/b1/mail-preview/mail-demo')).status,404);
+ f.db.sqlite.prepare("UPDATE mail_items SET status='collected' WHERE id='mail-demo'").run();
+ assert.match((await a(mailPath+'mail-preview/mail-demo')).data.notice,/已交付或退回/);
+});
+test('one observed LINE recipient can represent multiple tenants without inheriting paid digital services',async t=>{
+ const f=await fixture(t),a=await f.as('owner-a'),id=await observedMailContact(f);
+ f.db.sqlite.prepare("UPDATE businesses SET is_tenant=1 WHERE id='b1'").run();
+ const before=f.db.sqlite.prepare('SELECT count(*) n FROM subscriptions').get().n;
+ assert.equal((await a(mailPath+'mail-line','POST',mailBind(id))).status,200);
+ assert.equal((await a('/businesses/b1/mail-line','POST',mailBind(id))).status,200);
+ assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM tenant_mail_line_recipients').get().n,2);
+ assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM subscriptions').get().n,before);
+ f.db.sqlite.prepare("UPDATE line_connections SET enabled=0 WHERE id='la'").run();
+ assert.equal((await a(mailPath+'mail-line')).data.recipient.channel_enabled,false);
+ assert.equal((await a(mailPath+'mail-preview/mail-demo')).data.sent,false);
+});
