@@ -41,6 +41,6 @@ test('one thousand tenants remain bounded, complete, searchable and served by pa
 });
 test('malformed/oversized paging inputs cannot change authority or create unbounded responses',async t=>{
  const {as}=await fixture(t),actor=await as('sales-a1');
- for(const args of ['limit=0','limit=101','limit=1000000','limit=abc','cursor=bad!','cursor='+encodeURIComponent(btoa(JSON.stringify({operator_id:'op-b'}))))])assert.equal((await actor('/tenants?paged=1&'+args)).status,400);
+ for(const args of ['limit=0','limit=101','limit=1000000','limit=abc','cursor=bad!','cursor='+encodeURIComponent(btoa(JSON.stringify({operator_id:'op-b'})))])assert.equal((await actor('/tenants?paged=1&'+args)).status,400);
  const r=await actor('/tenants?paged=1&operator_id=op-b');assert.equal(r.status,200);assert(r.data.items.every(x=>x.operator_id==='op-a'));
 });
