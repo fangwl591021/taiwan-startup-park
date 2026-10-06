@@ -157,7 +157,7 @@ async function loginScreen(){
  root.innerHTML='<main class="login"><div class="brand-mark">園</div><p class="eyebrow">TAIWAN STARTUP PARK</p><h1>讓每一次成交<br>成為長期的服務關係</h1><p>業者工作台 · 租戶維運驗收版</p><form id="login-form"><label>選擇測試身分<select name="user_id" aria-label="示範身分">'+users.map((u:Row)=>'<option value="'+e(u.id)+'" '+(u.id==='owner-a'?'selected':'')+'>'+e(u.operator_name+' / '+u.name)+'</option>').join('')+'</select></label><button class="primary" type="submit">進入示範工作台</button><p class="form-error" role="alert"></p></form><div class="notice">純虛構資料 · '+(config.sandbox?'獨立測試資料庫，僅限授權管理員':'僅限本機')+'<br>LINE、金流與 AI 尚未串接。</div><p><a href="/tutorial.html">觀看操作教學影片 →</a></p><p class="fine">公司工作通訊將記錄操作人員與服務歷程，供授權管理與服務品質核查；不包含私人通訊。</p></main>';
 }
 async function start(){
- try{const identity=await Promise.all([api('/me'),api('/staff')]);me=identity[0];staff=identity[1];await refresh();}
+ try{const [identity,people]=await Promise.allSettled([api('/me'),api('/staff')]);if(identity.status==='rejected')throw identity.reason;me=identity.value;if(people.status==='rejected')throw people.reason;staff=people.value;await refresh();}
  catch(err){if(me&&['platform_admin','business_admin'].includes(me.role)){root.innerHTML='<main class="login"><h1>此角色尚未開放工作台</h1><p>目前不提供跨業者存取。</p><button data-action="logout">登出</button></main>';}else await loginScreen();}
 }
 async function refresh(force=false){

@@ -66,6 +66,10 @@ const billView=(r:Row)=>({...clean(r),balance:r.amount-r.net_received,payment_st
 async function bills(env:Env,a:Actor,biz:string){
  return (await stmt(env,'SELECT r.*,'+balanceSQL+' AS net_received FROM receivables r WHERE r.operator_id=? AND r.business_id=? ORDER BY r.created_at DESC',a.operator_id,biz).all<Row>()).results.map(billView);
 }
+async function paidForSubscription(env:Env,a:Actor,s:Row){
+ if(s.amount===0)return true;
+ return !!await stmt(env,"SELECT r.id FROM receivables r WHERE r.operator_id=? AND r.business_id=? AND r.subscription_id=? AND r.kind='digital' AND r.status='open' AND r.amount=? AND "+balanceSQL+">=r.amount",a.operator_id,s.business_id,s.id,s.amount).first();
+}
 export async function entitlements(env:Env,a:Actor,biz:string,dayNow=taipeiDay()){
  const subscriptions=(await stmt(env,'SELECT s.*,CASE WHEN s.amount=0 OR EXISTS(SELECT 1 FROM receivables r WHERE r.operator_id=s.operator_id AND r.business_id=s.business_id AND r.subscription_id=s.id AND r.kind=\'digital\' AND r.status=\'open\' AND r.amount=s.amount AND '+balanceSQL+'>=r.amount) THEN 1 ELSE 0 END AS payment_covered FROM subscriptions s WHERE s.operator_id=? AND s.business_id=? ORDER BY s.starts_on DESC,s.created_at DESC',a.operator_id,biz).all<Row>()).results;
  const rows=[];
@@ -138,7 +142,7 @@ export async function operationRoute(req:Request,env:Env,a:Actor,getBusiness:Acc
   ]),entitlements(env,a,biz)]);
   const [contracts,subs,mail,tickets,invoices]=results.map(r=>r.results);
   const visible=(r:Row)=>{const x=clean(r);if(a.role==='operator_service')delete x.amount;return x;};
-  return json({business:{id:b.id,name:b.name,service_owner_id:b.service_owner_id},contracts:contracts.map(r=>({...visible(r),period_status:taipeiDay()<r.starts_on?'scheduled':taipeiDay()>r.ends_on?'expired':'current'})),subscriptions:subs.map(visible),invoices:financialRead.includes(a.role)?invoices.map(billView):null,mail:mail.map(clean),tickets:tickets.map(clean),entitlements:rights});
+  return json({business:{id:b.id,name:b.name,service_owner_id:b.service_owner_id},contracts:contracts.map((r:Row)=>({...visible(r),period_status:taipeiDay()<r.starts_on?'scheduled':taipeiDay()>r.ends_on?'expired':'current'})),subscriptions:subs.map(visible),invoices:financialRead.includes(a.role)?invoices.map(billView):null,mail:mail.map(clean),tickets:tickets.map(clean),entitlements:rights});
 
  }
  if(kind==='entitlements'&&method==='GET'){
