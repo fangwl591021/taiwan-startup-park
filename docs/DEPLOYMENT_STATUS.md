@@ -1,3 +1,22 @@
+# 目前版本：按需載入、快取與列表分頁
+
+2026-10-06 08:55（Asia/Taipei）正式與獨立測試區已更新。
+
+- 切頁保留側欄與外框；資料按頁載入，15 秒內合併與重用 GET，寫入及身分切換清除。租戶、案件、對話清單每頁 50 筆，完整總數及搜尋由後端提供。
+- 0005_workspace_paging_indexes.sql 已成功套用於兩個專用 D1；只新增索引，不清除資料。租戶維運與據點讀取批次化，移除逐訂閱額外資格請求；原有角色／業者權限保留。
+- [建置、75 後端及 16 桌面／手機驗收、發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37396358578)
+- 1,001 家虛構租戶的分頁完整性與索引驗收通過；模擬 GET 延遲下，TTL 內的重訪與維運分頁額外讀取為 0。這些是本機／自動化證據，不是正式使用者延遲保證；[詳細測試與界線](PERFORMANCE_ACCEPTANCE.md)。
+- [截圖與報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37396358578/artifacts/11383383146)
+- Source：d6f4074854e09067a2ad2134d0e4173077f06d47
+- 正式 Worker：e87a75f6-8ca6-4605-ac9a-cca84eb24b80
+- 測試 Worker active：74c21861-ca48-4e01-8ddd-ebd6a63cee90
+- [發布後核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37396358578/artifacts/11382854641)：2026-10-06T00:55:37.475Z 確認 DB 分離、分潤值全 NULL、LINE 外送 off、兩區未登入 API Access 302。未代替本人完成正式已登入瀏覽器效能量測。
+- 教學影片沿用原版，錄影步驟 skipped；借址第一期、原始藍圖及未串接狀態完整保留。
+
+---
+
+## 先前發布紀錄
+
 # 目前版本：緊湊租戶條列與深色文字
 
 2026-10-06 08:36（Asia/Taipei）已更新正式與獨立測試區。
