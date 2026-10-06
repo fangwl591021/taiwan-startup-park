@@ -4,9 +4,10 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
   await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:8789/');
   await page.getByLabel('示範身分').selectOption('owner-a');await page.getByRole('button',{name:'進入示範工作台'}).click();
   await expect(page.getByRole('heading',{name:'總覽',exact:true})).toBeVisible();
-  const summary=await page.request.get('/api/businesses/b4/service-summary');expect(summary.status()).toBe(200);
+  const origin=new URL(page.url()).origin;
+  const summary=await page.request.get(origin+'/api/businesses/b4/service-summary');expect(summary.status()).toBe(200);
   const current=(await summary.json()).contracts.find(c=>c.id==='contract-demo');
-  const reset=await page.request.patch('/api/businesses/b4/contracts/contract-demo/terms',{headers:{origin:'http://127.0.0.1:8789','x-requested-with':'tsp'},data:{version:current.version,term_kind:null,payment_cycle:null,mail_service:null,note:'虛構 UI 驗收前置：保留未知舊合約條件'}});
+  const reset=await page.request.patch(origin+'/api/businesses/b4/contracts/contract-demo/terms',{headers:{origin,'x-requested-with':'tsp'},data:{version:current.version,term_kind:null,payment_cycle:null,mail_service:null,note:'虛構 UI 驗收前置：保留未知舊合約條件'}});
   expect(reset.status()).toBe(200);
   if(await page.getByRole('button',{name:'開啟導覽'}).isVisible())await page.getByRole('button',{name:'開啟導覽'}).click();
   await page.getByRole('button',{name:'租戶管理',exact:true}).click();
