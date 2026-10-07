@@ -30,3 +30,10 @@ Callback URL 由伺服器服務網址產生，不接受使用者自訂第三方 
 - https://developers.line.biz/en/docs/line-login/integrate-line-login/
 - https://developers.line.biz/en/reference/line-login/
 - https://developers.line.biz/en/docs/line-login/security-checklist/
+
+## 發布驗收（2026-10-07 15:48，Asia/Taipei）
+
+- [95 後端、27 桌面／手機及發布全通過](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37589370643)，source f9e532524e8266eddbf8883cf3aab44ca6fb4747；npm audit 0 vulnerabilities。
+- [建置與桌面／手機畫面](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37589370643/artifacts/11468260803)，docs/screenshots/*-line-login-settings.png。
+- [遠端核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37589370643/artifacts/11468206103)：獨立 Login 設定結構存在，設定 API 未登入 Access 302，主鑰 key_created:false、根政策保留、兩區 DB 分離、LINE 外送 off、分潤 NULL。
+- 尚未輸入正式 Login Channel 或密鑰、未代替本人登入正式瀏覽器、OAuth 登入流程及回呼未啟用。教學沿用、不重錄。
