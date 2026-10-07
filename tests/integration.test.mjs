@@ -23,7 +23,7 @@ function message(id='ev1',mid='line-msg-1',text='測試 LINE 文字',timestamp=1
 async function fixture(t){
  const db=database();seed(db);t.after(()=>db.close());
  const env={DB:db,APP_ENV:'local',DEMO_MODE:'on',LINE_SEND_ENABLED:'off',LINE_CHANNELS_JSON:JSON.stringify({la:{channelSecret:'test-secret-a',channelAccessToken:'test-token-a'},lb:{channelSecret:'test-secret-b',channelAccessToken:'test-token-b'}}),HTTP:async()=>{throw new Error('Unexpected network call');}};
- db.sqlite.exec("INSERT INTO line_connections VALUES('la','op-a','provider-a','channel-a','dest-a',1),('lb','op-b','provider-b','channel-b','dest-b',1)");
+ db.sqlite.exec("INSERT INTO line_connections(id,operator_id,provider_id,channel_id,destination,enabled) VALUES('la','op-a','provider-a','channel-a','dest-a',1),('lb','op-b','provider-b','channel-b','dest-b',1)");
  async function call(path,{method='GET',data,cookie='',token='',environment=env,origin}={}){
   const base=origin||'http://localhost';const response=await worker.fetch(new Request(base+'/api'+path,{method,headers:{'content-type':'application/json',origin:base,'x-requested-with':'tsp',cookie,'cf-access-jwt-assertion':token},...(data!==undefined?{body:JSON.stringify(data)}:{})}),environment);
   return {status:response.status,data:await response.json(),cookie:response.headers.get('set-cookie')};
@@ -375,4 +375,112 @@ test('one observed LINE recipient can represent multiple tenants without inherit
  f.db.sqlite.prepare("UPDATE line_connections SET enabled=0 WHERE id='la'").run();
  assert.equal((await a(mailPath+'mail-line')).data.recipient.channel_enabled,false);
  assert.equal((await a(mailPath+'mail-preview/mail-demo')).data.sent,false);
+});
+
+import {lineSecret,encryptLineSecret} from '../dist/line-credentials.js';
+import {provisionLineSettings,verifyLineBoundary} from '../scripts/line-settings-deploy.mjs';
+const oaSecret='a'.repeat(32),oaToken='t'.repeat(80),oaBot='U'+'d'.repeat(32),oaChannel='1234567890';
+async function oaFixture(t){
+ const f=await fixture(t);f.env.LINE_CREDENTIALS_KEY=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64');f.env.LINE_SEND_ENABLED='off';
+ const http=[];
+ f.env.HTTP=async(url,init={})=>{
+  http.push({url,method:init.method||'GET'});
+  assert.equal(init.redirect,'error');
+  if(url==='https://api.line.me/v2/oauth/verify'){
+   assert.equal(init.method,'POST');assert.equal(new URLSearchParams(init.body).get('access_token'),oaToken);
+   return Response.json({client_id:oaChannel,expires_in:999999});
+  }
+  assert.equal(url,'https://api.line.me/v2/bot/info');assert.equal(init.headers.Authorization,'Bearer '+oaToken);return Response.json({userId:oaBot,displayName:'業者測試 OA'});
+ };
+ const a=await f.as('owner-a');
+ const data={name:'業者自己的 OA',provider_id:'123456789',channel_id:oaChannel,channel_secret:oaSecret,channel_access_token:oaToken,reference:'業者管理員授權接收（虛構測試）'};
+ return {...f,http,a,data};
+}
+test('OA setup encrypts credentials, verifies channel ownership and works with the existing signed webhook receiver',async t=>{
+ const f=await oaFixture(t),r=await f.a('/line/settings','POST',f.data);assert.equal(r.status,201);
+ const c=r.data.connections.find(c=>c.channel_id===oaChannel);assert.equal(c.enabled,true);assert.match(c.webhook_url,/api\/line\/webhook\//);assert.equal(c.last_webhook_at,null);
+ assert(!JSON.stringify(r.data).includes(oaSecret));assert(!JSON.stringify(r.data).includes(oaToken));
+ const encrypted=f.db.sqlite.prepare('SELECT encrypted_value FROM line_connection_secrets WHERE connection_id=?').get(c.id).encrypted_value;
+ assert(!encrypted.includes(oaSecret));assert(!encrypted.includes(oaToken));assert.equal((await lineSecret(f.env,c.id)).channelAccessToken,oaToken);
+ const raw=JSON.stringify({destination:oaBot,events:[]});
+ const received=await worker.fetch(new Request('http://localhost/api/line/webhook/'+c.id,{method:'POST',headers:{'x-line-signature':await signature(raw,oaSecret)},body:raw}),f.env);
+ assert.equal(received.status,200);assert((await f.a('/line/settings')).data.connections.find(x=>x.id===c.id).last_webhook_at);
+ const event=message('configured-channel','configured-msg','真實來源的虛構收件聯絡人',Date.now(),'U'+'e'.repeat(32));
+ const eventRaw=JSON.stringify({destination:oaBot,events:[event]});
+ assert.equal((await worker.fetch(new Request('http://localhost/api/line/webhook/'+c.id,{method:'POST',headers:{'x-line-signature':await signature(eventRaw,oaSecret)},body:eventRaw}),f.env)).status,200);
+ const candidates=(await f.a('/businesses/b4/mail-line/candidates')).data.items;assert(candidates.some(x=>x.connection_id===c.id));
+ assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM line_outbox').get().n,0);assert(f.http.every(x=>!x.url.includes('/message/')));
+ const audit=f.db.sqlite.prepare("SELECT detail FROM activity_events WHERE action LIKE 'line_connection_%'").all();assert(!JSON.stringify(audit).includes(oaSecret));assert(!JSON.stringify(audit).includes(oaToken));
+ assert.equal((await f.a('/line/settings','POST',f.data)).status,409);
+});
+test('OA configuration rejects nonowners, forged fields, CSRF, unsupported environments and invalid channel tokens',async t=>{
+ const f=await oaFixture(t);
+ for(const user of ['sales-a1','service-a','finance-a','platform','business-admin']){
+  const u=await f.as(user);assert.equal((await u('/line/settings')).status,403);assert.equal((await u('/line/settings','POST',f.data)).status,403);
+ }
+ for(const patch of [{actor_id:'owner-b'},{operator_id:'op-b'},{enabled:true},{webhook_url:'https://evil.invalid'},{channel_secret:'bad'}])assert.equal((await f.a('/line/settings','POST',{...f.data,...patch})).status,400);
+ assert.equal((await f.a('/line/settings','POST',{...f.data,channel_id:'999999'})).status,400);
+ f.env.HTTP=async()=>Response.json({error:oaToken},{status:401});
+ const failed=await f.a('/line/settings','POST',f.data);assert.equal(failed.status,400);assert(!JSON.stringify(failed).includes(oaToken));
+ assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM line_connection_secrets').get().n,0);
+ delete f.env.LINE_CREDENTIALS_KEY;assert.equal((await f.a('/line/settings')).data.storage_ready,false);assert.equal((await f.a('/line/settings','POST',f.data)).status,503);
+});
+test('OA edits retain blank credentials, invalidate webhook proof after secret rotation, and use versioned operator isolation',async t=>{
+ const f=await oaFixture(t);const result=await f.a('/line/settings','POST',f.data),c=result.data.connections.find(c=>c.channel_id===oaChannel);
+ const b=await f.as('owner-b');assert.equal((await b('/line/settings')).data.connections.some(x=>x.id===c.id),false);
+ assert.equal((await b('/line/settings/'+c.id,'PATCH',{version:1,name:'偷改',reference:'x'})).status,404);
+ const unchanged=await f.a('/line/settings/'+c.id,'PATCH',{version:1,name:'已更新名稱',reference:'更新名稱'});
+ assert.equal(unchanged.status,200);assert.equal((await lineSecret(f.env,c.id)).channelAccessToken,oaToken);
+ const updated=unchanged.data.connections.find(x=>x.id===c.id);assert.equal(updated.version,2);
+ assert.equal((await f.a('/line/settings/'+c.id,'PATCH',{version:1,name:'stale',reference:'x'})).status,409);
+ assert.equal(f.db.sqlite.prepare("SELECT count(*) n FROM activity_events WHERE action='line_connection_updated'").get().n,1);
+ f.db.sqlite.prepare('UPDATE line_connections SET last_webhook_at=? WHERE id=?').run(new Date().toISOString(),c.id);
+ const rotated=await f.a('/line/settings/'+c.id,'PATCH',{version:2,name:'已更新名稱',channel_secret:'b'.repeat(32),reference:'輪換驗簽密鑰'});
+ assert.equal(rotated.status,200);assert.equal(rotated.data.connections.find(x=>x.id===c.id).last_webhook_at,null);
+ const stop=await f.a('/line/settings/'+c.id+'/status','PATCH',{version:3,enabled:false,reference:'停止接收'});
+ assert.equal(stop.status,200);
+ const raw=JSON.stringify({destination:oaBot,events:[]});
+ assert.equal((await worker.fetch(new Request('http://localhost/api/line/webhook/'+c.id,{method:'POST',headers:{'x-line-signature':await signature(raw,'b'.repeat(32))},body:raw}),f.env)).status,404);
+ const service=await f.as('service-a');assert((await service('/activity')).data.every(e=>!e.action.startsWith('line_connection_')));
+});
+test('encrypted OA secrets fail closed when key, ciphertext or channel/operator context changes',async t=>{
+ const f=await oaFixture(t);const r=await f.a('/line/settings','POST',f.data),c=r.data.connections.find(c=>c.channel_id===oaChannel);
+ const record=f.db.sqlite.prepare('SELECT encrypted_value FROM line_connection_secrets WHERE connection_id=?').get(c.id);
+ const key=f.env.LINE_CREDENTIALS_KEY;f.env.LINE_CHANNELS_JSON=JSON.stringify({[c.id]:{channelSecret:oaSecret,channelAccessToken:oaToken}});
+ f.env.LINE_CREDENTIALS_KEY=Buffer.alloc(32,7).toString('base64');assert.deepEqual(await lineSecret(f.env,c.id),{});
+ f.env.LINE_CREDENTIALS_KEY=key;
+ f.db.sqlite.prepare('UPDATE line_connection_secrets SET encrypted_value=? WHERE connection_id=?').run(await encryptLineSecret(f.env,'op-b',c.id,{channelSecret:oaSecret,channelAccessToken:oaToken}),c.id);
+ assert.deepEqual(await lineSecret(f.env,c.id),{});f.db.sqlite.prepare('UPDATE line_connection_secrets SET encrypted_value=? WHERE connection_id=?').run(record.encrypted_value,c.id);
+ assert.equal((await lineSecret(f.env,c.id)).channelSecret,oaSecret);
+ const checked=await f.a('/line/settings/'+c.id+'/check','POST',{version:1});assert.equal(checked.status,200);
+ assert.equal(checked.data.connections.find(x=>x.id===c.id).last_webhook_at,null);assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM line_outbox').get().n,0);
+});
+test('OA resource provisioning preserves the root Access app, limits bypass to signed webhook path and never rotates an existing key',async()=>{
+ const config={name:'taiwan-startup-park',account_id:'a'.repeat(32),vars:{APP_ENV:'production',APP_ORIGIN:'https://taiwan-startup-park.fangwl591021.workers.dev',ACCESS_AUD:'owner-aud',LINE_SEND_ENABLED:'off'},d1_databases:[{database_id:'db-id',database_name:'taiwan-startup-park-prod'}]};
+ const env={CLOUDFLARE_ACCOUNT_ID:'a'.repeat(32),CLOUDFLARE_API_TOKEN:'fake'},calls=[];let secret=true,app=false,policy=false;
+ const root={id:'root',aud:'owner-aud',domain:'taiwan-startup-park.fangwl591021.workers.dev',type:'self_hosted'};
+ const narrow={id:'webhook',type:'self_hosted',domain:root.domain+'/api/line/webhook/*'};
+ async function fake(url,init){
+  const path=new URL(url).pathname.split('/accounts/'+env.CLOUDFLARE_ACCOUNT_ID)[1];calls.push({path,method:init.method,body:init.body?JSON.parse(init.body):null});let result;
+  if(path==='/workers/subdomain')result={subdomain:'fangwl591021'};
+  else if(path==='/d1/database/db-id')result={name:'taiwan-startup-park-prod',uuid:'db-id'};
+  else if(path==='/workers/scripts/taiwan-startup-park/settings')result={bindings:[{type:'d1',name:'DB',id:'db-id'},...(secret?[{type:'secret_text',name:'LINE_CREDENTIALS_KEY'}]:[])]};
+  else if(path==='/access/apps') {app=true;assert.equal(JSON.parse(init.body).domain,narrow.domain);result=narrow;}
+  else if(path==='/access/apps/root/policies'){assert.equal(init.method,'GET');result=[{decision:'allow'}];}
+  else if(path==='/access/apps/webhook/policies'){
+   if(init.method==='POST'){policy=true;assert.equal(JSON.parse(init.body).decision,'bypass');result={id:'policy'};}
+   else result=policy?[{decision:'bypass',include:[{everyone:{}}],exclude:[],require:[]}]:[];
+  }else if(path==='/access/apps')result=narrow;
+  else if(path.startsWith('/access/apps?'))throw Error('pathname excludes query');
+  else if(path==='/access/apps' || new URL(url).search)result=[root,...(app?[narrow]:[])];
+  else throw Error(path);
+  return Response.json({success:true,result});
+ }
+ // Handle list before create: same pathname, GET has pagination.
+ const fetcher=async(url,init)=>init.method==='GET'&&new URL(url).pathname.endsWith('/access/apps')?Response.json({success:true,result:[root,...(app?[narrow]:[])]}):fake(url,init);
+ const result=await provisionLineSettings(env,config,fetcher);assert.equal(result.credential_key_present,true);assert.equal(result.key_created,false);assert.equal(result.webhook_domain,narrow.domain);assert(!calls.some(x=>x.path.endsWith('/secrets')));
+ const checks=await verifyLineBoundary(async(url,init)=>url.includes('/webhook/')?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}));
+ assert.equal(checks.length,4);assert(checks.slice(1).every(x=>x.access_protected));
+ await assert.rejects(()=>provisionLineSettings(env,{...config,name:'other-worker'},fetcher),/目標/);
+ await assert.rejects(()=>verifyLineBoundary(async()=>new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}})),/Webhook/);
 });

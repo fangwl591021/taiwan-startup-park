@@ -33,6 +33,7 @@ jobs:
           npm run worker:check
           node scripts/auth-runtime-check.mjs
           node --check scripts/phase-one-release-check.mjs
+          node --check scripts/line-settings-deploy.mjs
       - name: Browser and mobile acceptance
         run: |
           npx playwright install --with-deps chromium
@@ -152,6 +153,12 @@ jobs:
       - name: Publish verified Worker and assets
         if: steps.owner.outputs.ready == 'true'
         run: npx wrangler deploy --config wrangler.production.json
+      - name: Prepare encrypted OA settings and exact signed webhook route
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/line-settings-deploy.mjs prepare
+      - name: Verify signed webhook and protected OA settings boundary
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/line-settings-deploy.mjs verify
       - name: Check unauthenticated boundary
         run: node scripts/deployment.mjs smoke
       - name: Verify deployed address-only environments and blank revenue terms
@@ -166,4 +173,6 @@ jobs:
             deployment-target-report.json
             sandbox-resources.json
             phase-one-release-report.json
+            line-settings-resources.json
+            line-settings-boundary-report.json
           if-no-files-found: ignore

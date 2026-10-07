@@ -2,10 +2,7 @@ import type {Env,Actor} from './types.js';
 import {fail,stmt,now,uid,audit} from './shared.js';
 type Row=Record<string,any>;
 type Connection={id:string;operator_id:string;provider_id:string;channel_id:string;destination:string;enabled:number};
-type Secret={channelSecret?:string;channelAccessToken?:string};
-function secrets(env:Env,id:string):Secret{
- try{const raw=JSON.parse(env.LINE_CHANNELS_JSON||'{}');const v=raw[id];return v&&typeof v==='object'?v:{};}catch{return {};}
-}
+import {lineSecret as secrets} from './line-credentials.js';
 async function connection(env:Env,id:string){
  return stmt(env,'SELECT * FROM line_connections WHERE id=?',id).first<Connection>();
 }
@@ -18,7 +15,7 @@ async function rawBody(req:Request){
 }
 export async function receiveWebhook(req:Request,env:Env,id:string){
  const c=await connection(env,id);if(!c||!c.enabled)fail(404,'未設定 LINE channel');
- const secret=secrets(env,id).channelSecret;if(typeof secret!=='string'||!secret)fail(503,'LINE 驗簽尚未設定');
+ const secret=(await secrets(env,id)).channelSecret;if(typeof secret!=='string'||!secret)fail(503,'LINE 驗簽尚未設定');
  const bytes=await rawBody(req);const signature=req.headers.get('x-line-signature')||'';
  let valid=false;
  try{
@@ -29,7 +26,7 @@ export async function receiveWebhook(req:Request,env:Env,id:string){
  if(!valid)fail(401,'Webhook 簽章無效');
  let payload:Row;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{return fail(400,'Webhook 格式錯誤');}
  if(!payload||payload.destination!==c.destination||!Array.isArray(payload.events)||payload.events.length>100)fail(400,'Webhook channel 或事件格式錯誤');
- const commands=[];const time=now();
+ const commands=[stmt(env,'UPDATE line_connections SET last_webhook_at=? WHERE id=? AND operator_id=?',now(),c.id,c.operator_id)];const time=now();
  // Persist removals before messages so out-of-order/redelivered content cannot reappear.
  for(const event of payload.events){
   if(event?.type==='unsend'&&typeof event.unsend?.messageId==='string'&&event.unsend.messageId.length<=100){
@@ -69,7 +66,8 @@ export async function processInbox(env:Env,operatorId?:string){
 export async function integrationStatus(env:Env,a:Actor){
  if(a.role!=='operator_owner')fail(403,'沒有此操作權限');
  const connections=(await stmt(env,'SELECT c.id,c.provider_id,c.channel_id,c.enabled,(SELECT MAX(received_at) FROM line_events e WHERE e.connection_id=c.id) AS last_received FROM line_connections c WHERE c.operator_id=?',a.operator_id).all<Row>()).results;
- return {line:connections.map(c=>({id:c.id,provider_id:c.provider_id,channel_id:c.channel_id,enabled:!!c.enabled,signature_configured:!!secrets(env,c.id).channelSecret,send_configured:!!secrets(env,c.id).channelAccessToken,send_enabled:!!c.enabled&&sendEnabled(env)&&!!secrets(env,c.id).channelAccessToken,last_received:c.last_received})),
+ const line=await Promise.all(connections.map(async c=>{const s=await secrets(env,c.id);return {id:c.id,provider_id:c.provider_id,channel_id:c.channel_id,enabled:!!c.enabled,signature_configured:!!s.channelSecret,send_configured:!!s.channelAccessToken,send_enabled:!!c.enabled&&sendEnabled(env)&&!!s.channelAccessToken,last_received:c.last_received};}));
+ return {line,
   inbox_pending:(await stmt(env,"SELECT COUNT(*) n FROM line_events WHERE operator_id=? AND state IN('pending','unmatched')",a.operator_id).first<Row>())?.n||0,
   outbox:(await stmt(env,'SELECT state,COUNT(*) AS count FROM line_outbox WHERE operator_id=? GROUP BY state',a.operator_id).all()).results,
   payment:'not_connected',ai:'not_enabled'};
@@ -100,7 +98,7 @@ export async function lineLink(env:Env,operatorId:string,conversationId:string){
 }
 export async function enqueueLine(env:Env,a:Actor,conversation:Row,text:string,key:string){
  const link=await lineLink(env,a.operator_id,conversation.id);
- if(!link||!link.enabled||!sendEnabled(env)||!secrets(env,link.connection_id).channelAccessToken)fail(503,'LINE 發送尚未啟用；未建立外送訊息');
+ if(!link||!link.enabled||!sendEnabled(env)||!(await secrets(env,link.connection_id)).channelAccessToken)fail(503,'LINE 發送尚未啟用；未建立外送訊息');
  const old=await stmt(env,'SELECT id,body,status,actor_id FROM messages WHERE operator_id=? AND conversation_id=? AND idempotency_key=?',a.operator_id,conversation.id,key).first<Row>();
  if(old){if(old.body!==text||old.actor_id!==a.id)fail(409,'識別碼已用於其他訊息');return old;}
  const id=uid(),time=now();
@@ -134,7 +132,7 @@ export async function dispatchOutbox(env:Env,operatorId?:string){
    ]);
   }
   if(row.first_attempt_at&&time-row.first_attempt_at>=23*3600000||row.attempts>=5){await finish('needs_review','unknown','retry_window_or_attempt_limit');continue;}
-  const c=await connection(env,row.connection_id);const token=secrets(env,row.connection_id).channelAccessToken;
+  const c=await connection(env,row.connection_id);const token=(await secrets(env,row.connection_id)).channelAccessToken;
   if(!c?.enabled||c.operator_id!==row.operator_id||!token||!await sendPermission(env,row)){await finish('blocked','blocked','configuration_or_authorization_changed');continue;}
   const latestLink=await lineLink(env,row.operator_id,row.conversation_id);
   if(latestLink?.connection_id!==row.connection_id||latestLink?.user_id!==row.recipient){await finish('blocked','blocked','recipient_binding_changed');continue;}
@@ -171,5 +169,5 @@ export async function retryLine(env:Env,a:Actor,id:string){
 
 export async function conversationLineStatus(env:Env,a:Actor,id:string){
  const link=await lineLink(env,a.operator_id,id);
- return {bound:!!link,send_enabled:!!link?.enabled&&sendEnabled(env)&&!!secrets(env,link?.connection_id||'').channelAccessToken,connection_id:link?.connection_id||null};
+ return {bound:!!link,send_enabled:!!link?.enabled&&sendEnabled(env)&&!!(await secrets(env,link?.connection_id||'')).channelAccessToken,connection_id:link?.connection_id||null};
 }

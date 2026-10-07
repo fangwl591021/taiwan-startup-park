@@ -6,7 +6,7 @@ export interface Statement {
  run(): Promise<Result>;
 }
 export interface Database { prepare(sql: string): Statement; batch(statements:Statement[]):Promise<Result[]>; }
-export interface Env { DB:Database; APP_ENV?:string; DEMO_MODE?:string; DIGITAL_PREVIEW?:string; ASSETS?:{fetch(request:Request):Promise<Response>}; APP_ORIGIN?:string; ACCESS_ISSUER?:string; ACCESS_AUD?:string; LINE_CHANNELS_JSON?:string; LINE_SEND_ENABLED?:string; HTTP?:typeof fetch; SANDBOX_DATABASE_ID?:string; SANDBOX_OWNER_EMAIL?:string; }
+export interface Env { DB:Database; APP_ENV?:string; DEMO_MODE?:string; DIGITAL_PREVIEW?:string; ASSETS?:{fetch(request:Request):Promise<Response>}; APP_ORIGIN?:string; ACCESS_ISSUER?:string; ACCESS_AUD?:string; LINE_CHANNELS_JSON?:string; LINE_SEND_ENABLED?:string; LINE_CREDENTIALS_KEY?:string; HTTP?:typeof fetch; SANDBOX_DATABASE_ID?:string; SANDBOX_OWNER_EMAIL?:string; }
 export type Role = 'operator_owner'|'operator_sales'|'operator_service'|'operator_finance'|'platform_admin'|'business_admin';
 export interface Actor { id:string; operator_id:string; name:string; role:Role; active:number; }
 export interface Opportunity {
