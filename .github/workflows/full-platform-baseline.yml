@@ -23,6 +23,8 @@ jobs:
       - name: Install original locked backend dependencies
         working-directory: .migration-build/smart-menu/backend
         run: npm ci
+      - name: Repair compatible backend dependency lock in isolated copy
+        run: node scripts/repair-upstream-platform.mjs backend
       - name: Original backend module typechecks
         working-directory: .migration-build/smart-menu/backend
         run: npm run typecheck
@@ -35,6 +37,8 @@ jobs:
       - name: Install original locked frontend dependencies
         working-directory: .migration-build/smart-menu/frontend
         run: npm ci
+      - name: Repair compatible frontend dependency lock in isolated copy
+        run: node scripts/repair-upstream-platform.mjs frontend
       - name: Original frontend tests
         working-directory: .migration-build/smart-menu/frontend
         run: npm test

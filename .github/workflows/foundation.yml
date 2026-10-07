@@ -7,6 +7,8 @@ on:
       - 'config/platform-source-lock.json'
       - 'scripts/verify-upstream-platform.mjs'
       - 'scripts/audit-upstream-platform.mjs'
+      - 'scripts/repair-upstream-platform.mjs'
+      - 'platform/dependency-overlays/**'
       - '.github/workflows/full-platform-baseline.yml'
       - 'docs/FULL_PLATFORM_MIGRATION.md'
   pull_request:
