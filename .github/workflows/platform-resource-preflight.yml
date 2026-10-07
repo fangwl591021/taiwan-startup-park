@@ -1,0 +1,23 @@
+name: Platform resource preflight
+on:
+  push:
+    branches: [feature/full-platform-migration]
+    paths:
+      - scripts/platform-resource-preflight.mjs
+      - .github/workflows/platform-resource-preflight.yml
+permissions:
+  contents: read
+jobs:
+  resources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read-only verification of this project's isolated resources
+        run: node scripts/platform-resource-preflight.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
