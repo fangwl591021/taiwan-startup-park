@@ -15,6 +15,7 @@ import {crmRoute} from './crm.js';
 import {templateRoute} from './workspace-templates.js';
 import {hubRoute} from './line-hub.js';
 import {monitorRoute} from './chat-monitor.js';
+import {monitorConsoleRoute} from './monitor-console.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
@@ -128,6 +129,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  const templates=await templateRoute(req,env,a);if(templates)return templates;
  const crm=await crmRoute(req,env,a);if(crm)return crm;
  const hub=await hubRoute(req,env,a);if(hub)return hub;
+ const monitorConsole=await monitorConsoleRoute(req,env,a);if(monitorConsole)return monitorConsole;
  const monitor=await monitorRoute(req,env,a);if(monitor)return monitor;
  const loginSettings=await platformLoginRoute(req,env,a);if(loginSettings)return loginSettings;
  const platformLine=await platformLineRoute(req,env,a);if(platformLine)return platformLine;

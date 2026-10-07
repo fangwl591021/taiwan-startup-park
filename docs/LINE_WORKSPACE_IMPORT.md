@@ -56,3 +56,7 @@
 2026-10-07 19:06（Asia/Taipei）已發布來源 `13ed99c931f2e20aa75943b87ede3fb3c364043f` 至正式及獨立測試站；109 項後端與 31 項桌面／手機測試全部通過。新 migration 已套用，實際模組及 Access 邊界核對完成。
 
 [功能 PR #17](https://github.com/fangwl591021/taiwan-startup-park/pull/17) 已隨發布合併；[發布證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611482434)。[截圖與完整測試報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611846625/artifacts/11477339138) 包含 desktop/mobile-line-workspace-crm、hub、modules、templates、monitor，共十張虛構資料截圖。後續截圖拍攝選項修正不改動已發布的應用程式。
+
+## 四分頁監控補充（2026-10-07）
+
+已新增 LINE 聊天室、用量總覽、群組商機及 AI 呼叫紀錄，含期間、30 秒更新、群組明確啟用、候選確認與 CRM 連結，以及可信內部計量。模型尚未啟用、群組情境目前為規則匹配；詳見 [CHAT_MONITOR_IMPORT.md](CHAT_MONITOR_IMPORT.md)。此補充更新上表群組／用量的實作範圍，模型、群組自動回覆、告警及收費仍保留為後續。

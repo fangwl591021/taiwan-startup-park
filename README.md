@@ -126,3 +126,5 @@ GitHub Actions 執行相同流程並保存桌面／手機截圖及測試報告�
 ## LINE OA 工作區整合
 
 會員 CRM、LINE OA 工作台、模組管理、共用／私有模板與管理員私有核查已接上成交及借址租戶資料。完整來源對照、操作流程與尚未啟用部分見 [LINE_WORKSPACE_IMPORT.md](docs/LINE_WORKSPACE_IMPORT.md)。正式 Login OAuth、圖文選單發布、外送、金流與 AI 模型仍未啟用；數位分潤保持待議定。
+
+四分頁聊天室監控（LINE 聊天室、用量、群組商機、AI 紀錄）的操作、隔離與尚未啟用界線： [CHAT_MONITOR_IMPORT.md](docs/CHAT_MONITOR_IMPORT.md)。

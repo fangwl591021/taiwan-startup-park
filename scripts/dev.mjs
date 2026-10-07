@@ -4,8 +4,13 @@ import {mkdirSync} from 'node:fs';
 import {resolve,extname} from 'node:path';
 import {database,seed} from './database.mjs';
 import worker from '../dist/worker.js';
+import {seedMonitorUiFixture} from './monitor-ui-fixture.mjs';
 mkdirSync('.local',{recursive:true});
 const db=database(process.env.DEMO_DB||'.local/demo.sqlite');seed(db);
+if(process.env.MONITOR_UI_FIXTURE==='on'){
+ if(process.env.DEMO_DB!==':memory:')throw new Error('Monitor fixtures require an isolated in-memory database');
+ seedMonitorUiFixture(db);
+}
 const port=Number(process.env.PORT||8787);
 const root=resolve('dist/public');
 const assets={async fetch(req){

@@ -3,6 +3,7 @@ import {fail,stmt,now,uid,audit} from './shared.js';
 type Row=Record<string,any>;
 type Connection={id:string;operator_id:string;provider_id:string;channel_id:string;destination:string;enabled:number};
 import {lineSecret as secrets} from './line-credentials.js';
+import {groupEventStatements} from './monitor-groups.js';
 async function connection(env:Env,id:string){
  return stmt(env,'SELECT * FROM line_connections WHERE id=?',id).first<Connection>();
 }
@@ -37,6 +38,7 @@ export async function receiveWebhook(req:Request,env:Env,id:string){
    commands.push(stmt(env,'INSERT OR IGNORE INTO line_unsends(connection_id,provider_message_id) VALUES(?,?)',c.id,mid));
    commands.push(stmt(env,"UPDATE messages SET body='',status='removed',updated_at=? WHERE connection_id=? AND provider_message_id=?",time,c.id,mid));
    commands.push(stmt(env,"UPDATE line_events SET body=NULL WHERE connection_id=? AND provider_message_id=?",c.id,mid));
+   commands.push(stmt(env,"UPDATE monitor_group_messages SET body='',removed=1 WHERE connection_id=? AND provider_message_id=?",c.id,mid));
   }
  }
  for(const event of payload.events){
@@ -45,6 +47,7 @@ export async function receiveWebhook(req:Request,env:Env,id:string){
   const text=event.type==='message'&&event.message?.type==='text'&&typeof event.message.text==='string'&&event.message.text.length<=5000&&typeof event.message.id==='string'&&event.message.id.length<=100;
   const mid=text?event.message.id:event.type==='unsend'&&typeof event.unsend?.messageId==='string'?event.unsend.messageId:null;
   const supported=!!user&&text;
+  commands.push(...await groupEventStatements(env,c,event));
   if(user)commands.push(stmt(env,'INSERT OR IGNORE INTO line_contacts(id,operator_id,connection_id,user_id,created_at) VALUES(?,?,?,?,?)',uid(),c.operator_id,c.id,user,time));
   commands.push(stmt(env,"INSERT OR IGNORE INTO line_events(connection_id,event_id,operator_id,kind,user_id,provider_message_id,body,event_at,received_at,state) SELECT ?,?,?,?,?,?,CASE WHEN EXISTS(SELECT 1 FROM line_unsends WHERE connection_id=? AND provider_message_id=?) THEN NULL ELSE ? END,?,?,?",c.id,event.webhookEventId,c.operator_id,String(event.type||'unsupported').slice(0,40),user,mid,c.id,mid,supported?event.message.text:null,event.timestamp,time,supported?'pending':event.type==='unsend'?'processed':'unsupported'));
  }

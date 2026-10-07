@@ -2,9 +2,11 @@ import type {Actor,Env} from './types.js';
 import {stmt,uid,now,fail} from './shared.js';
 import {body,text,version,json,role,requireModule} from './workspace-common.js';
 export async function monitorRoute(req:Request,env:Env,a:Actor):Promise<Response|null>{
- const path=new URL(req.url).pathname;if(!path.startsWith('/api/admin/risk'))return null;
+ const url=new URL(req.url),path=url.pathname;if(!path.startsWith('/api/admin/risk'))return null;
  role(a,['operator_owner']);await requireModule(env,a,'monitor');
  if(path==='/api/admin/risk'&&req.method==='GET'){
+  const days=Number(url.searchParams.get('days')||30);if(![1,7,30,90].includes(days))fail(400,'統計期間格式不正確');
+  const since=new Date(Date.now()-days*86400000).toISOString();
   const rules=(await stmt(env,'SELECT * FROM risk_rules WHERE operator_id=? ORDER BY updated_at DESC LIMIT 20',a.operator_id).all()).results;
   const events=(await stmt(env,`SELECT r.id,r.status,r.version,r.created_at,rr.name AS rule_name,m.status AS message_status,
    CASE WHEN m.status='removed' THEN '' ELSE m.body END AS body,m.direction,m.source,m.created_at AS message_at,
@@ -13,7 +15,7 @@ export async function monitorRoute(req:Request,env:Env,a:Actor):Promise<Response
    JOIN messages m ON m.id=r.message_id AND m.operator_id=r.operator_id
    JOIN conversations c ON c.id=m.conversation_id AND c.operator_id=m.operator_id
    JOIN businesses b ON b.id=c.business_id AND b.operator_id=c.operator_id
-   LEFT JOIN staff_users u ON u.id=m.actor_id WHERE r.operator_id=? ORDER BY r.created_at DESC,r.id DESC LIMIT 50`,a.operator_id).all()).results;
+   LEFT JOIN staff_users u ON u.id=m.actor_id WHERE r.operator_id=? AND r.created_at>=? ORDER BY r.created_at DESC,r.id DESC LIMIT 50`,a.operator_id,since).all()).results;
   const stats=await stmt(env,`SELECT
    (SELECT COUNT(*) FROM line_contacts WHERE operator_id=?) AS visitors,
    (SELECT COUNT(*) FROM line_contacts WHERE operator_id=? AND conversation_id IS NULL) AS unassigned,
@@ -22,10 +24,10 @@ export async function monitorRoute(req:Request,env:Env,a:Actor):Promise<Response
   const responders=(await stmt(env,`SELECT u.id,u.name,COUNT(m.id) AS replies,MAX(m.created_at) AS last_reply,
    SUM(CASE WHEN m.status IN('failed','unknown','blocked') THEN 1 ELSE 0 END) AS needs_attention
    FROM staff_users u LEFT JOIN messages m ON m.actor_id=u.id AND m.operator_id=u.operator_id AND m.direction='out' AND m.created_at>=?
-   WHERE u.operator_id=? AND u.role IN('operator_owner','operator_sales','operator_service') GROUP BY u.id ORDER BY replies DESC,u.name LIMIT 100`,new Date(Date.now()-30*86400000).toISOString(),a.operator_id).all()).results;
-  const reviews=(await stmt(env,'SELECT r.id,r.event_id,r.action,r.detail,r.created_at,u.name AS actor_name FROM risk_reviews r JOIN staff_users u ON u.id=r.actor_id WHERE r.operator_id=? ORDER BY r.created_at DESC,r.id DESC LIMIT 50',a.operator_id).all()).results;
+   WHERE u.operator_id=? AND u.role IN('operator_owner','operator_sales','operator_service') GROUP BY u.id ORDER BY replies DESC,u.name LIMIT 100`,since,a.operator_id).all()).results;
+  const reviews=(await stmt(env,'SELECT r.id,r.event_id,r.action,r.detail,r.created_at,u.name AS actor_name FROM risk_reviews r JOIN staff_users u ON u.id=r.actor_id WHERE r.operator_id=? AND r.created_at>=? ORDER BY r.created_at DESC,r.id DESC LIMIT 50',a.operator_id,since).all()).results;
   const enabled=rules.some(r=>r.enabled===1);
-  return json({enabled,status:enabled?'rules_only':'not_enabled',ai_enabled:false,rules:rules.map(r=>({...r,keywords:JSON.parse(String(r.keywords))})),events,stats,responders,reviews,message:enabled?'私有規則核查已設定；AI 模型尚未啟用':'AI 與風控規則尚未啟用',data_gaps:['無法歸屬原生 OA 後台的人工回覆者','不讀取私人 LINE 或外部聯繫','規則命中僅供人工核查，不代表截單成立'],scan_scope:'人工掃描最近 200 則平台出站紀錄；不發送告警訊息'});
+  return json({period_days:days,enabled,status:enabled?'rules_only':'not_enabled',ai_enabled:false,rules:rules.map(r=>({...r,keywords:JSON.parse(String(r.keywords))})),events,stats,responders,reviews,message:enabled?'私有規則核查已設定；AI 模型尚未啟用':'AI 與風控規則尚未啟用',data_gaps:['無法歸屬原生 OA 後台的人工回覆者','不讀取私人 LINE 或外部聯繫','規則命中僅供人工核查，不代表截單成立'],scan_scope:'人工掃描最近 200 則平台出站紀錄；不發送告警訊息'});
  }
  const rules=path.match(/^\/api\/admin\/risk\/rules(?:\/([^/]+))?$/);
  if(rules&&['POST','PATCH'].includes(req.method)){
