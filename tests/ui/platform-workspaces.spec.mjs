@@ -11,7 +11,7 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
   await page.screenshot({path:'docs/screenshots/'+name+'-platform-workspaces.png',fullPage:true,animations:'disabled',style:'#toast{visibility:hidden!important}'});
   await page.locator('[data-pw-detail="pw-biz-b4"]').click();await expect(page.locator('#modal')).toContainText('2026-10-01 ～ 2027-09-30');
   await expect(page.locator('#modal .pw-modules li')).toHaveCount(8);await expect(page.locator('#modal')).toContainText('整合中，未開通');
-  await expect(page.locator('#modal')).toContainText('分潤：待議定');
+  await expect(page.locator('#modal')).toContainText('分潤：待議定');await expect(page.locator('#modal')).toContainText('合約類型待補');
   await page.screenshot({path:'docs/screenshots/'+name+'-platform-workspace-detail.png',fullPage:true,animations:'disabled',style:'#toast{visibility:hidden!important}'});
   await page.getByRole('button',{name:'開啟借址維運台',exact:false}).click();await expect(page.getByRole('heading',{name:'租戶維運',exact:true})).toBeVisible();
  });
