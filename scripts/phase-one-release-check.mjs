@@ -41,6 +41,8 @@ for(const [file,worker,databaseName,appEnv,demoMode] of targets){
  if(access[0]?.success!==true||Number(access[0]?.results?.[0]?.n)!==1)throw new Error('系統後台指定管理員權限尚未就緒');
  const settings=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n FROM platform_settings WHERE id=1'});
  if(settings[0]?.success!==true||Number(settings[0]?.results?.[0]?.n)!==1)throw new Error('平台規劃設定尚未就緒');
+ const login=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n FROM platform_line_login WHERE id=1'});
+ if(login[0]?.success!==true||Number(login[0]?.results?.[0]?.n)!==1)throw new Error('LINE Login 設定結構尚未就緒');
  reports.push({worker,database_name:databaseName,database_isolated:true,app_env:appEnv,line_send_enabled:false,revenue_terms_complete:true,revenue_values_all_null:true,settlement_enabled:false,system_admin_ready:true,platform_oa_status:'planning',unauthenticated_status:r.status,deployments:deployments.deployments||[]});
 }
 if(reports.length!==2)throw new Error('發布驗證不完整');

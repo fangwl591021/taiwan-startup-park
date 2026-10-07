@@ -12,7 +12,7 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
   await page.getByLabel('搜尋業者／OA').fill('晴川');await page.getByRole('button',{name:'搜尋',exact:true}).click();await expect(page.locator('.platform-rows')).not.toContainText('青禾商務中心');
   await navigate('業者 OA 串接總覽');await expect(page.locator('#content')).toContainText('不顯示憑證、客戶身分或聊天內容');
   await navigate('平台 OA 與通知規劃');await expect(page.locator('#content')).toContainText('規劃中 · 尚未串接');
-  await page.getByLabel('平台 OA 名稱',{exact:true}).fill('平台服務 OA（'+name+'驗收）');await page.getByLabel('規劃 Provider ID').fill('123');await page.getByLabel('規劃 Channel ID').fill('456');
+  await page.getByLabel('平台 OA 名稱',{exact:true}).fill('平台服務 OA（'+name+'驗收）');await page.getByLabel('Messaging API Provider ID（規劃）').fill('123');await page.getByLabel('Messaging API Channel ID（規劃）').fill('456');
   await page.getByLabel('使用目的').fill('業者加入與平台服務');await page.getByLabel('業者加入通知草稿').fill('歡迎加入，這是規劃草稿。');await page.getByLabel('平台服務通知草稿').fill('平台服務說明草稿。');
   await page.getByLabel('每月規劃發送上限').fill('');await page.getByLabel('更新依據').fill(name+'虛構規劃驗收');
   expect(await page.getByLabel('每月規劃發送上限').inputValue()).toBe('');await expect(page.locator('#platform-settings-form input[type="password"]')).toHaveCount(0);

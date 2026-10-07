@@ -30,3 +30,16 @@ export async function lineSecret(env:Env,id:string):Promise<LineSecret>{
  }
  try{const raw=JSON.parse(env.LINE_CHANNELS_JSON||'{}'),v=raw[id];return v&&typeof v==='object'?{channelSecret:v.channelSecret,channelAccessToken:v.channelAccessToken}:{};}catch{return {};}
 }
+/** Separate AAD namespace lets Login settings share the storage key without
+ * sharing an OA channel, credentials table or identity. Fail closed. */
+export async function decryptStoredSecret(env:Env,operator:string,id:string,encrypted:string):Promise<LineSecret>{
+ try{
+  const raw=keyBytes(env);if(!raw)return {};
+  const value=JSON.parse(encrypted);if(value.v!==1||typeof value.iv!=='string'||typeof value.data!=='string')return {};
+  const iv=Uint8Array.from(atob(value.iv),c=>c.charCodeAt(0));if(iv.length!==12)return {};
+  const key=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['decrypt']);
+  const text=await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:context(operator,id)},key,Uint8Array.from(atob(value.data),c=>c.charCodeAt(0)));
+  const data=JSON.parse(new TextDecoder().decode(text));
+  return typeof data.channelSecret==='string'?{channelSecret:data.channelSecret}:{};
+ }catch{return {};}
+}

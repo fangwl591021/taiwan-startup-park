@@ -491,10 +491,10 @@ test('OA resource provisioning preserves the root Access app, limits bypass to s
  assert.equal((await provisionLineSettings(env,config,fetcher)).key_created,false);assert.equal(calls.filter(x=>x.path.endsWith('/secrets')).length,1);
  secret=false;encryptedCount=1;await assert.rejects(()=>provisionLineSettings(env,config,fetcher),/拒絕重建/);assert.equal(calls.filter(x=>x.path.endsWith('/secrets')).length,1);
  const checks=await verifyLineBoundary(async(url,init)=>url.includes('/webhook/')?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}));
- assert.equal(checks.length,6);assert(checks.slice(1).every(x=>x.access_protected));
+ assert.equal(checks.length,7);assert(checks.slice(1).every(x=>x.access_protected));
  let probes=0,waits=0;
  const eventual=await waitLineBoundary(async url=>url.includes('/webhook/')&&++probes>1?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}),async()=>{waits++;});
- assert.equal(eventual.length,6);assert.equal(probes,2);assert.equal(waits,1);
+ assert.equal(eventual.length,7);assert.equal(probes,2);assert.equal(waits,1);
  await assert.rejects(()=>provisionLineSettings(env,{...config,name:'other-worker'},fetcher),/目標/);
  await assert.rejects(()=>verifyLineBoundary(async()=>new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}})),/Webhook/);
 });
