@@ -52,3 +52,7 @@
 `tests/ui/line-workspace.spec.mjs` 在桌面與手機走完會員 → 成交租戶、回覆模板 → 人工草稿、六格選單預覽、關鍵字分類、實際回覆人員 → 私有核查 → 誤報結案，並確認平台不讀業者 CRM、一般業務無核查入口。
 
 本次不製作或重新錄製教學影片。發布證據另記於 `DEPLOYMENT_STATUS.md`。
+
+2026-10-07 19:06（Asia/Taipei）已發布來源 `13ed99c931f2e20aa75943b87ede3fb3c364043f` 至正式及獨立測試站；109 項後端與 31 項桌面／手機測試全部通過。新 migration 已套用，實際模組及 Access 邊界核對完成。
+
+[功能 PR #17](https://github.com/fangwl591021/taiwan-startup-park/pull/17) 已隨發布合併；[發布證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611482434)。[截圖與完整測試報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611846625/artifacts/11477339138) 包含 desktop/mobile-line-workspace-crm、hub、modules、templates、monitor，共十張虛構資料截圖。後續截圖拍攝選項修正不改動已發布的應用程式。

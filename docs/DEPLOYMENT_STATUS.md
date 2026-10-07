@@ -1,4 +1,20 @@
-# 最新發布：平台 Webhook Verify 與獨立來訊接收
+# 最新發布：LINE OA 工作台、會員 CRM、模組與模板
+
+2026-10-07 19:06:02（Asia/Taipei）正式與獨立測試站已更新，遠端結構與保護核對通過。
+
+- 參照 Smart-Menu-Studio 的 LINE 工作區機制，加入會員 CRM、LINE OA 工作台、模組權益、共用／私有模板，以及僅業者管理員可見的聊天室核查。CRM → 成交案件 → 借址租戶沿用同一份客戶資料；單一未綁定 LINE 身分可帶入已接收的歷史對話。詳見 [功能對照與界線](LINE_WORKSPACE_IMPORT.md)。
+- 會員支援搜尋、標籤、狀態、分頁、指派與操作歷程；保留既有登記據點、合約起迄、年約／月約、付款約定、郵件代收及續約維運。列表採上限與 keyset 分頁，避免一次載入所有會員。
+- 平台管理模組與共用模板，不預設讀取業者 CRM／聊天室。業務與維運依案件／租戶指派限制；核查規則、事件及人工處理歷程不出現在一般活動紀錄。AI 模型未啟用，現在提供的是人工規則核查。
+- 109 項後端、31 項桌面／手機測試、TypeScript、建置、Worker dry-run 通過，npm audit 0 vulnerabilities。測試包含跨業者／角色隔離、千筆 CRM 分頁、重送不重建案件、會員到租戶、LINE 訊息綁定、模組相依、模板草稿及私有核查。
+- [發布與遠端核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611482434)；[實際部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611482434/artifacts/11478417739)；[桌面／手機驗收與截圖](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611846625/artifacts/11477339138)；[PR #17](https://github.com/fangwl591021/taiwan-startup-park/pull/17)（先建立草稿，隨發布分支快轉已合併）。
+- 正式應用來源 `13ed99c931f2e20aa75943b87ede3fb3c364043f`；正式 active version `9a184830-2687-466e-b5c6-15223feaba22`；測試 active version `b07b2605-b908-4448-9456-ad01f1fd5f61`。後續截圖修正 `08bb6d8282bc81445d4b5a06d8f4d650a9972af1` 僅更動測試拍攝選項，應用程式與已發布來源相同。
+- `0013_line_workspace.sql` 成功套用兩區專用 D1；核對 9 張新增表，正式 1 家業者／4 項模組，測試 2 家業者／8 項模組。既有 LINE 密鑰保留、主鑰未重建（key_created:false），根 Access 保護未放寬。16 項遠端邊界檢查通過；新受保護 API 未登入均為 Access 302，未知 Webhook 為 404。
+- 平台已配置 OA 的最後有效驗簽紀錄仍存在（signature_received:1）；未更換原平台 Webhook。此為遠端既有接收紀錄，不代表本輪代替使用者按下 LINE Console Verify。從本地環境直接探測原網址被 Cloudflare 回應 403／1010，未將該探測當成應用驗簽結果。
+- LINE Login OAuth／LIFF、正式外送、圖文選單圖片發布、金流、AI 模型與告警推播未啟用；數位服務平台費／分潤全部 NULL，結算關閉。測試站不填真實憑證；截圖使用虛構資料。沒有代替使用者登入正式工作台驗收，也沒有重錄教學影片。原始 PLATFORM_BLUEPRINT.md 與後續需求完整保留。
+
+以下為歷次發布紀錄。
+
+# 先前發布：平台 Webhook Verify 與獨立來訊接收
 
 2026-10-07 17:57:34（Asia/Taipei）正式／測試站驗證更新。平台原網址已接入專用驗簽接收端；有效空事件回應 200，訊息持久保存後才確認，支援重送去重與訊息收回。平台事件與所有業者客戶、聊天室分開。
 
