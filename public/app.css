@@ -238,3 +238,6 @@ button:disabled{opacity:1;color:#46594c;background:#edf1ee}
 @media(max-width:700px){.lw-row,.lw-person{gap:12px;flex-wrap:wrap;padding:18px 0}.lw-person>.company-icon{display:none}.lw-person>span:nth-child(2){flex-basis:65%}.lw-person>span:nth-child(3){flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap}.lw-person>span:last-child{display:none}.lw-row>div:first-child{flex-basis:100%}.lw-row>div:last-child{justify-content:flex-start}.lw-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lw-summary article{padding:16px}.lw-menu-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.lw-menu-preview>div{padding:20px 10px}.lw-cell-editor{grid-template-columns:1fr}.lw-search{align-items:stretch}.lw-search button{align-self:flex-end}.lw-shortcuts{align-items:stretch}.lw-shortcuts button{flex:1;min-width:180px}}
 
 @media(max-width:700px){.lw-menu-preview{grid-template-columns:repeat(3,minmax(0,1fr))}.lw-menu-preview>div{padding:18px 6px}.lw-menu-preview b{font-size:18px}.lw-menu-preview small{font-size:15px}}
+
+.workspace:has(.lw-panel) .page-heading h1{color:#0758b7}
+.lw-search select{min-height:52px}

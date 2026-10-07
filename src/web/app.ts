@@ -473,7 +473,7 @@ document.addEventListener('click',async event=>{
  if(await workspaces.click(target))return;
  if(d.workspace){
   event.preventDefault();if(d.workspace==='platform'&&!me.platform_access)return;
-  systemView=d.workspace==='platform';page=systemView?'system-overview':'dashboard';search='';platformOffset=0;viewRevision++;clearReads();root.innerHTML='';
+  systemView=d.workspace==='platform';if(!systemView)workspaceModules=(await api('/workspace/modules')).modules;page=systemView?'system-overview':'dashboard';search='';platformOffset=0;viewRevision++;clearReads();root.innerHTML='';
   const url=new URL(location.href);if(systemView)url.searchParams.set('workspace','platform');else url.searchParams.delete('workspace');window.history.replaceState(null,'',url);render(true);await refresh();return;
  }
  if(d.platformPage){platformOffset=Math.max(0,platformOffset+(d.platformPage==='next'?50:-50));await refresh();return;}
