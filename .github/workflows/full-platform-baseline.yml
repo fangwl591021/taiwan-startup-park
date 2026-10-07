@@ -20,11 +20,9 @@ jobs:
           node-version: '22'
       - name: Verify every imported file and prepare isolated build copy
         run: node scripts/verify-upstream-platform.mjs --prepare
-      - name: Install original locked backend dependencies
+      - name: Install reviewed locked backend dependency overlay
         working-directory: .migration-build/smart-menu/backend
         run: npm ci
-      - name: Repair compatible backend dependency lock in isolated copy
-        run: node scripts/repair-upstream-platform.mjs backend
       - name: Original backend module typechecks
         working-directory: .migration-build/smart-menu/backend
         run: npm run typecheck
@@ -34,11 +32,9 @@ jobs:
       - name: Bundle original backend using local placeholder resources
         working-directory: .migration-build/smart-menu/backend
         run: npx wrangler deploy --dry-run --config wrangler.jsonc --outdir worker-build
-      - name: Install original locked frontend dependencies
+      - name: Install reviewed locked frontend dependency overlay
         working-directory: .migration-build/smart-menu/frontend
         run: npm ci
-      - name: Repair compatible frontend dependency lock in isolated copy
-        run: node scripts/repair-upstream-platform.mjs frontend
       - name: Original frontend tests
         working-directory: .migration-build/smart-menu/frontend
         run: npm test
@@ -55,6 +51,8 @@ jobs:
           path: |
             platform/upstream-smart-menu
             config/platform-source-lock.json
+            config/platform-dependency-overlay.json
+            platform/dependency-overlays
             docs/FULL_PLATFORM_MIGRATION.md
             full-platform-source-report.json
             full-platform-backend-audit.json

@@ -50,11 +50,22 @@ for (const file of lock.files) {
     }
   }
 }
+const dependencyOverlay = JSON.parse(await readFile(join(root, 'config/platform-dependency-overlay.json'), 'utf8'));
+const allowedOverlayPaths = ['backend/package.json', 'backend/package-lock.json', 'frontend/package.json', 'frontend/package-lock.json'];
+if (dependencyOverlay.schema_version !== 1 || dependencyOverlay.source_commit !== lock.source_commit
+    || dependencyOverlay.files.length !== 4
+    || new Set(dependencyOverlay.files.map(file => file.path)).size !== 4
+    || dependencyOverlay.files.some(file => !allowedOverlayPaths.includes(file.path))) throw new Error('Unexpected dependency overlay');
+for (const file of dependencyOverlay.files) {
+  const bytes = await readFile(join(root, 'platform/dependency-overlays', file.path));
+  const sha = createHash('sha1').update(Buffer.from('blob ' + bytes.length + '\0')).update(bytes).digest('hex');
+  if (sha !== file.sha) throw new Error('Dependency overlay integrity mismatch: ' + file.path);
+}
 const migrations = lock.files.filter(file => /^backend\/migrations\/.+\.sql$/.test(file.path));
 if (migrations.length !== lock.migration_count) throw new Error('Incomplete migration inventory');
 const report = {
   source_repository: lock.source_repository, source_commit: lock.source_commit,
-  checked_files: actual.length, migration_files: migrations.length,
+  checked_files: actual.length, migration_files: migrations.length, dependency_overlay: dependencyOverlay,
   modules: lock.modules, runtime_integrated: false,
   source_hosts_require_review: sourceHosts, routes,
   production_bindings_changed: false, remote_migrations_applied: false,
@@ -75,6 +86,9 @@ if (args.includes('--prepare')) {
   await cp(source, destination, { recursive: true, force: false, errorOnExist: true });
   for (const area of ['backend', 'frontend']) {
     const directory = join(destination, area);
+    for (const file of ['package.json', 'package-lock.json']) {
+      await cp(join(root, 'platform/dependency-overlays', area, file), join(directory, file));
+    }
     const configPath = join(directory, 'wrangler.jsonc');
     await cp(configPath, join(directory, 'wrangler.upstream-reference.jsonc.txt'));
     const packagePath = join(directory, 'package.json');

@@ -65,7 +65,7 @@
 
 ## 建置隔離
 
-scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob hash 和 byte size，拒絕新增缺漏或符號連結。加上 --prepare 時，另建 .migration-build/smart-menu 工作副本：
+scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob hash 和 byte size，拒絕新增缺漏或符號連結。加上 --prepare 時，另建 .migration-build/smart-menu 工作副本並套用已核對 SHA 的固定 dependency overlay：
 
 - 原來源檔案不改動。
 - 工作副本使用本地 D1/R2 placeholder，移除原服務 Worker 綁定。
@@ -79,7 +79,7 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 - [x] 鎖定原平台完整來源並保存每個檔案。
 - [x] 保存功能、資料及權限對應清單，保留既有借址與後續需求。
 - [x] 原平台依鎖檔建置／測試及完整 Worker bundle：1222 後端測試、592 前端測試通過。
-- [ ] 原鎖檔依賴稽核修正：首輪 npm ci 回報前端 7 個 high findings，先取得機器可讀稽核；不將此來源基準標成可上線版本。
+- [x] 原鎖檔依賴稽核修正：完整 audit 初始後端 4、前端 7 個 high；經相容更新與 sharp 0.35.5 override，兩端 audit 均為 0。固定 package／lock overlay，不更改原 snapshot。
 - [ ] 整合登入、工作區映射、兩層權限及素材／憑證隔離。
 - [ ] 原平台全模組接上新工作區 API 與實際資料，移除靜態成功數字。
 - [ ] 成交、合約、郵件、維運、數位租用整合到同一企業 CRM。
@@ -99,5 +99,7 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 
 - 完整來源基準：run 37678050562 / commit 79bf9d03e5382b02fcedb0cae64a1b7ff1f362ec，success。全部 369 檔案的 hash／size 核對成功，55 份 migration 未套用；後端 1222、前端 592 測試零失敗，原 4 組 module typecheck、Worker dry-run、完整前端 build 均成功。
 - 此來源測試包含原有單元及原始碼契約檢查，不是新的整合 browser 或正式 LINE／金流驗收。
-- 既有借址回歸：run 37678050492，同一 commit，後端已通過；桌面／手機回歸結果待確認。
-- 新增 dependency audit JSON 與 high/critical gate，詳細結果待 CI；沒有更改原始 lockfile 或默默執行 audit force fix。
+- 既有借址回歸：run 37678050492，同一 commit，success；117 後端、35 桌面／手機測試通過，audit 0。此為現有借址畫面回歸，不是新完整平台整合截圖。
+- 稽核發現及修正：run 37678470074 證實原鎖檔後端 4／前端 7 high；run 37678750375 相容更新後仍剩 sharp 漏洞；run 37679159576 明確 override sharp 0.35.5 後，全部 1814 項來源測試、typecheck/build/dry-run 成功，兩端 npm audit 0。
+- 已保存 package／lock overlay 至 platform/dependency-overlays，下一輪 CI 直接 npm ci 驗證固定修正版本，不動態更新。high/critical gate 保留。
+- 本機 environment_offline 的障礙仍未消除；實際資料／登入／權限及整合 browser 驗收尚未完成，保存於 draft PR #19 待接續。
