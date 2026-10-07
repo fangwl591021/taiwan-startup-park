@@ -379,7 +379,7 @@ test('one observed LINE recipient can represent multiple tenants without inherit
 
 import {lineSecret,encryptLineSecret} from '../dist/line-credentials.js';
 import {lineSettingsRoute} from '../dist/line-settings.js';
-import {provisionLineSettings,verifyLineBoundary} from '../scripts/line-settings-deploy.mjs';
+import {provisionLineSettings,verifyLineBoundary,waitLineBoundary} from '../scripts/line-settings-deploy.mjs';
 const oaSecret='a'.repeat(32),oaToken='t'.repeat(80),oaBot='U'+'d'.repeat(32),oaChannel='1234567890';
 async function oaFixture(t){
  const f=await fixture(t);f.env.LINE_CREDENTIALS_KEY=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64');f.env.LINE_SEND_ENABLED='off';
@@ -492,6 +492,9 @@ test('OA resource provisioning preserves the root Access app, limits bypass to s
  secret=false;encryptedCount=1;await assert.rejects(()=>provisionLineSettings(env,config,fetcher),/拒絕重建/);assert.equal(calls.filter(x=>x.path.endsWith('/secrets')).length,1);
  const checks=await verifyLineBoundary(async(url,init)=>url.includes('/webhook/')?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}));
  assert.equal(checks.length,4);assert(checks.slice(1).every(x=>x.access_protected));
+ let probes=0,waits=0;
+ const eventual=await waitLineBoundary(async url=>url.includes('/webhook/')&&++probes>1?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}),async()=>{waits++;});
+ assert.equal(eventual.length,4);assert.equal(probes,2);assert.equal(waits,1);
  await assert.rejects(()=>provisionLineSettings(env,{...config,name:'other-worker'},fetcher),/目標/);
  await assert.rejects(()=>verifyLineBoundary(async()=>new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}})),/Webhook/);
 });
