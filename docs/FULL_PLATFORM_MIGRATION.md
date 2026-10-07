@@ -93,7 +93,7 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 
 ## 接續工作
 
-開發環境恢復後，checkout feature/full-platform-migration，閱讀本文件、來源 lock 與 PLATFORM_BLUEPRINT，再從工作區映射及權限適配開始。原平台完整來源已入庫，可直接進行整合，不必重新挑選或複製模組。
+接續 feature/full-platform-migration，閱讀本文件、來源 lock 與 PLATFORM_BLUEPRINT。工作區映射及現有 session 權限橋接已完成第 1 段，接續原平台 Hono／React 執行路由、獨立資料層、素材／憑證與完整企業 CRM 整合，不必重新挑選或複製來源模組。
 
 ## CI 證據
 
@@ -115,4 +115,38 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 - 工作台新增「平台工作區」，以條列、深色字和藍色標題呈現。工作區詳情沿用已有借址服務起迄、合約類型、付款週期，連回租戶維運；顯示八個原平台模組「整合中，未開通」。企業帳號只看到其已授權工作區。
 - 原平台完整 React UI 及 Hono 執行尚未接入這層 context；source_role=null、source_access=false、runtime_integrated=false。context 回應不是可供未來後端直接信任的客戶端能力憑證。
 - 沒有建立或綁定第二個遠端 D1／R2，沒有搬移 LINE、金流、AI 憑證；不改寫正式 Worker。費率與分潤保持 NULL。
-- 新增 13 個後端流程／隔離測試和 4 個桌面／手機驗收；實際結果以下一次 CI 紀錄為準。
+- 新增 14 個後端流程／隔離測試和 4 個桌面／手機驗收；實際結果以下一次 CI 紀錄為準。
+
+## 工作區橋接驗收證據
+
+- 實作 commit：68416d411e80f107d26eacb0acd97554a20d068c。
+- 新整合驗收：[Platform acceptance / run 37702210031](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37702210031)，success。TypeScript、Worker dry-run、130 個後端流程／隔離測試、39 個桌面／手機瀏覽器測試全部通過；其中新增 13 個後端及 4 個桌面／手機測試。
+- 原平台完整來源回歸：[run 37702209968](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37702209968)，success。369 檔案／55 migrations 保持原樣、1222 後端和 592 前端來源測試、typechecks、Worker／React build 及依賴 audit 通過，findings=0。
+- [桌面／手機截圖及驗收附件](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37702210031/artifacts/11518570993)：docs/screenshots 下含 desktop-platform-workspaces.png、mobile-platform-workspaces.png、desktop-platform-workspace-detail.png、mobile-platform-workspace-detail.png、desktop-enterprise-workspace.png、mobile-enterprise-workspace.png。
+- 截圖為本次工作區橋接畫面，不能當作原平台完整 UI／執行整合完成的證據。
+- release/cloudflare 仍為 e24b74f1fbce1a2b01f8784ec1f2664c3db6b2e5；本輪沒有部署或套用正式資料庫 migration。
+
+### 額外修正
+
+- 一般業務、維運與財務的 /api/workspace/modules 不回傳 owner 私有核查模組的名稱、開關及描述；新增 API discovery 隔離測試。管理員仍可使用原有私有核查功能。
+- 舊合約 term_kind=NULL 時顯示「合約類型待補」，不猜測年約或一次性。payment_cycle 亦顯示待補提示。
+- 企業工作區的合約期間狀態共用既有維運台 serviceState：未生效的續約顯示「服務尚未開始」，到期與終止分别呈現；不只依資料庫 active 欄位宣稱正在服務。
+- Playwright 截圖均出自本地 SQLite 虛構資料；沒有正式 LINE、付款或模型呼叫，沒有重製教學影片。
+
+## 最終橋接驗收
+
+實作 commit：0f1a15dcae3453fd4595c9c375e9ed88f9008237。
+
+- [最終整合 CI / 37703344956](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37703344956)：success。131 個後端測試、39 個桌面／手機測試、TypeScript、Worker dry-run 均通過；其中新增 14 個後端與 4 個瀏覽器測試。
+- [完整來源 CI / 37703344947](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37703344947)：success。369 檔案／55 migrations 核對完整，1222 後端與 592 前端來源測試及建置通過，audit=0。
+- [完整報告與截圖附件](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37703344956/artifacts/11519030275)。六張截圖已另存 docs/screenshots，workspace-bridge-manifest.json 記錄 CI、實作 commit、檔案 SHA 與大小，便於對照。
+- 已目視核對桌面／手機；缺合約條件提示及未生效續約狀態均修正。
+- 仍未完成原平台 Hono／React 全部執行路由、獨立資料層及企業真實登入邀請；本輪工作區橋接驗收不能視為整套平台已移植完成。開發環境仍未連線，成果已保存，正式 Worker 未變更。
+
+桌面列表：
+
+![桌面平台工作區](screenshots/desktop-platform-workspaces.png)
+
+手機列表：
+
+![手機平台工作區](screenshots/mobile-platform-workspaces.png)
