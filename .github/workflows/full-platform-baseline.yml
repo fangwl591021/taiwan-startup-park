@@ -20,6 +20,8 @@ jobs:
           node-version: '22'
       - name: Verify every imported file and prepare isolated build copy
         run: node scripts/verify-upstream-platform.mjs --prepare
+      - name: Verify fresh isolated full platform schema without demonstration accounts
+        run: node scripts/verify-platform-schema.mjs
       - name: Install reviewed locked backend dependency overlay
         working-directory: .migration-build/smart-menu/backend
         run: npm ci
