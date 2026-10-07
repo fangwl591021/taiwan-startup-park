@@ -226,6 +226,21 @@ LINE 真實收送尚未串接且發送關閉；金流未串接，帳務為人工
 已發布新增既有租戶、新增操作人員資料及獨立據點／方案設定，並補上空資料頁的可點擊建立入口。空租戶工作台、實際建檔、手機入口及承辦人權限已通過測試。直接建檔租戶不製造案件成交、收款或權益；明確指派業務承辦時，僅該員或管理員可查看。人員資料預設停用且待 Access 綁定；不能直接啟用、指派案件或新增 owner/platform 角色。新增操作指引見 CREATION_GUIDE.md。
 
 新增驗收截圖：desktop-empty-tenants.png、desktop-add-staff.png、mobile-add-tenant.png、mobile-catalog.png，保存於上述 build artifact 的 docs/screenshots。
+# 系統總後台與管理員角色修正
+
+2026-10-07 15:20（Asia/Taipei）正式與獨立測試區已更新。
+
+- 「系統總管理員」與「業者管理員」分開；平台建立者的業者角色保留，另加明確系統權限，可切換後台。一般業者沒有跨業者權限。[範圍與操作](SYSTEM_CONSOLE.md)。
+- 新增系統總覽、業者與 OA 狀態總覽、可保存的平台 OA／通知規劃、平台費與分潤預留、獨立系統設定歷程。平台 OA 僅規劃，未串接／未發送；業者開通、停用與 SaaS 方案核准尚未開放。
+- 0009_platform_console.sql 已套用專用 D1，授權限預先綁定的固定平台建立者；既有角色、合約與租戶保留。測試可選虛構系統管理員；不重設資料。
+- [93 後端、25 桌面／手機、建置、權限與發布通過](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743)；npm audit 0 vulnerabilities。
+- [截圖與建置](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743/artifacts/11466727105)；[部署核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743/artifacts/11467280650)。
+- Source：d2e05cc244a537f8400d11eeb33ce61d2aca901f；正式 active：eb7a56c2-a1bf-41d2-9b6b-8f5ef45d96e9；測試 active：5e029961-e9ee-413e-83cf-7bd260771f23。
+- 系統 overview/settings 與原工作台 API 皆 Access 302；Webhook 保留原精確路徑，根政策未放寬。兩區指定系統帳號與平台設定核對成功，D1 分離、分潤 NULL、LINE 外送 off、結算 disabled、金流與 AI 未啟用。
+- 首輪雙後台 UI mock 的未登入回應錯誤已修正；建置擋下首輪發布。最後全數通過；UI 為虛構資料，雙身分 UI mock 與後端真 grant 分開驗收。未代替本人登入正式瀏覽器。教學沿用、不重錄；原始藍圖保留。
+
+---
+
 # 業者 LINE OA 設定入口
 
 2026-10-07 14:54（Asia/Taipei）正式與獨立測試區已更新。

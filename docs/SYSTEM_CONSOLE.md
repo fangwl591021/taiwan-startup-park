@@ -30,3 +30,11 @@
 新增桌面／手機系統後台與平台 OA 草稿驗收，及雙工作台切換。純系統角色 UI 使用真實本機 SQLite 虛構資料；雙身分切換的 UI 使用局部權限模擬，後端另驗證真正的 grant 檢查。
 
 發布後核對指定正式帳號 grant、測試角色、獨立 D1、平台設定、分潤 NULL、LINE_SEND_ENABLED=off。系統 API 維持 Access 保護；不擴張 webhook bypass。教學沿用，不重錄。
+
+## 發布證據（2026-10-07 15:20，Asia/Taipei）
+
+- [93 後端、25 桌面／手機及完整發布通過](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743)，source d2e05cc244a537f8400d11eeb33ce61d2aca901f；npm audit 0 vulnerabilities，教學錄影 skipped。
+- [桌面／手機畫面與建置](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743/artifacts/11466727105)，圖片 docs/screenshots/*-system-dashboard.png、*-system-oa-planning.png。
+- [遠端核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743/artifacts/11467280650)：兩區 system_admin_ready:true、平台 OA planning、分潤 NULL、LINE 外送 off；系統 overview/settings API 未登入皆 Access 302。
+- 第一輪雙後台 UI 測試把未登入錯誤誤標為已授權，導致登入表单不存在；已修正 mock 保留未登入回應，沒有刪除或降低切換驗收。首輪發布被建置 gate 擋下，未部署失敗版本。
+- 尚未代替本人登入正式瀏覽器，平台 OA 實際串接、用量查詢及發送均未實作／未啟用。
