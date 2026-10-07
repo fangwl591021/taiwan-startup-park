@@ -31,6 +31,10 @@ export function database(path=':memory:'){
   sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0008_line_settings.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
   catch(e){sqlite.exec('ROLLBACK');throw e;}
  }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_settings'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0009_platform_console.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
  function prepare(sql,values=[]){
   const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return {results:st.all(...values),meta:{changes:0}};
    const r=st.run(...values);return {results:[],meta:{changes:Number(r.changes)}};};
@@ -58,7 +62,7 @@ export function seed(db){
    ['sales-a3','op-a','業務 S3 · 王禾','operator_sales'],
    ['service-a','op-a','維運 · 張青','operator_service'],
    ['finance-a','op-a','財務 · 周月','operator_finance'],
-   ['platform','op-a','平台管理（未開放）','platform_admin'],
+   ['platform','op-a','系統總管理員（虛構）','platform_admin'],
    ['business-admin','op-a','企業管理（未開放）','business_admin'],
    ['owner-b','op-b','B 業者管理員','operator_owner'],
    ['sales-b','op-b','B 業者業務','operator_sales']]){

@@ -23,7 +23,7 @@ export async function enrollOwner(req:Request,env:SetupEnv){
  if(!counts||counts.operators||counts.staff||counts.identities)fail(409,'已有操作人員資料，不能重新初始化');
  await env.DB.batch([
   stmt(env,'INSERT INTO operators(id,name) SELECT ?,? WHERE NOT EXISTS(SELECT 1 FROM operators) AND NOT EXISTS(SELECT 1 FROM staff_users) AND NOT EXISTS(SELECT 1 FROM auth_identities)',OP,'台灣創業園'),
-  stmt(env,"INSERT INTO staff_users(id,operator_id,name,role,active) SELECT ?,?,?,'operator_owner',1 WHERE changes()>0",USER,OP,'總管理員'),
+  stmt(env,"INSERT INTO staff_users(id,operator_id,name,role,active) SELECT ?,?,?,'operator_owner',1 WHERE changes()>0",USER,OP,'平台建立者'),
   stmt(env,'INSERT INTO auth_identities(issuer,subject,user_id) SELECT ?,?,? WHERE changes()>0',claim.iss,claim.sub,USER),
   stmt(env,"INSERT INTO activity_events(id,operator_id,actor_id,action,detail,created_at) SELECT ?,?,?,'owner_initialized',?,? WHERE changes()>0",'tsp-owner-initialized',OP,USER,JSON.stringify({method:'verified_access_preapproved_email'}),now())
  ]);

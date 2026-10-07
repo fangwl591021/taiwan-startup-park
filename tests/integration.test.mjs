@@ -255,10 +255,10 @@ test('hosted simulation requires signed owner Access even for bootstrap, health 
  for(const path of ['/bootstrap','/health','/demo/users'])assert.equal((await call(path,opts)).status,401);
  const token=await jwt(s,{email:s.SANDBOX_OWNER_EMAIL});
  const list=await call('/demo/users',{...opts,token});assert.equal(list.status,200);
- assert.equal(list.data.length,8);assert(!list.data.some(x=>['platform_admin','business_admin'].includes(x.role)));
+ assert.equal(list.data.length,9);assert(list.data.some(x=>x.role==='platform_admin'));assert(!list.data.some(x=>x.role==='business_admin'));
  assert.equal((await call('/bootstrap',{...opts,token})).data.sandbox,true);
  assert.equal((await call('/demo/users',{...opts,token:await jwt(s,{email:'other@example.invalid'})})).status,403);
- assert.equal((await call('/demo/login',{...opts,token,method:'POST',data:{user_id:'platform'}})).status,401);
+ assert.equal((await call('/demo/login',{...opts,token,method:'POST',data:{user_id:'platform'}})).status,200);
  assert.equal((await call('/line/webhook/la',{...opts,token,method:'POST',data:{}})).status,404);
 });
 test('sandbox sessions bind verified visitor and cannot cross into production or reuse local cookies',async t=>{
@@ -425,7 +425,7 @@ test('OA configuration rejects nonowners, forged fields, CSRF, unsupported envir
  const failed=await f.a('/line/settings','POST',f.data);assert.equal(failed.status,400);assert(!JSON.stringify(failed).includes(oaToken));
  assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM line_connection_secrets').get().n,0);
  delete f.env.LINE_CREDENTIALS_KEY;assert.equal((await f.a('/line/settings')).data.storage_ready,false);assert.equal((await f.a('/line/settings','POST',f.data)).status,503);
- await assert.rejects(()=>lineSettingsRoute(new Request('http://localhost/api/line/settings',{method:'POST'}),{...f.env,APP_ENV:'sandbox'},f.a),/總管理員/);
+ await assert.rejects(()=>lineSettingsRoute(new Request('http://localhost/api/line/settings',{method:'POST'}),{...f.env,APP_ENV:'sandbox'},f.a),/業者管理員/);
  await assert.rejects(()=>lineSettingsRoute(new Request('http://localhost/api/line/settings',{method:'POST'}),{...f.env,APP_ENV:'sandbox'},{id:'owner-a',operator_id:'op-a',role:'operator_owner'}),/測試區/);
 });
 test('OA edits retain blank credentials, invalidate webhook proof after secret rotation, and use versioned operator isolation',async t=>{
@@ -491,10 +491,10 @@ test('OA resource provisioning preserves the root Access app, limits bypass to s
  assert.equal((await provisionLineSettings(env,config,fetcher)).key_created,false);assert.equal(calls.filter(x=>x.path.endsWith('/secrets')).length,1);
  secret=false;encryptedCount=1;await assert.rejects(()=>provisionLineSettings(env,config,fetcher),/拒絕重建/);assert.equal(calls.filter(x=>x.path.endsWith('/secrets')).length,1);
  const checks=await verifyLineBoundary(async(url,init)=>url.includes('/webhook/')?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}));
- assert.equal(checks.length,4);assert(checks.slice(1).every(x=>x.access_protected));
+ assert.equal(checks.length,6);assert(checks.slice(1).every(x=>x.access_protected));
  let probes=0,waits=0;
  const eventual=await waitLineBoundary(async url=>url.includes('/webhook/')&&++probes>1?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}),async()=>{waits++;});
- assert.equal(eventual.length,4);assert.equal(probes,2);assert.equal(waits,1);
+ assert.equal(eventual.length,6);assert.equal(probes,2);assert.equal(waits,1);
  await assert.rejects(()=>provisionLineSettings(env,{...config,name:'other-worker'},fetcher),/目標/);
  await assert.rejects(()=>verifyLineBoundary(async()=>new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}})),/Webhook/);
 });

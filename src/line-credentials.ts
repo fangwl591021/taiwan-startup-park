@@ -8,7 +8,7 @@ function keyBytes(env:Env){
 export const credentialStorageReady=(env:Env)=>!!keyBytes(env);
 const context=(operator:string,id:string)=>enc.encode('tsp-line-credentials-v1|'+operator+'|'+id);
 export async function encryptLineSecret(env:Env,operator:string,id:string,data:LineSecret){
- const raw=keyBytes(env);if(!raw)fail(503,'安全憑證保存尚未就緒，請聯絡平台管理員');
+ const raw=keyBytes(env);if(!raw)fail(503,'安全憑證保存尚未就緒，請聯絡系統總管理員');
  const key=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt']);
  const iv=crypto.getRandomValues(new Uint8Array(12));
  const value=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:context(operator,id)},key,enc.encode(JSON.stringify(data)));

@@ -6,6 +6,7 @@ import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueu
 import {listPage} from './paging.js';
 import {operationRoute} from './operations.js';
 import {lineSettingsRoute} from './line-settings.js';
+import {platformRoute,platformAccess} from './platform.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
@@ -97,13 +98,13 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(path==='/api/demo/users'&&method==='GET'){
   if(!demo(req,env))fail(404,'不存在');
   const users=(await stmt(env,'SELECT u.id,u.name,u.role,o.name AS operator_name FROM staff_users u JOIN operators o ON o.id=u.operator_id WHERE u.active=1 ORDER BY u.operator_id,u.id').all()).results;
-  return json(sandbox(req,env)?users.filter(u=>['operator_owner','operator_sales','operator_service','operator_finance'].includes(String(u.role))):users);
+  return json(sandbox(req,env)?users.filter(u=>['operator_owner','operator_sales','operator_service','operator_finance','platform_admin'].includes(String(u.role))):users);
  }
  if(path==='/api/demo/login'&&method==='POST'){
   if(!demo(req,env))fail(404,'不存在');
   const d=await body(req,['user_id']);const id=textField(d.user_id,'使用者',100);
   const u=await stmt(env,'SELECT id,role FROM staff_users WHERE id=? AND active=1',id).first();
-  if(!u||sandbox(req,env)&&!['operator_owner','operator_sales','operator_service','operator_finance'].includes(String(u.role)))fail(401,'帳號不可使用');
+  if(!u||sandbox(req,env)&&!['operator_owner','operator_sales','operator_service','operator_finance','platform_admin'].includes(String(u.role)))fail(401,'帳號不可使用');
   const token=uid()+uid();
   const claim=sandbox(req,env)?await sandboxAccess(req,env):null;
   const seconds=claim?Math.max(0,Math.min(28800,claim.exp-Math.floor(Date.now()/1000))):28800;
@@ -112,6 +113,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/auth/access'&&method==='POST'){if(sandbox(req,env))fail(404,'請選擇模擬帳號');await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
+ const platform=await platformRoute(req,env,a);if(platform)return platform;
  const lineSettings=await lineSettingsRoute(req,env,a);if(lineSettings)return lineSettings;
  const operation=await operationRoute(req,env,a,id=>getBusiness(env,a,id));if(operation)return operation;
  if(path==='/api/integrations'&&method==='GET')return json(await integrationStatus(env,a));
@@ -129,7 +131,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
 
  if(path==='/api/me'&&method==='GET'){
   const op=await stmt(env,'SELECT name FROM operators WHERE id=?',a.operator_id).first();
-  return json({...a,operator_name:op?.name,phase:'address_only',digital_preview:digitalPreview(env),demo:demo(req,env),sandbox:sandbox(req,env)});
+  return json({...a,platform_access:await platformAccess(env,a),operator_name:op?.name,phase:'address_only',digital_preview:digitalPreview(env),demo:demo(req,env),sandbox:sandbox(req,env)});
  }
  if(path==='/api/logout'&&method==='POST'){
   const token=req.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith('tsp_session='))?.slice(12)||'';

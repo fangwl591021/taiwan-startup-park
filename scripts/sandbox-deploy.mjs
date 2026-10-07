@@ -52,7 +52,7 @@ if(mode==='prepare'){
    const db=database();seed(db);const statements=[];
    const quote=v=>v===null?'NULL':typeof v==='number'?String(v):"'"+String(v).replaceAll("'","''")+"'";
    for(const {name} of db.sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()){
-    if(['sessions','auth_identities','digital_revenue_terms'].includes(name))continue;
+    if(['sessions','auth_identities','digital_revenue_terms','platform_settings'].includes(name))continue;
     for(const row of db.sqlite.prepare('SELECT * FROM "'+name+'"').all())statements.push('INSERT INTO "'+name+'" ('+Object.keys(row).map(c=>'"'+c+'"').join(',')+') VALUES ('+Object.values(row).map(quote).join(',')+');');
    }
    db.close();await writeFile('.sandbox-seed.sql',statements.join('\n')+'\n',{mode:0o600});

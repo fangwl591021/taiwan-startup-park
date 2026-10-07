@@ -3,9 +3,9 @@ import {stmt,fail,uid,now,audit} from './shared.js';
 import {credentialStorageReady,encryptLineSecret,lineSecret} from './line-credentials.js';
 type Row=Record<string,any>;
 const json=(v:unknown,status=200)=>Response.json(v,{status});
-const owner=(a:Actor)=>{if(a.role!=='operator_owner')fail(403,'只有總管理員可管理業者 LINE OA');};
+const owner=(a:Actor)=>{if(a.role!=='operator_owner')fail(403,'只有業者管理員可管理業者 LINE OA');};
 const ready=(env:Env)=>credentialStorageReady(env)&&['local','staging','production'].includes(env.APP_ENV||'');
-function writeReady(env:Env){if(env.APP_ENV==='sandbox')fail(409,'測試區不保存真實 LINE 憑證，請到正式工作台設定');if(!ready(env))fail(503,'安全憑證保存尚未就緒，請聯絡平台管理員');}
+function writeReady(env:Env){if(env.APP_ENV==='sandbox')fail(409,'測試區不保存真實 LINE 憑證，請到正式工作台設定');if(!ready(env))fail(503,'安全憑證保存尚未就緒，請聯絡系統總管理員');}
 function field(v:unknown,label:string,max=100){if(typeof v!=='string'||!v.trim()||v.length>max)fail(400,label+'格式不正確');return (v as string).trim();}
 function ver(v:unknown){if(typeof v!=='number'||!Number.isSafeInteger(v)||v<1)fail(400,'版本格式不正確');return v as number;}
 async function body(req:Request,keys:string[]){

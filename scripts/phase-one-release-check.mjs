@@ -37,7 +37,11 @@ for(const [file,worker,databaseName,appEnv,demoMode] of targets){
  const location=r.headers.get('location');
  if(![302,303,307,308].includes(r.status)||!location||!new URL(location,url).hostname.endsWith('.cloudflareaccess.com'))throw new Error('未登入工作台未受 Access 保護');
  const deployments=await cf('/workers/scripts/'+worker+'/deployments');
- reports.push({worker,database_name:databaseName,database_isolated:true,app_env:appEnv,line_send_enabled:false,revenue_terms_complete:true,revenue_values_all_null:true,settlement_enabled:false,unauthenticated_status:r.status,deployments:deployments.deployments||[]});
+ const access=await cf('/d1/database/'+dbId+'/query',{sql:appEnv==='production'?"SELECT COUNT(*) n FROM platform_admin_grants g JOIN staff_users u ON u.id=g.user_id JOIN auth_identities i ON i.user_id=u.id WHERE g.active=1 AND u.active=1 AND u.id='tsp-primary-owner' AND u.operator_id='tsp-primary-operator' AND u.role='operator_owner' AND i.issuer=?":"SELECT COUNT(*) n FROM staff_users WHERE id='platform' AND role='platform_admin' AND active=1",params:appEnv==='production'?[config.vars.ACCESS_ISSUER]:[]});
+ if(access[0]?.success!==true||Number(access[0]?.results?.[0]?.n)!==1)throw new Error('系統後台指定管理員權限尚未就緒');
+ const settings=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n FROM platform_settings WHERE id=1'});
+ if(settings[0]?.success!==true||Number(settings[0]?.results?.[0]?.n)!==1)throw new Error('平台規劃設定尚未就緒');
+ reports.push({worker,database_name:databaseName,database_isolated:true,app_env:appEnv,line_send_enabled:false,revenue_terms_complete:true,revenue_values_all_null:true,settlement_enabled:false,system_admin_ready:true,platform_oa_status:'planning',unauthenticated_status:r.status,deployments:deployments.deployments||[]});
 }
 if(reports.length!==2)throw new Error('發布驗證不完整');
 const report={source_commit:process.env.GITHUB_SHA,checked_at:new Date().toISOString(),targets:reports};
