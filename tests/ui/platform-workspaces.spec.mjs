@@ -12,6 +12,12 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
   await page.locator('[data-pw-detail="pw-biz-b4"]').click();await expect(page.locator('#modal')).toContainText('2026-10-01 ～ 2027-09-30');
   await expect(page.locator('#modal .pw-modules li')).toHaveCount(8);await expect(page.locator('#modal')).toContainText('整合中，未開通');
   await expect(page.locator('#modal')).toContainText('分潤：待議定');await expect(page.locator('#modal')).toContainText('合約類型待補');
+  const detail=await (await page.request.get('http://127.0.0.1:8789/api/platform-workspaces/pw-biz-b4')).json();
+  const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+  for(const contract of detail.address.contracts.filter(c=>c.status==='active'&&c.starts_on>today)){
+   await expect(page.locator('#modal .pw-contracts li').filter({hasText:contract.starts_on+' ～ '+contract.ends_on})).toContainText('服務尚未開始');
+  }
+
   await page.screenshot({path:'docs/screenshots/'+name+'-platform-workspace-detail.png',fullPage:true,animations:'disabled',style:'#toast{visibility:hidden!important}'});
   await page.getByRole('button',{name:'開啟借址維運台',exact:false}).click();await expect(page.getByRole('heading',{name:'租戶維運',exact:true})).toBeVisible();
  });

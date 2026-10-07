@@ -159,7 +159,7 @@ const workspaces=lineWorkspace({api,e,badge,date,modal:showModal,toast,me:()=>me
   if(!chats.some(c=>c.id===id)){const all=(await api('/conversations?paged=1&limit=100')).items;const selected=all.find((c:Row)=>c.id===id);if(selected){chats=[selected,...chats];render();}}
   await loadChat();const field=document.querySelector<HTMLTextAreaElement>('#message-body');if(field){field.value=body;field.focus();toast('已填入回覆草稿，請確認內容；尚未發送');}
  }});
-const platformWorkspaceUI=platformWorkspaces({api,e,badge,me:()=>me,modal:showModal,toast,refresh:()=>refresh(true),openAddress:async(id)=>{opsBusiness=id;opsTab='overview';page='operations';render(true);await refresh();}});
+const platformWorkspaceUI=platformWorkspaces({api,e,badge,me:()=>me,modal:showModal,toast,serviceState,refresh:()=>refresh(true),openAddress:async(id)=>{opsBusiness=id;opsTab='overview';page='operations';render(true);await refresh();}});
 function toast(message:string){const el=document.querySelector('#toast')!;el.textContent=message;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4500);}
 function badge(label:string,tone=''){return '<span class="badge '+e(tone)+'">'+e(label)+'</span>';}
 function empty(title:string,detail:string,action=''){return '<div class="empty"><span class="empty-icon">＋</span><h3>'+e(title)+'</h3><p>'+e(detail)+'</p>'+action+'</div>';}
