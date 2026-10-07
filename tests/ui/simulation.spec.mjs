@@ -8,7 +8,7 @@ test('simulation account switch preserves server role isolation and tutorial is 
  await page.getByLabel('示範身分').selectOption('sales-a1');await page.getByRole('button',{name:'進入示範工作台'}).click();
  await expect(page.locator('.case-list')).toContainText('日和設計工作室');
  await expect(page.locator('.case-list')).not.toContainText('森嶼品牌有限公司');
- await expect(page.getByRole('button',{name:'管理員專區',exact:false})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'聊天室 AI 監控',exact:false})).toHaveCount(0);
  await expect(page.getByRole('link',{name:'開啟測試帳號模擬',exact:true})).toHaveCount(0);
  await page.screenshot({path:'docs/screenshots/desktop-simulation-sales.png',fullPage:true});
  await page.getByRole('button',{name:'切換測試帳號',exact:true}).click();

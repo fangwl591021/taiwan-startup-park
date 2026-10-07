@@ -65,7 +65,7 @@ test('mobile drawer, search empty state, form error, no horizontal overflow',asy
 });
 test('sales UI omits owner risk and historical input is escaped',async({page})=>{
  await login(page,'sales-a1');
- await expect(page.getByRole('button',{name:'管理員專區',exact:false})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'聊天室 AI 監控',exact:false})).toHaveCount(0);
  await page.getByRole('button',{name:'工作聊天室',exact:false}).click();
  await page.getByLabel('回覆內容').fill('<img src=x onerror=alert(1)>');
  await page.getByRole('button',{name:'模擬回覆',exact:true}).click();

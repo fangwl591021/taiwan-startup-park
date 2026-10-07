@@ -10,6 +10,11 @@ import {platformRoute,platformAccess} from './platform.js';
 import {platformLoginRoute} from './platform-login.js';
 import {platformLineRoute} from './platform-line.js';
 import {receivePlatformWebhook} from './platform-webhook.js';
+import {moduleRoute} from './workspace-modules.js';
+import {crmRoute} from './crm.js';
+import {templateRoute} from './workspace-templates.js';
+import {hubRoute} from './line-hub.js';
+import {monitorRoute} from './chat-monitor.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
@@ -119,6 +124,11 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/auth/access'&&method==='POST'){if(sandbox(req,env))fail(404,'請選擇模擬帳號');await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
+ const workspaceModules=await moduleRoute(req,env,a);if(workspaceModules)return workspaceModules;
+ const templates=await templateRoute(req,env,a);if(templates)return templates;
+ const crm=await crmRoute(req,env,a);if(crm)return crm;
+ const hub=await hubRoute(req,env,a);if(hub)return hub;
+ const monitor=await monitorRoute(req,env,a);if(monitor)return monitor;
  const loginSettings=await platformLoginRoute(req,env,a);if(loginSettings)return loginSettings;
  const platformLine=await platformLineRoute(req,env,a);if(platformLine)return platformLine;
  const platform=await platformRoute(req,env,a);if(platform)return platform;
@@ -391,9 +401,6 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   if(a.role==='operator_finance')extra+=" AND e.action NOT IN('mail_received','mail_status_changed','ticket_created','ticket_status_changed')";
   if(a.role==='operator_sales'){extra+=' AND (e.opportunity_id IS NULL OR EXISTS(SELECT 1 FROM opportunities o WHERE o.id=e.opportunity_id AND o.operator_id=e.operator_id AND o.owner_id=?))';args.push(a.id);}
   return json((await stmt(env,'SELECT e.id,e.action,e.detail,e.created_at,e.business_id,e.opportunity_id,u.name AS actor_name FROM activity_events e JOIN staff_users u ON u.id=e.actor_id WHERE e.operator_id=?'+extra+' ORDER BY e.created_at DESC,e.rowid DESC LIMIT 100',...args).all()).results);
- }
- if(path==='/api/admin/risk'&&method==='GET'){
-  roles(a,['operator_owner']);return json({enabled:false,status:'not_enabled',events:[],message:'AI 與風控規則尚未啟用'});
  }
  return fail(404,'找不到此功能');
 }

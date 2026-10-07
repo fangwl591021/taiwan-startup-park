@@ -1,8 +1,10 @@
+import {lineWorkspace} from './line-workspace.js';
 export {};
 type Row=Record<string,any>;
 const root=document.querySelector<HTMLDivElement>('#app')!;
 const dialog=document.querySelector<HTMLDialogElement>('#modal')!;
 let me:Row;let page='dashboard';let staff:Row[]=[];let opps:Row[]=[];let tenants:Row[]=[];let chats:Row[]=[];let selectedChat='';let chatLine:Row={bound:false,send_enabled:false};let filter='';let search='';let busy=false;let opsBusiness='';let opsTab='overview';let opsData:Row;let opsCatalog:Row;let revenueTerms:Row[]=[];let lineSettings:Row={connections:[]};
+let workspaceData:Row={};let workspaceModules:Row[]=[];
 let systemView=false;let platformData:Row={};let platformOffset=0;
 const stageNames:Row={contact:'接觸',onboarding:'導入',billing:'收費',won:'成交',paused:'暫緩',lost:'未成交'};
 const roleNames:Row={operator_owner:'業者管理員',operator_sales:'業務',operator_service:'維運',operator_finance:'財務',platform_admin:'系統總管理員',business_admin:'企業管理員'};
@@ -115,6 +117,7 @@ function pagination(kind:string){
 }
 async function loadPageData(){
  const current=page,revision=++viewRevision;
+ if(workspaces.pages[current]){const result=await api(workspaces.path(current));if(revision!==viewRevision||page!==current)return false;workspaceData=result;return true;}
  if(systemView){
   const endpoint=({ 'system-overview':'overview','system-operators':'operators','system-line':'connections','system-settings':'settings','system-login':'line-account','system-inbox':'line-events','system-revenue':'revenue','system-activity':'activity'} as Row)[current];
   if(!endpoint)return false;
@@ -147,6 +150,12 @@ async function loadPageData(){
  return revision===viewRevision&&page===current;
 }
 
+const workspaces=lineWorkspace({api,e,badge,date,modal:showModal,toast,me:()=>me,staff:()=>staff,
+ refresh:()=>refresh(true),openCase:showOpportunity,followUTC,
+ compose:async(id,body)=>{page='chat';selectedChat=id;resetList('chat');await refresh(true);
+  if(!chats.some(c=>c.id===id)){const all=(await api('/conversations?paged=1&limit=100')).items;const selected=all.find((c:Row)=>c.id===id);if(selected){chats=[selected,...chats];render();}}
+  await loadChat();const field=document.querySelector<HTMLTextAreaElement>('#message-body');if(field){field.value=body;field.focus();toast('已填入回覆草稿，請確認內容；尚未發送');}
+ }});
 function toast(message:string){const el=document.querySelector('#toast')!;el.textContent=message;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4500);}
 function badge(label:string,tone=''){return '<span class="badge '+e(tone)+'">'+e(label)+'</span>';}
 function empty(title:string,detail:string,action=''){return '<div class="empty"><span class="empty-icon">＋</span><h3>'+e(title)+'</h3><p>'+e(detail)+'</p>'+action+'</div>';}
@@ -165,18 +174,19 @@ async function loginScreen(){
  root.innerHTML='<main class="login"><div class="brand-mark">園</div><p class="eyebrow">TAIWAN STARTUP PARK</p><h1>讓每一次成交<br>成為長期的服務關係</h1><p>業者工作台 · 租戶維運驗收版</p><form id="login-form"><label>選擇測試身分<select name="user_id" aria-label="示範身分">'+users.map((u:Row)=>'<option value="'+e(u.id)+'" '+(u.id==='owner-a'?'selected':'')+'>'+e(u.operator_name+' / '+u.name)+'</option>').join('')+'</select></label><button class="primary" type="submit">進入示範工作台</button><p class="form-error" role="alert"></p></form><div class="notice">純虛構資料 · '+(config.sandbox?'獨立測試資料庫，僅限授權管理員':'僅限本機')+'<br>LINE、金流與 AI 尚未串接。</div><p><a href="/tutorial.html">觀看操作教學影片 →</a></p><p class="fine">公司工作通訊將記錄操作人員與服務歷程，供授權管理與服務品質核查；不包含私人通訊。</p></main>';
 }
 async function start(){
- try{me=await api('/me');systemView=me.platform_access&&(me.role==='platform_admin'||new URL(location.href).searchParams.get('workspace')==='platform');page=systemView?(['line-login','line-account'].includes(new URL(location.href).searchParams.get('section')||'')?'system-login':'system-overview'):'dashboard';staff=me.role==='platform_admin'?[]:await api('/staff');root.innerHTML='';await refresh();}
+ try{me=await api('/me');systemView=me.platform_access&&(me.role==='platform_admin'||new URL(location.href).searchParams.get('workspace')==='platform');page=systemView?(['line-login','line-account'].includes(new URL(location.href).searchParams.get('section')||'')?'system-login':'system-overview'):'dashboard';[staff,workspaceModules]=me.role==='platform_admin'?[[],[]]:await Promise.all([api('/staff'),api('/workspace/modules').then(r=>r.modules)]);root.innerHTML='';await refresh();}
  catch(err){if(me&&me.role==='business_admin'){root.innerHTML='<main class="login"><h1>此角色尚未開放工作台</h1><p>目前不提供跨業者存取。</p><button data-action="logout">登出</button></main>';}else if(me?.platform_access){root.innerHTML='<main class="login"><h1>系統後台暫時無法載入</h1><p>'+e((err as Error).message)+'</p><button data-action="access-login">重新登入</button><button data-action="logout">登出</button></main>';}else await loginScreen();}
 }
 async function refresh(force=false){
  if(force)clearReads();
- if(await loadPageData())render();
+ try{if(await loadPageData())render();}catch(err){if((err as Error).name==='AbortError')return;render(true);document.querySelector('#content')!.innerHTML=empty('功能暫時無法開啟',(err as Error).message);}
 }
 function render(loading=false){
  if(systemView){renderPlatform(loading);return;}
- const nav=[['dashboard','▦','總覽'],...(salesView()?[['pipeline','↗','成交追蹤']]:[]),['tenants','▤','租戶管理'],...(chatView()?[['chat','◌','工作聊天室']]:[]),...(owner()?[['catalog','▣','據點與方案'],['activity','≡','操作歷程'],['staff','♙','操作人員'],['line-settings','⇄','LINE OA 串接'],['integrations','⇄','整合中心'],['risk','◇','管理員專區']]:[])];
+ const enabled=(key:string)=>workspaceModules.some(m=>m.key===key&&m.enabled);
+ const nav=[['dashboard','▦','總覽'],...(salesView()?[['pipeline','↗','成交追蹤']]:[]),['tenants','▤','租戶管理'],...(chatView()?[['chat','◌','工作聊天室'],...(enabled('crm')?[['crm','♙','會員 CRM']]:[]),...(enabled('templates')?[['templates','▣','模板中心']]:[])]:[]),...(owner()?[...(enabled('line_hub')&&enabled('crm')?[['line-hub','⇄','LINE OA 工作台']]:[]),['modules','⚙','模組管理'],['catalog','▣','據點與方案'],['activity','≡','操作歷程'],['staff','♙','操作人員'],['line-settings','⇄','LINE OA 串接'],['integrations','⇄','整合中心'],...(enabled('monitor')?[['risk','◇','聊天室 AI 監控']]:[])]:[])];
  const title=page==='operations'?'租戶維運':nav.find(n=>n[0]===page)?.[2]||'總覽';
- const shellHtml='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar" id="workspace-sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span class="brand-label">台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]||page==='operations'&&n[0]==='tenants'?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+' aria-label="'+n[2]+'" title="'+n[2]+'"><span aria-hidden="true">'+n[1]+'</span><b class="nav-label">'+n[2]+'</b></button>').join('')+'</nav><div class="learning-links"><a href="/tutorial.html" aria-label="操作教學影片" title="操作教學影片"><span aria-hidden="true">▶</span><span class="link-label">操作教學影片</span></a>'+(me.sandbox?'<a href="https://taiwan-startup-park.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="返回正式工作台" title="返回正式工作台"><span aria-hidden="true">↗</span><span class="link-label">返回正式工作台</span></a>':owner()?'<a href="https://taiwan-startup-park-demo.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="開啟測試帳號模擬" title="開啟測試帳號模擬"><span aria-hidden="true">↗</span><span class="link-label">開啟測試帳號模擬</span></a>':'')+'</div><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'獨立測試環境':'企業工作環境')+'<small>Operations · 借址第一期</small></div></aside><div class="workspace"><header class="topbar"><button class="sidebar-toggle" data-action="sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="收合側欄" title="收合側欄">⇤</button><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>TEST DEMO</span>虛構示範資料 · '+(futureDigital()?'後續數位流程本機預覽 · ':'第一期借址 · ')+(me.sandbox?'與正式資料分開 · ':'')+'LINE／金流尚未串接 · AI 尚未啟用 <button class="text-button" data-action="logout">切換測試帳號</button>':'<span>WORKSPACE</span>第一期 · 借址服務 · LINE 接收依業者設定 · 推播未啟用 · 金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。','line-settings':'設定業者自己的 OA，分開確認憑證與實際接收。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',operations:'合約、帳務與日常服務，一次掌握。',catalog:'第一期管理登記據點；數位合作與分潤欄位預留。',risk:'僅業者管理員可存取的獨立工作區。'} as Row)[page])+'</p></div>' +headingActions()+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
+ const shellHtml='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar" id="workspace-sidebar"><a class="brand" href="#" data-page="dashboard"><span class="brand-mark">園</span><span class="brand-label">台灣創業園<small>TAIWAN STARTUP PARK</small></span></a><div class="workspace-label">業者工作台</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]||page==='operations'&&n[0]==='tenants'?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+' aria-label="'+n[2]+'" title="'+n[2]+'"><span aria-hidden="true">'+n[1]+'</span><b class="nav-label">'+n[2]+'</b></button>').join('')+'</nav><div class="learning-links"><a href="/tutorial.html" aria-label="操作教學影片" title="操作教學影片"><span aria-hidden="true">▶</span><span class="link-label">操作教學影片</span></a>'+(me.sandbox?'<a href="https://taiwan-startup-park.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="返回正式工作台" title="返回正式工作台"><span aria-hidden="true">↗</span><span class="link-label">返回正式工作台</span></a>':owner()?'<a href="https://taiwan-startup-park-demo.fangwl591021.workers.dev/" target="_blank" rel="noopener" aria-label="開啟測試帳號模擬" title="開啟測試帳號模擬"><span aria-hidden="true">↗</span><span class="link-label">開啟測試帳號模擬</span></a>':'')+'</div><div class="sidebar-bottom"><span class="status-dot"></span>'+(me.demo?'獨立測試環境':'企業工作環境')+'<small>Operations · 借址第一期</small></div></aside><div class="workspace"><header class="topbar"><button class="sidebar-toggle" data-action="sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="收合側欄" title="收合側欄">⇤</button><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">工作台 <span>/</span> '+e(title)+'</div><div class="identity"><span class="avatar">'+e(me.name.slice(-1))+'</span><div>'+e(me.name)+'<small>'+e(roleNames[me.role])+'</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip">'+(me.demo?'<span>TEST DEMO</span>虛構示範資料 · '+(futureDigital()?'後續數位流程本機預覽 · ':'第一期借址 · ')+(me.sandbox?'與正式資料分開 · ':'')+'LINE／金流尚未串接 · AI 尚未啟用 <button class="text-button" data-action="logout">切換測試帳號</button>':'<span>WORKSPACE</span>第一期 · 借址服務 · LINE 接收依業者設定 · 推播未啟用 · 金流尚未串接 · AI 尚未啟用')+'</div><main id="main"><div class="page-heading"><div><p class="eyebrow">'+e(me.operator_name)+'</p><h1>'+e(title)+'</h1><p class="subtitle">'+e(({dashboard:'把來客、成交與長期服務，放在同一個工作台。',pipeline:'從第一次接觸，到下一段合作。',tenants:'成交是開始，讓服務持續發生。',chat:'每一次回覆，都能追溯實際操作人員。',activity:'每個關鍵操作，保留人員與時間。',staff:'一人一帳號，清楚分工。','line-settings':'設定業者自己的 OA，分開確認憑證與實際接收。',integrations:'確認連線狀態，讓每一位來客都有明確歸屬。',operations:'合約、帳務與日常服務，一次掌握。',catalog:'第一期管理登記據點；數位合作與分潤欄位預留。',risk:'來客動向、實際回覆者與私有核查；AI 模型未啟用。',crm:'從 LINE 來客到借址租戶，沿用同一份客戶資料。',templates:'共用與業者私有模板，先預覽，再人工套用。',modules:'工作區權益與租戶數位租用分開管理。','line-hub':'接收、CRM、需求分類與借址成交，集中在一起。'} as Row)[page])+'</p></div>' +headingActions()+'</div><section id="content"></section><footer>台灣創業園 · 時間以台北時間顯示<span>工作通訊與操作將留存服務歷程</span></footer></main></div></div>';
  if(!root.querySelector('.shell'))root.innerHTML=shellHtml;
  else {
   const template=document.createElement('template');template.innerHTML=shellHtml;
@@ -202,7 +212,7 @@ function render(loading=false){
  if(page==='activity')void renderActivity();
  if(page==='staff')content.innerHTML=staffPage();
  if(page==='catalog')void renderCatalog();
- if(page==='risk')void renderRisk();
+ if(workspaces.pages[page])content.innerHTML=workspaces.render(page,workspaceData);
  if(page==='integrations')void renderIntegrations();
  if(page==='line-settings')void renderLineSettings();
  if(page==='operations')void renderOperations();
@@ -217,7 +227,7 @@ function headingActions(){
 function platformPagination(){return '<div class="list-pagination"><span>共 '+e(platformData.total||0)+' 筆 · 每頁 50 筆</span><div><button data-platform-page="previous" '+(!platformOffset?'disabled':'')+'>上一頁</button><button data-platform-page="next" '+(platformOffset+50>=platformData.total?'disabled':'')+'>下一頁</button></div></div>';}
 function platformSearch(){return '<form id="platform-search" class="platform-search"><label>搜尋業者／OA<input name="q" value="'+e(search)+'" maxlength="100" placeholder="輸入業者或 OA 名稱"></label><button type="submit">搜尋</button><p class="form-error" role="alert"></p></form>';}
 function renderPlatform(loading=false){
- const nav=[['system-overview','▦','系統總覽'],['system-login','⚙','LINE 帳號設定'],['system-inbox','◌','平台 OA 來訊'],['system-operators','▤','業者總覽'],['system-line','⇄','業者 OA 串接總覽'],['system-settings','⚙','通知草稿與額度'],['system-revenue','≡','平台費與分潤'],['system-activity','◇','系統操作歷程']];
+ const nav=[['system-overview','▦','系統總覽'],['system-login','⚙','LINE 帳號設定'],['system-inbox','◌','平台 OA 來訊'],['system-operators','▤','業者總覽'],['system-line','⇄','業者 OA 串接總覽'],['system-settings','⚙','通知草稿與額度'],['system-revenue','≡','平台費與分潤'],['system-modules','⚙','模組管理'],['system-templates','▣','共用模板中心'],['system-activity','◇','系統操作歷程']];
  const title=nav.find(n=>n[0]===page)?.[2]||'系統總覽';
  root.innerHTML='<div class="shell"><button class="scrim" data-action="menu-close" aria-label="關閉導覽"></button><aside class="sidebar" id="workspace-sidebar"><div class="brand"><span class="brand-mark">園</span><span class="brand-label">台灣創業園<small>TAIWAN STARTUP PARK</small></span></div><div class="workspace-label">系統總後台 · 平台商</div><nav>'+nav.map(n=>'<button data-page="'+n[0]+'" class="nav-item '+(page===n[0]?'active':'')+'" '+(page===n[0]?'aria-current="page"':'')+' aria-label="'+n[2]+'" title="'+n[2]+'"><span aria-hidden="true">'+n[1]+'</span><b class="nav-label">'+n[2]+'</b></button>').join('')+'</nav><div class="learning-links">'+(me.role!=='platform_admin'?'<button class="primary workspace-switch" data-workspace="operator">返回業者工作台 →</button>':'')+'<a href="https://taiwan-startup-park-demo.fangwl591021.workers.dev/" target="_blank" rel="noopener">開啟測試帳號模擬 ↗</a></div><div class="sidebar-bottom">平台管理 · 與業者工作台分開</div></aside><div class="workspace"><header class="topbar"><button class="sidebar-toggle" data-action="sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="收合側欄">⇤</button><button class="menu-button" data-action="menu" aria-label="開啟導覽">☰</button><div class="crumb">系統總後台 <span>/</span> '+e(title)+'</div><div class="identity"><div>'+e(me.name)+'<small>系統總管理員</small></div><button class="text-button" data-action="logout">登出</button></div></header><div class="demo-strip"><span>'+(me.demo?'TEST DEMO':'SYSTEM')+'</span>'+(me.demo?'虛構測試資料 · ':'')+'平台接收依 Messaging 設定 · LINE 登入未啟用 · 推播未啟用 · 金流尚未串接 · AI 尚未啟用</div><main id="main"><div class="page-heading"><div><p class="eyebrow">平台商管理範圍</p><h1>'+e(title)+'</h1><p class="subtitle">業者狀態、平台設定與合作條件，集中管理。</p></div><button data-action="refresh">重新整理</button></div><section id="content">'+(loading?'<p class="loading">正在載入系統資料…</p>':platformContent())+'</section><footer>台灣創業園 · 系統總後台<span>設定變更保留操作人員與時間</span></footer></main></div></div>';
  applySidebar();
@@ -246,6 +256,7 @@ function platformLineContent(){
 }
 
 function platformContent(){
+ if(workspaces.pages[page])return workspaces.render(page,workspaceData);
  if(page==='system-login')return platformLineContent();
  if(page==='system-inbox'){
   const kinds:Row={message:'客戶訊息',follow:'加入好友',unfollow:'封鎖帳號',unsend:'收回訊息',postback:'選單操作',join:'加入群組',leave:'離開群組'};
@@ -380,6 +391,7 @@ document.addEventListener('submit',async event=>{
  const form=event.target as HTMLFormElement;event.preventDefault();if(busy)return;busy=true;
  const button=form.querySelector<HTMLButtonElement>('button[type="submit"]');if(button)button.disabled=true;
  try{
+  if(await workspaces.submit(form))return;
   const d=formData(form);
   if(form.id==='platform-search'){search=d.q;platformOffset=0;await refresh(true);}
   if(form.id==='platform-line-form'){
@@ -458,6 +470,7 @@ document.addEventListener('submit',async event=>{
 document.addEventListener('click',async event=>{
  const target=(event.target as HTMLElement).closest<HTMLElement>('button,a');if(!target)return;
  const d=target.dataset;try{
+ if(await workspaces.click(target))return;
  if(d.workspace){
   event.preventDefault();if(d.workspace==='platform'&&!me.platform_access)return;
   systemView=d.workspace==='platform';page=systemView?'system-overview':'dashboard';search='';platformOffset=0;viewRevision++;clearReads();root.innerHTML='';
@@ -486,8 +499,8 @@ document.addEventListener('click',async event=>{
  if(d.action==='menu')document.querySelector('.shell')?.classList.add('menu-open');
  if(d.action==='menu-close')document.querySelector('.shell')?.classList.remove('menu-open');
  if(d.action==='close')dialog.close();
- if(d.action==='logout'){viewRevision++;clearReads();await api('/logout','POST',{});opps=[];tenants=[];chats=[];staff=[];platformData={};systemView=false;platformOffset=0;for(const kind of ['pipeline','tenants','chat'])resetList(kind);me=undefined as unknown as Row;page='dashboard';search='';filter='';dialog.close();await loginScreen();}
- if(d.page){event.preventDefault();page=d.page;search='';filter='';platformOffset=0;resetList(page);render(true);await refresh();}
+ if(d.action==='logout'){viewRevision++;clearReads();await api('/logout','POST',{});opps=[];tenants=[];chats=[];staff=[];platformData={};workspaceData={};workspaceModules=[];systemView=false;platformOffset=0;for(const kind of ['pipeline','tenants','chat'])resetList(kind);me=undefined as unknown as Row;page='dashboard';search='';filter='';dialog.close();await loginScreen();}
+ if(d.page){event.preventDefault();workspaces.reset(d.page);page=d.page;search='';filter='';platformOffset=0;resetList(page);render(true);await refresh();}
  if(d.action==='new')await newOpportunity();
  if(d.action==='new-tenant'&&owner())await newTenant();
  if(d.action==='new-staff'&&owner())newStaff();

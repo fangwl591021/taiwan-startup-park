@@ -218,3 +218,23 @@ button:disabled{opacity:1;color:#46594c;background:#edf1ee}
 #platform-settings-form{padding:12px 24px 24px;color:#173d35}
 .panel:has(.platform-rows)>p,.panel:has(#platform-settings-form)>p{padding:0 24px;color:#34594f}
 @media(max-width:700px){.platform-rows article{align-items:stretch;flex-direction:column}.platform-rows{padding:0 16px}.platform-search{padding:16px;flex-wrap:wrap}.platform-search label{flex-basis:100%}#platform-settings-form{padding:12px 16px}}
+.lw-panel h2,.lw-panel h3,.lw-panel label:not(.checkbox),.lw-system-modules h2{color:#0758b7}
+.lw-panel p,.lw-panel small,.lw-panel li{color:#233e48}
+.lw-panel p{line-height:1.65;margin:10px 0 18px}
+.lw-list{display:flex;flex-direction:column;min-width:0}
+.lw-row,.lw-person{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 4px;border:0;border-bottom:1px solid #dce5e7;border-radius:0;background:#fff;text-align:left;width:100%;color:#17353f;min-width:0}
+.lw-row:last-child,.lw-person:last-child{border-bottom:0}
+.lw-row>div:first-child,.lw-person>span:nth-child(2){flex:1;min-width:0}
+.lw-row>div:last-child{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.lw-row h3{font-size:21px;margin:0 0 8px}.lw-row p{margin:6px 0;font-size:18px;overflow-wrap:anywhere}
+.lw-person b{font-size:22px}.lw-person small{display:block;font-size:18px;margin:6px 0;color:#29434e}.lw-person:hover{background:#f0f8f4}
+.lw-tags{display:flex;gap:5px;flex-wrap:wrap}.lw-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}.lw-summary article{background:white;border:1px solid #dce5e7;border-radius:10px;padding:20px}.lw-summary span{color:#0758b7;font-size:19px}.lw-summary strong{display:block;font-size:32px;margin-top:8px}
+.lw-empty{padding:22px 4px}.lw-empty b{font-size:21px;color:#17353f}.lw-empty p{margin:8px 0;color:#29434e}
+.lw-search,.lw-shortcuts{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:12px 0 20px}.lw-search label{flex:1;min-width:180px}.lw-search .form-error:empty{display:none}.lw-search .form-error{flex-basis:100%}
+.lw-template-text{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f7f9;border:1px solid #d4e0e8;border-radius:8px;padding:20px;font-size:20px;line-height:1.7;margin:20px 0}
+.lw-menu-preview{display:grid;grid-template-columns:repeat(3,1fr);margin:20px 0;border:1px solid #b7d8eb;border-radius:8px;overflow:hidden}.lw-menu-preview>div{background:#eaf4fc;padding:25px 15px;text-align:center;border:1px solid #c6ddec;min-width:0}.lw-menu-preview b{color:#0758b7;font-size:22px}.lw-menu-preview small{display:block;margin-top:12px;font-size:17px;overflow-wrap:anywhere}
+.lw-cell-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.lw-cell-editor>div{padding:16px;background:#f7fafb;border:1px solid #dce5e7;border-radius:8px}.lw-panel select,.lw-panel input,.lw-panel textarea{color:#17353f}.lw-review{align-items:flex-start}
+.lw-panel .checkbox{display:flex;align-items:center;gap:10px;color:#17353f}.lw-panel .checkbox input{width:auto}
+@media(max-width:700px){.lw-row,.lw-person{gap:12px;flex-wrap:wrap;padding:18px 0}.lw-person>.company-icon{display:none}.lw-person>span:nth-child(2){flex-basis:65%}.lw-person>span:nth-child(3){flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap}.lw-person>span:last-child{display:none}.lw-row>div:first-child{flex-basis:100%}.lw-row>div:last-child{justify-content:flex-start}.lw-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lw-summary article{padding:16px}.lw-menu-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.lw-menu-preview>div{padding:20px 10px}.lw-cell-editor{grid-template-columns:1fr}.lw-search{align-items:stretch}.lw-search button{align-self:flex-end}.lw-shortcuts{align-items:stretch}.lw-shortcuts button{flex:1;min-width:180px}}
+
+@media(max-width:700px){.lw-menu-preview{grid-template-columns:repeat(3,minmax(0,1fr))}.lw-menu-preview>div{padding:18px 6px}.lw-menu-preview b{font-size:18px}.lw-menu-preview small{font-size:15px}}

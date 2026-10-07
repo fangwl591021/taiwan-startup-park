@@ -47,6 +47,10 @@ export function database(path=':memory:'){
   sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0012_platform_line_webhook.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
   catch(e){sqlite.exec('ROLLBACK');throw e;}
  }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_modules'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0013_line_workspace.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
  function prepare(sql,values=[]){
   const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return {results:st.all(...values),meta:{changes:0}};
    const r=st.run(...values);return {results:[],meta:{changes:Number(r.changes)}};};

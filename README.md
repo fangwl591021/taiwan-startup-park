@@ -122,3 +122,7 @@ GitHub Actions 執行相同流程並保存桌面／手機截圖及測試報告�
 本分支新增地址合約、應收與人工收退款、信件包裹、維運需求、數位訂閱與後端權益檢查。參見 [租戶維運範圍](docs/TENANT_OPERATIONS.md)。原始藍圖保持完整；租戶維運已隨第一期發布，數位功能依最新分期關閉。金流、物流、模組開通及 AI 仍未串接。
 
 第三輪驗收結果與桌面／手機截圖：[TENANT_ACCEPTANCE.md](docs/TENANT_ACCEPTANCE.md)。
+
+## LINE OA 工作區整合
+
+會員 CRM、LINE OA 工作台、模組管理、共用／私有模板與管理員私有核查已接上成交及借址租戶資料。完整來源對照、操作流程與尚未啟用部分見 [LINE_WORKSPACE_IMPORT.md](docs/LINE_WORKSPACE_IMPORT.md)。正式 Login OAuth、圖文選單發布、外送、金流與 AI 模型仍未啟用；數位分潤保持待議定。
