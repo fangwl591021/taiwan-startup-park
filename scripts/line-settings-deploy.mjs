@@ -54,7 +54,7 @@ export async function verifyLineBoundary(fetcher=fetch){
  const webhook=await fetcher(origin+'/api/line/webhook/configuration-probe',{method:'POST',headers:{'x-line-signature':'invalid','Content-Type':'application/json'},body:'{"destination":"invalid","events":[]}',redirect:'manual',signal:AbortSignal.timeout(15000)});
  if(![401,404,503].includes(webhook.status)||webhook.headers.get('location'))throw Error('LINE Webhook 未到達驗簽邊界：HTTP '+webhook.status+'，重新導向='+!!webhook.headers.get('location'));
  checks.push({path:'/api/line/webhook/configuration-probe',status:webhook.status,rejected:true});
- for(const path of ['/api/me','/api/line/settings','/api/line/inbox','/api/platform/overview','/api/platform/settings','/api/platform/line-login','/api/platform/line-account']){
+ for(const path of ['/api/me','/api/line/settings','/api/line/inbox','/api/platform/overview','/api/platform/settings','/api/platform/line-login','/api/platform/line-account','/api/platform/line-events']){
   const r=await fetcher(origin+path,{redirect:'manual',signal:AbortSignal.timeout(15000)});
   const location=r.headers.get('location');
   if(![302,303,307,308].includes(r.status)||!location||!new URL(location,origin).hostname.endsWith('.cloudflareaccess.com'))throw Error('工作台路徑 Access 保護不符：'+path+' HTTP '+r.status);

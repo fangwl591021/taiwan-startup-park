@@ -21,7 +21,7 @@
 
 ## 真實啟用狀態
 
-本輪完成設定保存，尚未實作平台 OAuth 登入與平台 OA 訊息接收。Callback 回應 503；預留平台 Webhook 回應 404，絕不假裝接受並遺失事件。頁面明示兩者未啟用，保存憑證不代表驗證或連線成功。
+後續修正已補上平台 Webhook 驗簽接收與平台獨立事件保存；空事件 Verify 通過簽章驗證後回應 200。詳見 [PLATFORM_LINE_WEBHOOK.md](PLATFORM_LINE_WEBHOOK.md)。平台 OAuth 登入仍未啟用，Callback 回應 503；保存憑證不代表驗證或連線成功，必須以實際最後驗簽時間確認。
 
 各業者既有 Messaging API 接收流程維持原狀。`LINE_SEND_ENABLED=off`；不發送客戶訊息。金流、AI、數位租用與分潤仍未啟用。`docs/PLATFORM_BLUEPRINT.md` 完整保留。
 

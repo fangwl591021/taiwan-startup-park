@@ -19,7 +19,7 @@ export async function platformRoute(req:Request,env:Env,a:Actor):Promise<Respons
    (SELECT COUNT(*) FROM line_connections) AS connections,
    (SELECT COUNT(*) FROM line_connections WHERE enabled=1) AS receiving,
    (SELECT COUNT(*) FROM line_connections WHERE last_webhook_at IS NOT NULL) AS verified`).first();
-  return json({stats,phase:'address_only',platform_oa:'planning',push_enabled:false,payment_enabled:false,ai_enabled:false,settlement_enabled:false});
+  return json({stats,phase:'address_only',platform_oa:'signed_receiver_available',push_enabled:false,payment_enabled:false,ai_enabled:false,settlement_enabled:false});
  }
  if(path==='/api/platform/operators'&&req.method==='GET'){
   const p=paging(url),where='o.name LIKE ?';

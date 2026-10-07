@@ -9,6 +9,7 @@ import {lineSettingsRoute} from './line-settings.js';
 import {platformRoute,platformAccess} from './platform.js';
 import {platformLoginRoute} from './platform-login.js';
 import {platformLineRoute} from './platform-line.js';
+import {receivePlatformWebhook} from './platform-webhook.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
@@ -90,8 +91,10 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(path==='/api/bootstrap'&&method==='GET')return json({demo:demo(req,env),sandbox:sandbox(req,env),auth:demo(req,env)?'local_demo':configured(env)?'cloudflare_access':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
  if(path==='/api/auth/line/callback'&&method==='GET')return json({error:'LINE Login 登入流程尚未啟用；此為預留 Callback 路徑'},503);
  const webhook=path.match(/^\/api\/line\/webhook\/([a-zA-Z0-9_-]+)$/);
+ if(webhook&&webhook[1].startsWith('platform-')&&method==='GET')return json({error:'Webhook 使用 POST；請在 LINE Developers 的 Messaging API 按 Verify 驗證'},405,{Allow:'POST'});
  if(webhook&&method==='POST'){
   if(sandbox(req,env))fail(404,'測試環境不接收真實 LINE');
+  if(webhook[1].startsWith('platform-'))return receivePlatformWebhook(req,env,webhook[1]);
   const response=await receiveWebhook(req,env,webhook[1]);
   ctx?.waitUntil(processInbox(env).catch(()=>console.error('LINE inbox processing needs recovery')));
   return response;

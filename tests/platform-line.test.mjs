@@ -21,7 +21,7 @@ test('unified platform LINE save encrypts independent credentials, preserves bla
  assert.deepEqual(await decryptStoredSecret(env,'__platform_messaging__','messaging:222',row.encrypted_messaging),{channelSecret:msgSecret,channelAccessToken:token});
  assert.deepEqual(await decryptStoredSecret(env,'__platform_line_login__','login:222',row.encrypted_messaging),{});
  let state=(await admin('/platform/line-account')).data;assert(state.has_login_secret&&state.has_messaging_secret&&state.has_messaging_token);
- assert.equal(state.oa_name,draft.oa_name);assert.equal(state.basic_id,'@startup');assert.equal(state.webhook_enabled,false);assert.equal(state.login_enabled,false);assert.equal(state.push_enabled,false);
+ assert.equal(state.oa_name,draft.oa_name);assert.equal(state.basic_id,'@startup');assert.equal(state.webhook_enabled,true);assert.equal(state.login_enabled,false);assert.equal(state.push_enabled,false);
  for(const value of[loginSecret,msgSecret,token]){assert(!JSON.stringify(state).includes(value));assert(!JSON.stringify((await admin('/platform/activity')).data).includes(value));assert(!JSON.stringify([row,login]).includes(value));}
  assert.equal((await admin('/platform/line-account','PATCH',{...draft,oa_name:'stale'})).status,409);assert.equal(db.sqlite.prepare('SELECT oa_name FROM platform_settings').get().oa_name,draft.oa_name);assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM platform_activity').get().n,1);
  const next={...draft,version:2,login_version:2,planning_version:2,login_channel_secret:'',messaging_channel_secret:'',messaging_access_token:''};
@@ -31,7 +31,7 @@ test('unified platform LINE save encrypts independent credentials, preserves bla
  assert.equal((await admin('/platform/line-account','PATCH',{...draft,version:4,login_version:4,planning_version:4,messaging_channel_id:'333'})).status,200);
  state=(await admin('/platform/line-account')).data;assert(state.has_login_secret);assert(!state.has_messaging_secret&&!state.has_messaging_token);assert.equal(state.webhook_url,row.webhook_key?'http://localhost/api/line/webhook/'+row.webhook_key:'');
  assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM line_outbox').get().n,0);assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM line_connections').get().n,0);
- assert.equal((await admin('/line/webhook/'+row.webhook_key,'POST',{destination:'forged',events:[]})).status,404);
+ assert.equal((await admin('/line/webhook/'+row.webhook_key,'POST',{destination:'forged',events:[]})).status,503);
 });
 test('platform settings reject other roles, CSRF, activation fields and real sandbox secrets; preserve prior Login',async t=>{
  const{db,env,as}=await fixture(t),admin=await as('platform');

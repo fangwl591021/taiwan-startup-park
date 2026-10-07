@@ -43,9 +43,9 @@ for(const [file,worker,databaseName,appEnv,demoMode] of targets){
  if(settings[0]?.success!==true||Number(settings[0]?.results?.[0]?.n)!==1)throw new Error('平台規劃設定尚未就緒');
  const login=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n FROM platform_line_login WHERE id=1'});
  if(login[0]?.success!==true||Number(login[0]?.results?.[0]?.n)!==1)throw new Error('LINE Login 設定結構尚未就緒');
- const lineAccount=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n FROM platform_line_account WHERE id=1'});
+ const lineAccount=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n,MAX(CASE WHEN messaging_channel_id!='' THEN 1 ELSE 0 END) channel_id_present,MAX(CASE WHEN encrypted_messaging!='' THEN 1 ELSE 0 END) encrypted_credentials_present,MAX(CASE WHEN last_webhook_at!='' THEN 1 ELSE 0 END) signature_received FROM platform_line_account WHERE id=1'});
  if(lineAccount[0]?.success!==true||Number(lineAccount[0]?.results?.[0]?.n)!==1)throw new Error('整合 LINE 帳號設定尚未就緒');
- reports.push({worker,database_name:databaseName,database_isolated:true,app_env:appEnv,line_send_enabled:false,revenue_terms_complete:true,revenue_values_all_null:true,settlement_enabled:false,system_admin_ready:true,platform_oa_status:'planning',unauthenticated_status:r.status,deployments:deployments.deployments||[]});
+ reports.push({worker,database_name:databaseName,database_isolated:true,app_env:appEnv,line_send_enabled:false,revenue_terms_complete:true,revenue_values_all_null:true,settlement_enabled:false,system_admin_ready:true,platform_oa_status:'signed_receiver_available',platform_line_configuration:lineAccount[0].results[0],unauthenticated_status:r.status,deployments:deployments.deployments||[]});
 }
 if(reports.length!==2)throw new Error('發布驗證不完整');
 const report={source_commit:process.env.GITHUB_SHA,checked_at:new Date().toISOString(),targets:reports};

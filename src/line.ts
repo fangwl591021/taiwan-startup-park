@@ -7,23 +7,26 @@ async function connection(env:Env,id:string){
  return stmt(env,'SELECT * FROM line_connections WHERE id=?',id).first<Connection>();
 }
 const sendEnabled=(env:Env)=>['staging','production'].includes(env.APP_ENV||'')&&env.LINE_SEND_ENABLED==='on';
-async function rawBody(req:Request){
+export async function rawBody(req:Request){
  const reader=req.body?.getReader();if(!reader)return new Uint8Array();
  const chunks:Uint8Array[]=[];let size=0;
  for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>262144){await reader.cancel();fail(413,'Webhook 過大');}chunks.push(value);}
  const out=new Uint8Array(size);let offset=0;for(const c of chunks){out.set(c,offset);offset+=c.length;}return out;
 }
-export async function receiveWebhook(req:Request,env:Env,id:string){
- const c=await connection(env,id);if(!c||!c.enabled)fail(404,'未設定 LINE channel');
- const secret=(await secrets(env,id)).channelSecret;if(typeof secret!=='string'||!secret)fail(503,'LINE 驗簽尚未設定');
- const bytes=await rawBody(req);const signature=req.headers.get('x-line-signature')||'';
+export async function verifyLineSignature(bytes:Uint8Array<ArrayBuffer>,signature:string,secret:string){
  let valid=false;
  try{
   const signatureBytes=Uint8Array.from(atob(signature),v=>v.charCodeAt(0));
   const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['verify']);
   valid=signatureBytes.length===32&&await crypto.subtle.verify('HMAC',key,signatureBytes,bytes);
  }catch{valid=false;}
- if(!valid)fail(401,'Webhook 簽章無效');
+ return valid;
+}
+export async function receiveWebhook(req:Request,env:Env,id:string){
+ const c=await connection(env,id);if(!c||!c.enabled)fail(404,'未設定 LINE channel');
+ const secret=(await secrets(env,id)).channelSecret;if(typeof secret!=='string'||!secret)fail(503,'LINE 驗簽尚未設定');
+ const bytes=await rawBody(req);
+ if(!await verifyLineSignature(bytes,req.headers.get('x-line-signature')||'',secret))fail(401,'Webhook 簽章無效');
  let payload:Row;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{return fail(400,'Webhook 格式錯誤');}
  if(!payload||payload.destination!==c.destination||!Array.isArray(payload.events)||payload.events.length>100)fail(400,'Webhook channel 或事件格式錯誤');
  const commands=[stmt(env,'UPDATE line_connections SET last_webhook_at=? WHERE id=? AND operator_id=?',now(),c.id,c.operator_id)];const time=now();
