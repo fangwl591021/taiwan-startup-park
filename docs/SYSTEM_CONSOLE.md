@@ -1,5 +1,7 @@
 # 系統總後台與業者工作台
 
+> 2026-10-07 更新：平台帳號配置集中至「LINE 帳號設定」；通知草稿與額度保留。詳見 [LINE_ACCOUNT_SETTINGS.md](LINE_ACCOUNT_SETTINGS.md)。
+
 系統總管理員是平台商，業者管理員只管理自己的借址業者。原本 role 名稱「總管理員」改為「業者管理員」；platform_admin 顯示「系統總管理員」。原始 PLATFORM_BLUEPRINT.md 不改寫。
 
 ## 本輪可操作範圍

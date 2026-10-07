@@ -1,5 +1,7 @@
 # LINE Login 與 Messaging API 分開
 
+> 2026-10-07 更新：設定介面已合併為「LINE 帳號設定」，與 Messaging API 同頁填寫；兩種憑證仍分開保存。詳見 [LINE_ACCOUNT_SETTINGS.md](LINE_ACCOUNT_SETTINGS.md)。本文保留先前實作與登入後續需求。
+
 前一輪系統後台只有平台 OA／Messaging API 規劃，使用者指出要填的是 Login API。新增「LINE Login 登入設定」獨立頁面與資料表，不把已保存的 OA Provider／Channel 當成 Login Channel。
 
 ## 欄位

@@ -1,3 +1,19 @@
+# 最新發布：平台 LINE 帳號單頁設定
+
+2026-10-07 16:15:53（Asia/Taipei）正式站與獨立測試站已驗證更新。
+
+- 依 Smart-Menu-Studio 參考模式，官方帳號名稱、@ID、Login 與 Messaging Channel ID、三組憑證、Callback／預留 Webhook 集中同頁；憑證狀態分開顯示，留白保留。桌面兩欄、手機單欄、深色大字。
+- 系統總後台 → LINE 帳號設定；網址 `/?workspace=platform&section=line-account`。一次交易保存，版本衝突不會部分寫入；密鑰不回顯、不入歷程；舊 Login 設定沿用。
+- 平台 OAuth／平台 Webhook 接收／推播尚未啟用，表單明示。業者既有 OA 接收維持原狀；金流、AI、數位分潤、原始藍圖完整保留；沒有重錄影片。
+- 97 項後端、27 項桌面／手機驗收、TypeScript、建置、Worker dry-run 全通過；npm audit 0 vulnerabilities。
+- [發布與保護檢查](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37592331763)；[驗收及桌面／手機截圖](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37592326214/artifacts/11469521126)；[草稿 PR #15](https://github.com/fangwl591021/taiwan-startup-park/pull/15)。
+- Source：`beb4ed3ba1639c0d2cdf37abd711bfc7cc84df1d`。
+- 正式 active version：`2f3cde31-a276-45dd-97b9-374ce8debbe2`；測試 active version：`acdfaa97-9c1a-464f-9019-9babad387024`。
+- 0011 遷移在兩個專用 D1 套用成功；資料庫隔離、分潤 NULL、發送關閉、指定系統管理員與 Access 保護確認正常。既有加密主鑰未重建，根路徑 Access 未放寬。
+- 只放行原有精確 signed webhook 路徑；未登入新 `/api/platform/line-account` 回應 Access 302。詳見 [LINE_ACCOUNT_SETTINGS.md](LINE_ACCOUNT_SETTINGS.md)。
+
+以下為歷次發布紀錄。
+
 # 目前版本：郵件代收 LINE 聯絡人綁定與通知預覽
 
 2026-10-06 11:14（Asia/Taipei）正式與獨立測試區已更新。
