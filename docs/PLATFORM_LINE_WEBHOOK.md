@@ -32,3 +32,11 @@ https://developers.line.biz/en/docs/messaging-api/verify-webhook-signature/
 測試涵蓋空事件 200、錯誤／Login 密鑰／body 變動拒絕、首次 destination 綁定、另一 bot 拒絕、密鑰讀取失敗、重送去重、訊息收回與延遲、權限隔離、配置競爭、保存失敗不確認、XSS 文字及桌面／手機畫面。
 
 `LINE_SEND_ENABLED=off`，不回覆、推播或呼叫外送 API。平台 LINE Login、金流與 AI 仍未啟用；原始 PLATFORM_BLUEPRINT 與數位租用／分潤待議定需求完整保留。本輪不錄製教學影片。
+
+## 發布證據
+
+2026-10-07 17:57:34（Asia/Taipei）正式與獨立測試站已驗證更新。Source `c7a106936a8e5cd9d6be86c819bd82198ba70f8b`；正式 active `c740117a-3bfe-489b-a1a2-787d7cf00c50`，測試 active `ef56babe-f84f-40c3-aae1-b7a1d5aa26f3`。0012 遷移在兩個專用 D1 成功套用，Access 與資料隔離維持，推播關閉／分潤 NULL。
+
+100 項後端、27 項桌面／手機、建置及 Worker dry-run 通過；[發布流程](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37603887754)，[截圖及驗收報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37603887754/artifacts/11473827821)，[草稿 PR #16](https://github.com/fangwl591021/taiwan-startup-park/pull/16)。截圖使用虛構 UI 測試資料；正式後台是否完成 LINE Verify，以真實最後驗簽時間為準。
+
+17:58:19 對使用者提供的原平台網址發送不含有效簽章的公開測試：由原來 404 改為預期的 401，確認已到達驗簽接收端且已可解密 Messaging Secret。有效簽章的空事件 200 在隔離測試中驗證；尚未代替使用者在 LINE Console 按 Verify。未發送任何客戶訊息，未變更網址或已保存密鑰。

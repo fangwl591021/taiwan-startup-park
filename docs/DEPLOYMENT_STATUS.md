@@ -1,3 +1,15 @@
+# 最新發布：平台 Webhook Verify 與獨立來訊接收
+
+2026-10-07 17:57:34（Asia/Taipei）正式／測試站驗證更新。平台原網址已接入專用驗簽接收端；有效空事件回應 200，訊息持久保存後才確認，支援重送去重與訊息收回。平台事件與所有業者客戶、聊天室分開。
+
+系統總後台新增「平台 OA 來訊」，帳號設定顯示最後驗簽時間。Login、推播、金流、AI 仍未啟用，分潤 NULL，藍圖完整保留；不錄製教學影片。
+
+100 項後端、27 項桌面／手機通過；[發布及保護檢查](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37603887754)；[截圖／報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37603887754/artifacts/11473827821)；[PR #16](https://github.com/fangwl591021/taiwan-startup-park/pull/16)。
+
+Source `c7a106936a8e5cd9d6be86c819bd82198ba70f8b`；正式 active `c740117a-3bfe-489b-a1a2-787d7cf00c50`；測試 active `ef56babe-f84f-40c3-aae1-b7a1d5aa26f3`。原平台網址無效簽章公開探測已由 404 改為 401；實際 LINE Console Verify 仍需由使用者按下確認。詳見 [PLATFORM_LINE_WEBHOOK.md](PLATFORM_LINE_WEBHOOK.md)。
+
+以下為歷次發布紀錄。
+
 # 最新發布：平台 LINE 帳號單頁設定
 
 2026-10-07 16:15:53（Asia/Taipei）正式站與獨立測試站已驗證更新。
