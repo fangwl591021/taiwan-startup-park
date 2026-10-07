@@ -1,4 +1,20 @@
-# 最新發布：LINE OA 工作台、會員 CRM、模組與模板
+# 最新發布：四分頁聊天室監控與群組商機
+
+2026-10-07 20:51:19（Asia/Taipei）正式與獨立測試站已更新，實際資料結構、版本與保護核對成功。
+
+- 業者管理員工作台 → 聊天室 AI 監控，新增 LINE 聊天室、用量總覽、群組商機、AI 呼叫紀錄；支援 1／7／30／90 天、搜尋及狀態篩選、keyset 分頁、30 秒更新。背景、輸入、對話框、離頁及切換身分停止輪詢；快速切換不重疊載入。
+- LINE 聊天室顯示授權工作訊息、未分派來客、實際回覆者與送出狀態。群組須已驗簽發現並由管理員明確啟用，關鍵字＋同則情境用語形成規則候選；可人工確認並連結同業者 CRM，不自動建案、成交或收費。
+- AI 用量與紀錄由可信內部執行介面計量；未知 Token／價格保留 NULL，不保存提示詞、正文、輸出或密鑰。模型未接通，群組是規則候選，不是 AI 情境判讀。詳見 [操作與界線](CHAT_MONITOR_IMPORT.md)。
+- 117 項後端與 35 項桌面／手機驗收通過，另含 TypeScript、Worker dry-run、runtime 身分驗證、npm audit 0 vulnerabilities。首輪自動更新焦點判斷問題已修正，後續完整驗收通過；截圖確認控制大小、歷程對齊與收合。
+- [發布與遠端驗證](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623673561)；[實際部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623673561/artifacts/11482948510)；[最終驗收與八張桌面／手機截圖](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623597984/artifacts/11483420941)；[PR #18](https://github.com/fangwl591021/taiwan-startup-park/pull/18)（先建立草稿，隨發布分支快轉已合併）。
+- 已發布應用來源 `a816245c0e7bfe7d2b33d74e7bf9ccad68b0bb73`；正式 active version `c2fc1d34-e23b-4400-89ef-00ea2e9c4ed3`；測試 active version `5367ef58-caed-4401-a1db-1a621ca7425b`。後續文件提交不更動已發布應用。
+- `0014_chat_monitor.sql` 在兩區專用 D1 成功套用；確認 6 張監控新表。原 CRM／租戶／合約／郵件及後續藍圖保留，沒有匯入正式 fixture。既有加密主鑰保留（key_created:false），根 Access 未放寬；17 項遠端邊界通過，新 `/api/admin/monitor` 未登入為 Access 302，未知 Webhook 404。
+- 一般業務、維運、財務及平台管理身分不能讀取業者監控；群組確認與規則歷程獨立保存，不進一般 activity 或 CRM 預載。圖片為獨立記憶體測試服務的虛構資料，群組真實接收另以原始簽章後端測試驗證；沒有代替使用者登入正式瀏覽器驗收。
+- LINE Login、正式外送、圖文選單圖片發布、金流、AI 模型與告警仍未啟用，平台費／分潤全 NULL，結算關閉。不重新錄製教學影片。
+
+以下為歷次發布紀錄。
+
+# 先前發布：LINE OA 工作台、會員 CRM、模組與模板
 
 2026-10-07 19:06:02（Asia/Taipei）正式與獨立測試站已更新，遠端結構與保護核對通過。
 

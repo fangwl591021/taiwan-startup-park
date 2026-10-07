@@ -47,3 +47,5 @@ LINE Login、正式外送、金流、選單圖片發布及數位租用收費仍�
 瀏覽器群組圖片使用第三個獨立記憶體測試服務的虛構群組歷史；fixture 僅在 dev.mjs 的顯式 MONITOR_UI_FIXTURE=on 且 DEMO_DB=:memory: 時使用，不隨正式或雲端測試 D1 migration 匯入。後端群組接收另以原始簽章事件測試；AI adapter 測試回呼為測試用 fixture，不表示正式模型已接通。
 
 官方依據：[群組／多人聊天室](https://developers.line.biz/en/docs/messaging-api/group-chats/)；[原始內容驗簽](https://developers.line.biz/en/docs/messaging-api/verify-webhook-signature/)。發布識別與實際驗證結果另記 DEPLOYMENT_STATUS.md。
+
+2026-10-07 20:51（Asia/Taipei）已發布至正式與獨立測試站，來源 `a816245c0e7bfe7d2b33d74e7bf9ccad68b0bb73`。117 項後端、35 項桌面／手機通過；6 張新表、17 項保護邊界及實際 active version 核對完成。[最終驗收與八張截圖](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623597984/artifacts/11483420941)；[發布](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623673561)；[PR #18](https://github.com/fangwl591021/taiwan-startup-park/pull/18)。
