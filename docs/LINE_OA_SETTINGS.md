@@ -9,7 +9,7 @@
 3. 新增 OA：名稱、上述欄位與授權依據。伺服器只呼叫 verify token 及 get bot info，核對 Channel ID，取得 OA destination；不發訊息。此版本只支援長期／短期 token verify API，其他 token 類型請勿使用。
 4. 保存後產生每組 OA 的 Webhook 網址。貼至 LINE Developers → Messaging API → Webhook URL → Verify → Use webhook。
 5. 客戶加入 OA 並傳文字，回設定頁重新整理查看「已驗簽接收」，再到整合中心分派案件或租戶維運台綁定收件聯絡人。
-Token 查驗與 Webhook 驗收分开；Token 有效不能顯示已成功接收。UI 不包含測試推播或廣播按鈕。
+Token 查驗與 Webhook 驗收分開；Token 有效不能顯示已成功接收。UI 不包含測試推播或廣播按鈕。
 Provider ID 由管理員核對輸入，token verify 僅核驗 Channel ID；不假稱 LINE API 已驗證 Provider 管理權。
 更新時密鑰欄位留空沿用、送出後清除輸入；不回顯既有秘密。OA/Channel/Provider 識別固定，改接另一個 OA 需新增；停用保留所有來客與歷程。
 
@@ -38,3 +38,13 @@ UI 模擬不能作為正式 OA 已串接證明；後端使用 SQLite、模擬官
 - https://developers.line.biz/en/reference/messaging-api/#get-bot-info
 - https://developers.cloudflare.com/cloudflare-one/access-controls/policies/common-policies/#bypass-a-public-endpoint
 - https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/secrets/methods/update/
+
+## 發布驗收（2026-10-07 14:54，Asia/Taipei）
+
+- 已發布正式與獨立測試區；[完整 CI / 發布](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236) source `e1370867fd46cc66a851927dc65b0017ddea4857`。
+- 89 項後端、22 項桌面／手機 UI、TypeScript、建置及 Worker dry run 通過；npm audit 為 0 vulnerabilities。新增 sharp 0.35.5 override 修補新公告的依賴問題，未略過 audit gate。
+- [桌面／手機畫面與驗收](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236/artifacts/11465462248)；圖片位於 docs/screenshots/，LINE 設定 UI 使用虛構資料。
+- [遠端核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236/artifacts/11465952685)：未設定 webhook 探針 HTTP 404 且無登入跳轉；/api/me、/api/line/settings、/api/line/inbox 皆 Access 302。
+- 初次新路徑發布的邊界檢查未通過；後續未放寬根政策即通過。部署驗證現加入上限 10 次、間隔 10 秒的傳播等待及 HTTP 狀態診斷，不降低通過標準。
+- 主鑰已存在，重複部署 `key_created:false`，沒有旋轉；兩區資料庫分離、LINE 外送 off、分潤 NULL、結算 disabled。教學沿用，錄影 skipped。
+- 尚未輸入真實 LINE 憑證、未替管理員登入正式瀏覽器、未發送客戶訊息。後台入口已就緒，實際 OA 仍需業者設定及 LINE Verify。

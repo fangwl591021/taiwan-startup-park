@@ -226,4 +226,17 @@ LINE 真實收送尚未串接且發送關閉；金流未串接，帳務為人工
 已發布新增既有租戶、新增操作人員資料及獨立據點／方案設定，並補上空資料頁的可點擊建立入口。空租戶工作台、實際建檔、手機入口及承辦人權限已通過測試。直接建檔租戶不製造案件成交、收款或權益；明確指派業務承辦時，僅該員或管理員可查看。人員資料預設停用且待 Access 綁定；不能直接啟用、指派案件或新增 owner/platform 角色。新增操作指引見 CREATION_GUIDE.md。
 
 新增驗收截圖：desktop-empty-tenants.png、desktop-add-staff.png、mobile-add-tenant.png、mobile-catalog.png，保存於上述 build artifact 的 docs/screenshots。
+# 業者 LINE OA 設定入口
 
+2026-10-07 14:54（Asia/Taipei）正式與獨立測試區已更新。
+
+- 總管理員側欄新增「LINE OA 串接」，整合中心與管理員專區也有入口；可設定業者自有 OA、加密保存憑證、取得 Webhook 網址並區分 Token 查驗與已驗簽接收。[操作與界線](LINE_OA_SETTINGS.md)。
+- 本輪業者自有 OA 接收設定不開放租戶付費數位服務；推播與郵件外送仍未啟用。平台費／分潤全 NULL、結算 disabled，原始藍圖完整保留。
+- 0008_line_settings.sql 已套用兩個專用 D1，未重設或匯入正式資料。正式加密主鑰以 Worker secret 保存，後續部署核對不重建／旋轉。
+- [89 項後端、22 項桌面／手機、建置、權限與發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236)；npm audit 0 vulnerabilities（sharp override 0.35.5）。
+- [畫面與驗收](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236/artifacts/11465462248)；[遠端部署核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236/artifacts/11465952685)。
+- Source：e1370867fd46cc66a851927dc65b0017ddea4857；正式 active：7c070ece-7c6e-450b-8691-6122075108a7；測試 active：794a4c60-2aac-44b0-b833-241c9ca2d446。
+- Webhook 未設定探針回應 404；工作台身分、OA 設定與來客 API 皆 Access 302。精確 webhook 路徑允許第三方請求，根網域政策保留。初次路徑發布後檢查失敗，後續同邊界檢查已通過；加入有上限的傳播等待，沒有放寬登入保護。
+- UI 圖片使用虛構資料，後端以 SQLite 與 HMAC 驗收；未代替管理員登入正式瀏覽器、未填真實 LINE 憑證、未宣稱 OA 已完成串接、未發訊息。教學影片沿用、錄影 skipped。
+
+---
