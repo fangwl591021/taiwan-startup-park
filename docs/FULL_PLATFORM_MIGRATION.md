@@ -6,7 +6,7 @@
 
 使用者已確認：以整套 Smart-Menu-Studio 為平台基底，再增加借址登記模型。不能以選單名稱、少數 LINE 功能或畫面規劃代替完整移植。
 
-本次先保存完整來源基準，尚未完成登入、資料與執行路由整合。現有正式 Worker 仍使用既有借址系統；此分支的原平台程式尚未提供正式服務。
+已保存完整來源基準，並開始實作既有登入與業者／企业工作區權限橋接；原平台執行路由和完整資料整合仍未完成。現有正式 Worker 仍使用既有借址系統；此分支的原平台程式尚未提供正式服務。
 
 - 來源：fangwl591021/Smart-Menu-Studio，main / f69fd70a2ff91056bbac158a41e046ee35f10077。
 - 來源 tree：dbcc440b081bcdeb11aa98d1ebac06e0e7300ea1。
@@ -14,7 +14,7 @@
 - 完整保存 369 個來源檔案，包括二進位素材、WASM、前後端、鎖檔、原有測試、55 份 migrations。
 - 路徑：platform/upstream-smart-menu。每個檔案保持原 Git blob SHA；config/platform-source-lock.json 記錄版本及完整清單。
 - 保留 docs/PLATFORM_BLUEPRINT.md 及既有成交、合約、郵件、LINE、風控功能。來源 migrations 不放進根目錄 migrations，也不套用正式 D1。
-- 本機環境顯示 environment_offline，終端及瀏覽器工具未提供；已改用 GitHub 保存來源與執行 CI。互動驗收及整合開發仍待環境恢复。
+- 本機環境仍顯示 environment_offline，終端及瀏覽器工具未提供；以 GitHub 保存實作，透過 Actions 執行建置、資料及瀏覽器驗收。原平台完整執行整合尚待繼續。
 - 原平台的既有測試和建置不代表新的業者／企業權限及借址整合已通過。
 
 ## 完整功能範圍
@@ -103,3 +103,16 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 - 稽核發現及修正：run 37678470074 證實原鎖檔後端 4／前端 7 high；run 37678750375 相容更新後仍剩 sharp 漏洞；run 37679159576 明確 override sharp 0.35.5 後，全部 1814 項來源測試、typecheck/build/dry-run 成功，兩端 npm audit 0。
 - 已保存 package／lock overlay 至 platform/dependency-overlays。固定版本驗證 run 37679494945 / commit 01a7d59635311e3ba4b9de87795af1538939bd7b，success：全部 369 原檔與 4 份 overlay SHA 通過、1222＋592 來源測試零失敗、typecheck／完整 Worker dry-run／前端 build 成功、兩端 npm audit 0。CI 直接 npm ci，不動態更新。high/critical gate 保留。
 - 本機 environment_offline 的障礙仍未消除；實際資料／登入／權限及整合 browser 驗收尚未完成，保存於 draft PR #19 待接續。
+
+## 工作區整合實作（第 1 段）
+
+- 新增根資料庫 migration 0015：platform_workspaces、platform_workspace_entitlements、platform_business_members。全部為加法；不改寫既有聯絡人、回覆者、合約或帳本，未套用正式資料庫。
+- 每個業者有自己的工作區；已有租戶、人工建檔及成交轉租戶均建立企業工作區。重送成交、同企業加購均沿用同一映射。映射身分及 source_workspace_id 不可重綁，不沿用來源 default。
+- 八個原平台模組均明寫 disabled 權益；即使資料層誤設 enabled，也不在執行整合完成前視為可用。缺漏權益拒絕存取，無舊版「全部啟用」fallback。
+- 現有 Access／session 登入沿用，後端每次重查有效角色與承辦關係。企業管理帳號须經業者管理員明確授權；授權具有版本、依據與實際操作者歷程，可即時撤銷。
+- 業務、維運、財務只取得原借址指派範圍；查看借址企業不等於取得該企業自己的零售 CRM／OA 聊天。平台管理員無隱含工作區內容權限。原私有核查 API 保留 owner 限制。
+- 新增 /api/platform-workspaces 列表、詳情、context、狀態及企業 membership API；列表使用既有有限分頁。actor／operator／role 由伺服器決定，客戶端 workspace／role／actor headers 無效。
+- 工作台新增「平台工作區」，以條列、深色字和藍色標題呈現。工作區詳情沿用已有借址服務起迄、合約類型、付款週期，連回租戶維運；顯示八個原平台模組「整合中，未開通」。企業帳號只看到其已授權工作區。
+- 原平台完整 React UI 及 Hono 執行尚未接入這層 context；source_role=null、source_access=false、runtime_integrated=false。context 回應不是可供未來後端直接信任的客戶端能力憑證。
+- 沒有建立或綁定第二個遠端 D1／R2，沒有搬移 LINE、金流、AI 憑證；不改寫正式 Worker。費率與分潤保持 NULL。
+- 新增 13 個後端流程／隔離測試和 4 個桌面／手機驗收；實際結果以下一次 CI 紀錄為準。

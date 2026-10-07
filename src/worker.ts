@@ -1,3 +1,4 @@
+import {platformWorkspacesRoute} from './platform-workspaces.js';
 import {digitalPreview,requireDigitalPreview} from './scope.js';
 import type {Actor,Env,Opportunity,Statement} from './types.js';
 import {HttpError,fail,now,uid,stmt,local,sandbox,demo,digest,audit} from './shared.js';
@@ -125,6 +126,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/auth/access'&&method==='POST'){if(sandbox(req,env))fail(404,'請選擇模擬帳號');await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
+ const platformWorkspaces=await platformWorkspacesRoute(req,env,a);if(platformWorkspaces)return platformWorkspaces;
  const workspaceModules=await moduleRoute(req,env,a);if(workspaceModules)return workspaceModules;
  const templates=await templateRoute(req,env,a);if(templates)return templates;
  const crm=await crmRoute(req,env,a);if(crm)return crm;
