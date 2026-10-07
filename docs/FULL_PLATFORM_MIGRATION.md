@@ -101,5 +101,5 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 - 此來源測試包含原有單元及原始碼契約檢查，不是新的整合 browser 或正式 LINE／金流驗收。
 - 既有借址回歸：run 37678050492，同一 commit，success；117 後端、35 桌面／手機測試通過，audit 0。此為現有借址畫面回歸，不是新完整平台整合截圖。
 - 稽核發現及修正：run 37678470074 證實原鎖檔後端 4／前端 7 high；run 37678750375 相容更新後仍剩 sharp 漏洞；run 37679159576 明確 override sharp 0.35.5 後，全部 1814 項來源測試、typecheck/build/dry-run 成功，兩端 npm audit 0。
-- 已保存 package／lock overlay 至 platform/dependency-overlays，下一輪 CI 直接 npm ci 驗證固定修正版本，不動態更新。high/critical gate 保留。
+- 已保存 package／lock overlay 至 platform/dependency-overlays。固定版本驗證 run 37679494945 / commit 01a7d59635311e3ba4b9de87795af1538939bd7b，success：全部 369 原檔與 4 份 overlay SHA 通過、1222＋592 來源測試零失敗、typecheck／完整 Worker dry-run／前端 build 成功、兩端 npm audit 0。CI 直接 npm ci，不動態更新。high/critical gate 保留。
 - 本機 environment_offline 的障礙仍未消除；實際資料／登入／權限及整合 browser 驗收尚未完成，保存於 draft PR #19 待接續。
