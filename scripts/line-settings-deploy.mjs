@@ -23,7 +23,7 @@ export async function provisionLineSettings(env,config,fetcher=fetch){
  if(existing&&existing.type!=='secret_text')throw Error('加密主鑰綁定類型不符');
  let keyCreated=false;
  if(!existing){
-  const q=await cf('/d1/database/'+dbId+'/query','POST',{sql:"SELECT (SELECT COUNT(*) FROM line_connection_secrets)+(SELECT COUNT(*) FROM platform_line_login WHERE encrypted_secret!='') AS n"});
+  const q=await cf('/d1/database/'+dbId+'/query','POST',{sql:"SELECT (SELECT COUNT(*) FROM line_connection_secrets)+(SELECT COUNT(*) FROM platform_line_login WHERE encrypted_secret!='')+(SELECT COUNT(*) FROM platform_line_account WHERE encrypted_messaging!='') AS n"});
   if(q[0]?.success!==true||!q[0]?.results?.[0]||Number(q[0].results[0].n)!==0)throw Error('已有加密憑證但主鑰缺失；拒絕重建以免資料失效');
   await cf('/workers/scripts/'+WORKER+'/secrets','PUT',{name:SECRET,type:'secret_text',text:randomBytes(32).toString('base64')});
   keyCreated=true;
@@ -54,7 +54,7 @@ export async function verifyLineBoundary(fetcher=fetch){
  const webhook=await fetcher(origin+'/api/line/webhook/configuration-probe',{method:'POST',headers:{'x-line-signature':'invalid','Content-Type':'application/json'},body:'{"destination":"invalid","events":[]}',redirect:'manual',signal:AbortSignal.timeout(15000)});
  if(![401,404,503].includes(webhook.status)||webhook.headers.get('location'))throw Error('LINE Webhook 未到達驗簽邊界：HTTP '+webhook.status+'，重新導向='+!!webhook.headers.get('location'));
  checks.push({path:'/api/line/webhook/configuration-probe',status:webhook.status,rejected:true});
- for(const path of ['/api/me','/api/line/settings','/api/line/inbox','/api/platform/overview','/api/platform/settings','/api/platform/line-login']){
+ for(const path of ['/api/me','/api/line/settings','/api/line/inbox','/api/platform/overview','/api/platform/settings','/api/platform/line-login','/api/platform/line-account']){
   const r=await fetcher(origin+path,{redirect:'manual',signal:AbortSignal.timeout(15000)});
   const location=r.headers.get('location');
   if(![302,303,307,308].includes(r.status)||!location||!new URL(location,origin).hostname.endsWith('.cloudflareaccess.com'))throw Error('工作台路徑 Access 保護不符：'+path+' HTTP '+r.status);

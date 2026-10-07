@@ -8,6 +8,7 @@ import {operationRoute} from './operations.js';
 import {lineSettingsRoute} from './line-settings.js';
 import {platformRoute,platformAccess} from './platform.js';
 import {platformLoginRoute} from './platform-login.js';
+import {platformLineRoute} from './platform-line.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
@@ -116,6 +117,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(path==='/api/auth/access'&&method==='POST'){if(sandbox(req,env))fail(404,'請選擇模擬帳號');await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
  const loginSettings=await platformLoginRoute(req,env,a);if(loginSettings)return loginSettings;
+ const platformLine=await platformLineRoute(req,env,a);if(platformLine)return platformLine;
  const platform=await platformRoute(req,env,a);if(platform)return platform;
  const lineSettings=await lineSettingsRoute(req,env,a);if(lineSettings)return lineSettings;
  const operation=await operationRoute(req,env,a,id=>getBusiness(env,a,id));if(operation)return operation;

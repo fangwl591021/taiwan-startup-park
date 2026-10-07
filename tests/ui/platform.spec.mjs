@@ -11,13 +11,12 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
   await navigate('業者總覽');await expect(page.locator('#content')).toContainText('青禾商務中心');await expect(page.locator('#content')).toContainText('晴川商務中心');
   await page.getByLabel('搜尋業者／OA').fill('晴川');await page.getByRole('button',{name:'搜尋',exact:true}).click();await expect(page.locator('.platform-rows')).not.toContainText('青禾商務中心');
   await navigate('業者 OA 串接總覽');await expect(page.locator('#content')).toContainText('不顯示憑證、客戶身分或聊天內容');
-  await navigate('平台 OA 與通知規劃');await expect(page.locator('#content')).toContainText('規劃中 · 尚未串接');
-  await page.getByLabel('平台 OA 名稱',{exact:true}).fill('平台服務 OA（'+name+'驗收）');await page.getByLabel('Messaging API Provider ID（規劃）').fill('123');await page.getByLabel('Messaging API Channel ID（規劃）').fill('456');
+  await navigate('通知草稿與額度');await expect(page.locator('#content')).toContainText('規劃中 · 尚未串接');
   await page.getByLabel('使用目的').fill('業者加入與平台服務');await page.getByLabel('業者加入通知草稿').fill('歡迎加入，這是規劃草稿。');await page.getByLabel('平台服務通知草稿').fill('平台服務說明草稿。');
   await page.getByLabel('每月規劃發送上限').fill('');await page.getByLabel('更新依據').fill(name+'虛構規劃驗收');
   expect(await page.getByLabel('每月規劃發送上限').inputValue()).toBe('');await expect(page.locator('#platform-settings-form input[type="password"]')).toHaveCount(0);
   await page.getByRole('button',{name:'保存規劃',exact:true}).click();await expect(page.locator('#toast')).toContainText('尚未串接或發送');
-  await page.reload();await expect(page.getByRole('heading',{name:'系統總覽',exact:true})).toBeVisible();await navigate('平台 OA 與通知規劃');await expect(page.getByLabel('平台 OA 名稱',{exact:true})).toHaveValue('平台服務 OA（'+name+'驗收）');
+  await page.reload();await expect(page.getByRole('heading',{name:'系統總覽',exact:true})).toBeVisible();await navigate('通知草稿與額度');await expect(page.getByLabel('使用目的')).toHaveValue('業者加入與平台服務');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'docs/screenshots/'+name+'-system-oa-planning.png',fullPage:true});
   await navigate('平台費與分潤');await expect(page.locator('#content')).toContainText('空白不代表免費或 0%');
   await navigate('系統操作歷程');await expect(page.locator('#content')).toContainText(name+'虛構規劃驗收');

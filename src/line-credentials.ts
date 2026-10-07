@@ -40,6 +40,6 @@ export async function decryptStoredSecret(env:Env,operator:string,id:string,encr
   const key=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['decrypt']);
   const text=await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:context(operator,id)},key,Uint8Array.from(atob(value.data),c=>c.charCodeAt(0)));
   const data=JSON.parse(new TextDecoder().decode(text));
-  return typeof data.channelSecret==='string'?{channelSecret:data.channelSecret}:{};
+  return typeof data.channelSecret==='string'?{channelSecret:data.channelSecret,...(typeof data.channelAccessToken==='string'?{channelAccessToken:data.channelAccessToken}:{})}:{};
  }catch{return {};}
 }
