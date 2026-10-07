@@ -1,0 +1,25 @@
+{
+  "name": "smart-menu-backend",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "typecheck:campaign": "tsc -p tsconfig.campaign.json",
+    "typecheck:commerce": "tsc -p tsconfig.commerce.json",
+    "typecheck:travel": "tsc -p tsconfig.travel.json",
+    "typecheck:modules": "tsc -p tsconfig.modules.json",
+    "typecheck": "npm run typecheck:campaign && npm run typecheck:commerce && npm run typecheck:travel && npm run typecheck:modules"
+  },
+  "dependencies": {
+    "hash-wasm": "4.12.0",
+    "hono": "^4.13.1",
+    "openai": "^7.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260810.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.110.0"
+  }
+}
