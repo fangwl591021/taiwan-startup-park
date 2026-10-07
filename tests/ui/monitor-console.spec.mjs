@@ -17,7 +17,7 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
  });
  test(name+' 30 second refresh stops for a modal and on page exit',async({page})=>{
   await login(page);await nav(page,'聊天室 AI 監控');await expect(page.locator('#mc-console')).toBeVisible();await page.clock.install();let requests=0;page.on('request',r=>{if(new URL(r.url()).pathname==='/api/admin/monitor')requests++;});
-  await page.getByLabel('每 30 秒更新',{exact:true}).check();const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/admin/monitor');await page.clock.fastForward(30000);await response;await expect(page.locator('#mc-console')).toBeVisible();const after=requests;expect(after).toBe(1);
+  await page.getByLabel('每 30 秒更新',{exact:true}).check();const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/admin/monitor');await page.clock.fastForward(30000);await response;await expect(page.locator('#mc-console')).toBeVisible();const after=requests;expect(after).toBe(1);const search=page.getByLabel('搜尋企業／訊息／回覆人員',{exact:true});await search.fill('尚未送出的篩選');await page.clock.fastForward(60000);expect(requests).toBe(after);await search.fill('');await search.evaluate(el=>el.blur());
   await page.getByRole('button',{name:'查看對話',exact:true}).first().click();await expect(page.locator('#modal')).toBeVisible();await page.clock.fastForward(60000);expect(requests).toBe(after);await page.getByRole('button',{name:'關閉',exact:true}).click();await nav(page,'會員 CRM');await expect(page.getByRole('heading',{name:'會員 CRM',exact:true})).toBeVisible();await page.clock.fastForward(60000);expect(requests).toBe(after);
  });
 }

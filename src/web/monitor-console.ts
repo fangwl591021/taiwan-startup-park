@@ -16,7 +16,7 @@ export function monitorConsole(d:Deps,legacy:(data:Row)=>string){
  function reset(){leave();tab='chat';days=7;q='';status='all';cursors=[null];index=0;}
  async function reload(){if(busy){queued=true;return;}busy=true;try{do{queued=false;await d.refresh();}while(queued);}finally{busy=false;}}
  function polling(){if(timer)clearInterval(timer);timer=undefined;if(!auto)return;
-  timer=setInterval(()=>{if(d.me()?.id!==actorId){leave();return;}if(document.hidden||!document.querySelector('#mc-console')||document.querySelector('#modal[open]')||document.activeElement?.matches('input,textarea,select')||busy)return;void reload().catch(()=>d.toast('監控更新失敗，請重新整理'));},30000);
+  timer=setInterval(()=>{if(d.me()?.id!==actorId){leave();return;}if(document.hidden||!document.querySelector('#mc-console')||document.querySelector('#modal[open]')||document.activeElement?.matches('input:not([type=checkbox]):not([type=radio]),textarea,select')||busy)return;void reload().catch(()=>d.toast('監控更新失敗，請重新整理'));},30000);
  }
  const pagination=()=>'<div class="list-pagination"><span>共 '+num(snapshot.total)+' 筆 · 第 '+(index+1)+' 頁</span><div><button data-mc-pager="previous" '+(!index?'disabled':'')+'>上一頁</button><button data-mc-pager="next" '+(!snapshot.next_cursor?'disabled':'')+'>下一頁</button></div></div>';
  function filters(){const opts=tab==='chat'?{all:'全部紀錄',attention:'需注意的送出狀態',in:'客戶來訊',out:'人員回覆'}:tab==='groups'?{all:'全部商機',pending:'待確認',reviewing:'處理中',accepted:'確認商機',discarded:'不採用'}:{all:'全部呼叫',success:'成功',failed:'失敗',cached:'快取',fallback:'備援'};
