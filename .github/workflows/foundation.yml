@@ -2,6 +2,13 @@ name: Platform acceptance
 on:
   push:
     branches: [feature/foundation, feature/line-integration, feature/tenant-operations, feature/phase1-address-scope, feature/workspace-performance, feature/tenant-service-clarity, feature/mail-line-notifications, feature/line-oa-settings, feature/platform-console, feature/line-login-settings, feature/line-account-settings, feature/line-workspace, feature/chat-monitor-import, feature/full-platform-migration]
+    paths-ignore:
+      - 'platform/upstream-smart-menu/**'
+      - 'config/platform-source-lock.json'
+      - 'scripts/verify-upstream-platform.mjs'
+      - 'scripts/audit-upstream-platform.mjs'
+      - '.github/workflows/full-platform-baseline.yml'
+      - 'docs/FULL_PLATFORM_MIGRATION.md'
   pull_request:
     branches: [main, docs/platform-blueprint, feature/foundation, feature/line-integration]
 permissions:

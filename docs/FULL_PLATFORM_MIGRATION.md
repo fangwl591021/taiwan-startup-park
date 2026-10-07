@@ -78,7 +78,8 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 
 - [x] 鎖定原平台完整來源並保存每個檔案。
 - [x] 保存功能、資料及權限對應清單，保留既有借址與後續需求。
-- [ ] 原平台依鎖檔建置／測試及完整 Worker bundle；檢查 CI 實際結果。
+- [x] 原平台依鎖檔建置／測試及完整 Worker bundle：1222 後端測試、592 前端測試通過。
+- [ ] 原鎖檔依賴稽核修正：首輪 npm ci 回報前端 7 個 high findings，先取得機器可讀稽核；不將此來源基準標成可上線版本。
 - [ ] 整合登入、工作區映射、兩層權限及素材／憑證隔離。
 - [ ] 原平台全模組接上新工作區 API 與實際資料，移除靜態成功數字。
 - [ ] 成交、合約、郵件、維運、數位租用整合到同一企業 CRM。
@@ -93,3 +94,10 @@ scripts/verify-upstream-platform.mjs 核對全部來源檔案的原 Git blob has
 ## 接續工作
 
 開發環境恢復後，checkout feature/full-platform-migration，閱讀本文件、來源 lock 與 PLATFORM_BLUEPRINT，再從工作區映射及權限適配開始。原平台完整來源已入庫，可直接進行整合，不必重新挑選或複製模組。
+
+## CI 證據
+
+- 完整來源基準：run 37678050562 / commit 79bf9d03e5382b02fcedb0cae64a1b7ff1f362ec，success。全部 369 檔案的 hash／size 核對成功，55 份 migration 未套用；後端 1222、前端 592 測試零失敗，原 4 組 module typecheck、Worker dry-run、完整前端 build 均成功。
+- 此來源測試包含原有單元及原始碼契約檢查，不是新的整合 browser 或正式 LINE／金流驗收。
+- 既有借址回歸：run 37678050492，同一 commit，後端已通過；桌面／手機回歸結果待確認。
+- 新增 dependency audit JSON 與 high/critical gate，詳細結果待 CI；沒有更改原始 lockfile 或默默執行 audit force fix。

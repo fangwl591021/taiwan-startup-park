@@ -2,13 +2,6 @@ name: Full platform source baseline
 on:
   push:
     branches: [feature/full-platform-migration]
-  pull_request:
-    branches: [release/cloudflare]
-    paths:
-      - 'platform/upstream-smart-menu/**'
-      - 'config/platform-source-lock.json'
-      - 'scripts/verify-upstream-platform.mjs'
-      - '.github/workflows/full-platform-baseline.yml'
 permissions:
   contents: read
 jobs:
@@ -48,6 +41,8 @@ jobs:
       - name: Build complete original frontend using local API origin
         working-directory: .migration-build/smart-menu/frontend
         run: npm run build
+      - name: Audit imported dependencies before runtime integration
+        run: node scripts/audit-upstream-platform.mjs
       - name: Save source and baseline evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -58,6 +53,8 @@ jobs:
             config/platform-source-lock.json
             docs/FULL_PLATFORM_MIGRATION.md
             full-platform-source-report.json
+            full-platform-backend-audit.json
+            full-platform-frontend-audit.json
             .migration-build/smart-menu/backend/worker-build
             .migration-build/smart-menu/frontend/dist
           if-no-files-found: warn
