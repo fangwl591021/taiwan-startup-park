@@ -26,7 +26,7 @@ for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
  });
 }
 test('explicitly authorized creator can switch system/operator workspaces without impersonation',async({page})=>{
- await page.route('**/api/me',async route=>{const response=await route.fetch();const me=await response.json();await route.fulfill({json:{...me,platform_access:true}});});
+ await page.route('**/api/me',async route=>{const response=await route.fetch();if(!response.ok()){await route.fulfill({response});return;}const me=await response.json();await route.fulfill({json:{...me,platform_access:true}});});
  await page.route('**/api/platform/overview',route=>route.fulfill({json:{stats:{operators:2,connections:0,receiving:0,verified:0}}}));
  await page.goto('http://127.0.0.1:8789/');await page.getByLabel('示範身分').selectOption('owner-a');await page.getByRole('button',{name:'進入示範工作台'}).click();
  await page.getByRole('button',{name:'系統總後台 →',exact:true}).click();await expect(page.getByRole('heading',{name:'系統總覽',exact:true})).toBeVisible();await expect(page).toHaveURL(/workspace=platform/);
