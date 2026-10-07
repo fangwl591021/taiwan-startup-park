@@ -378,6 +378,7 @@ test('one observed LINE recipient can represent multiple tenants without inherit
 });
 
 import {lineSecret,encryptLineSecret} from '../dist/line-credentials.js';
+import {lineSettingsRoute} from '../dist/line-settings.js';
 import {provisionLineSettings,verifyLineBoundary} from '../scripts/line-settings-deploy.mjs';
 const oaSecret='a'.repeat(32),oaToken='t'.repeat(80),oaBot='U'+'d'.repeat(32),oaChannel='1234567890';
 async function oaFixture(t){
@@ -424,6 +425,8 @@ test('OA configuration rejects nonowners, forged fields, CSRF, unsupported envir
  const failed=await f.a('/line/settings','POST',f.data);assert.equal(failed.status,400);assert(!JSON.stringify(failed).includes(oaToken));
  assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM line_connection_secrets').get().n,0);
  delete f.env.LINE_CREDENTIALS_KEY;assert.equal((await f.a('/line/settings')).data.storage_ready,false);assert.equal((await f.a('/line/settings','POST',f.data)).status,503);
+ await assert.rejects(()=>lineSettingsRoute(new Request('http://localhost/api/line/settings',{method:'POST'}),{...f.env,APP_ENV:'sandbox'},f.a),/總管理員/);
+ await assert.rejects(()=>lineSettingsRoute(new Request('http://localhost/api/line/settings',{method:'POST'}),{...f.env,APP_ENV:'sandbox'},{id:'owner-a',operator_id:'op-a',role:'operator_owner'}),/測試區/);
 });
 test('OA edits retain blank credentials, invalidate webhook proof after secret rotation, and use versioned operator isolation',async t=>{
  const f=await oaFixture(t);const result=await f.a('/line/settings','POST',f.data),c=result.data.connections.find(c=>c.channel_id===oaChannel);
@@ -441,7 +444,8 @@ test('OA edits retain blank credentials, invalidate webhook proof after secret r
  assert.equal(stop.status,200);
  const raw=JSON.stringify({destination:oaBot,events:[]});
  assert.equal((await worker.fetch(new Request('http://localhost/api/line/webhook/'+c.id,{method:'POST',headers:{'x-line-signature':await signature(raw,'b'.repeat(32))},body:raw}),f.env)).status,404);
- const service=await f.as('service-a');assert((await service('/activity')).data.every(e=>!e.action.startsWith('line_connection_')));
+ const service=await f.as('service-a');assert.equal((await service('/activity')).status,403);
+ const visible=await service('/activity?business_id=b4');assert.equal(visible.status,200);assert(visible.data.every(e=>!e.action.startsWith('line_connection_')));
 });
 test('encrypted OA secrets fail closed when key, ciphertext or channel/operator context changes',async t=>{
  const f=await oaFixture(t);const r=await f.a('/line/settings','POST',f.data),c=r.data.connections.find(c=>c.channel_id===oaChannel);
@@ -457,13 +461,17 @@ test('encrypted OA secrets fail closed when key, ciphertext or channel/operator 
 });
 test('OA resource provisioning preserves the root Access app, limits bypass to signed webhook path and never rotates an existing key',async()=>{
  const config={name:'taiwan-startup-park',account_id:'a'.repeat(32),vars:{APP_ENV:'production',APP_ORIGIN:'https://taiwan-startup-park.fangwl591021.workers.dev',ACCESS_AUD:'owner-aud',LINE_SEND_ENABLED:'off'},d1_databases:[{database_id:'db-id',database_name:'taiwan-startup-park-prod'}]};
- const env={CLOUDFLARE_ACCOUNT_ID:'a'.repeat(32),CLOUDFLARE_API_TOKEN:'fake'},calls=[];let secret=true,app=false,policy=false;
+ const env={CLOUDFLARE_ACCOUNT_ID:'a'.repeat(32),CLOUDFLARE_API_TOKEN:'fake'},calls=[];let secret=true,app=false,policy=false,encryptedCount=0;
  const root={id:'root',aud:'owner-aud',domain:'taiwan-startup-park.fangwl591021.workers.dev',type:'self_hosted'};
  const narrow={id:'webhook',type:'self_hosted',domain:root.domain+'/api/line/webhook/*'};
  async function fake(url,init){
   const path=new URL(url).pathname.split('/accounts/'+env.CLOUDFLARE_ACCOUNT_ID)[1];calls.push({path,method:init.method,body:init.body?JSON.parse(init.body):null});let result;
   if(path==='/workers/subdomain')result={subdomain:'fangwl591021'};
   else if(path==='/d1/database/db-id')result={name:'taiwan-startup-park-prod',uuid:'db-id'};
+  else if(path==='/d1/database/db-id/query')result=[{success:true,results:[{n:encryptedCount}]}];
+  else if(path==='/workers/scripts/taiwan-startup-park/secrets'){
+   assert.equal(init.method,'PUT');const d=JSON.parse(init.body);assert.equal(d.name,'LINE_CREDENTIALS_KEY');assert.equal(Buffer.from(d.text,'base64').length,32);secret=true;result={name:d.name,type:'secret_text'};
+  }
   else if(path==='/workers/scripts/taiwan-startup-park/settings')result={bindings:[{type:'d1',name:'DB',id:'db-id'},...(secret?[{type:'secret_text',name:'LINE_CREDENTIALS_KEY'}]:[])]};
   else if(path==='/access/apps') {app=true;assert.equal(JSON.parse(init.body).domain,narrow.domain);result=narrow;}
   else if(path==='/access/apps/root/policies'){assert.equal(init.method,'GET');result=[{decision:'allow'}];}
@@ -479,6 +487,9 @@ test('OA resource provisioning preserves the root Access app, limits bypass to s
  // Handle list before create: same pathname, GET has pagination.
  const fetcher=async(url,init)=>init.method==='GET'&&new URL(url).pathname.endsWith('/access/apps')?Response.json({success:true,result:[root,...(app?[narrow]:[])]}):fake(url,init);
  const result=await provisionLineSettings(env,config,fetcher);assert.equal(result.credential_key_present,true);assert.equal(result.key_created,false);assert.equal(result.webhook_domain,narrow.domain);assert(!calls.some(x=>x.path.endsWith('/secrets')));
+ secret=false;assert.equal((await provisionLineSettings(env,config,fetcher)).key_created,true);
+ assert.equal((await provisionLineSettings(env,config,fetcher)).key_created,false);assert.equal(calls.filter(x=>x.path.endsWith('/secrets')).length,1);
+ secret=false;encryptedCount=1;await assert.rejects(()=>provisionLineSettings(env,config,fetcher),/拒絕重建/);assert.equal(calls.filter(x=>x.path.endsWith('/secrets')).length,1);
  const checks=await verifyLineBoundary(async(url,init)=>url.includes('/webhook/')?new Response(null,{status:404}):new Response(null,{status:302,headers:{location:'https://test.cloudflareaccess.com/login'}}));
  assert.equal(checks.length,4);assert(checks.slice(1).every(x=>x.access_protected));
  await assert.rejects(()=>provisionLineSettings(env,{...config,name:'other-worker'},fetcher),/目標/);
