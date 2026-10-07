@@ -148,3 +148,13 @@ test('write endpoints retain same-origin and JSON field-whitelist protection',as
   assert.equal((await owner('/platform-workspaces/pw-biz-b4','PATCH',{status:'suspended',version:1,reference:'forged',...extra})).status,400);
  }
 });
+
+test('ordinary module discovery never reveals the owner-private monitoring module',async t=>{
+ const {as}=await fixture(t);
+ for(const id of ['sales-a1','service-a','finance-a']){
+  const staff=await as(id),result=await staff('/workspace/modules');assert.equal(result.status,200);
+  assert(!result.data.modules.some(m=>m.key==='monitor'));
+  assert(!/monitor|聊天室核查|核查歷程/.test(JSON.stringify(result.data)));
+ }
+ const owner=await as('owner-a');assert((await owner('/workspace/modules')).data.modules.some(m=>m.key==='monitor'));
+});
