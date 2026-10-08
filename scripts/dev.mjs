@@ -1,7 +1,7 @@
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {mkdirSync} from 'node:fs';
-import {resolve,extname} from 'node:path';
+import {resolve,extname,relative,isAbsolute} from 'node:path';
 import {database,seed} from './database.mjs';
 import worker from '../dist/worker.js';
 import {seedMonitorUiFixture} from './monitor-ui-fixture.mjs';
@@ -16,7 +16,8 @@ const root=resolve('dist/public');
 const assets={async fetch(req){
  const path=new URL(req.url).pathname;
  const file=resolve(root,'.'+decodeURIComponent(path==='/'?'/index.html':path));
- if(file!==root&&!file.startsWith(root+'/'))return new Response('Not found',{status:404});
+ const inside=relative(root,file);
+ if(inside==='..'||inside.startsWith('../')||inside.startsWith('..\\')||isAbsolute(inside))return new Response('Not found',{status:404});
  try{return new Response(await readFile(file),{headers:{'Content-Type':({'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mp4':'video/mp4','.vtt':'text/vtt; charset=utf-8','.jpg':'image/jpeg','.json':'application/json'})[extname(file)]||'application/octet-stream'}});}
  catch{return new Response('Not found',{status:404});}
 }};

@@ -261,3 +261,5 @@ button:disabled{opacity:1;color:#46594c;background:#edf1ee}
 .pw-modules>li{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #d5dfe2;color:#19363f}
 .pw-contracts>li{align-items:flex-start}
 @media(max-width:700px){.pw-list>li{flex-wrap:wrap;gap:12px}.pw-list>li>div:first-child{flex-basis:100%}.pw-state{flex:1}.pw-modules>li{flex-wrap:wrap}.pw-modules strong{font-size:18px}.pw-panel .search{width:100%}}
+/* The same attention cards and tenant destinations serve desktop and mobile. */
+.attention-list{list-style:none;padding:0;margin:0}.attention-list .case-row{width:100%;text-align:left}.attention-list .case-main{min-width:0}.attention-list small{overflow-wrap:anywhere}.attention-grid{margin-bottom:20px}
