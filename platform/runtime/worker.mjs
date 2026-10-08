@@ -28,7 +28,7 @@ export default{
    if(path==='/api/members'||path.startsWith('/api/members/'))return secured(response({success:false,error:'操作人員與企業授權由主工作台管理'},409));
    // External services stay explicit and disabled until separately configured.
    const lineAction=/\/(publish|set-default|sync|execute|send|dispatch|probe-https)(?:\/|$)/.test(path);
-   if(lineAction&&!['GET','HEAD'].includes(req.method))return secured(response({success:false,error:'外部 LINE／金流／AI 執行尚未启用；草稿與內部管理可正常使用',errorCode:'INTEGRATION_NOT_READY'},503));
+   if(lineAction&&!path.startsWith('/api/site-drafts')&&!['GET','HEAD'].includes(req.method))return secured(response({success:false,error:'外部 LINE／金流／AI 執行尚未启用；草稿與內部管理可正常使用',errorCode:'INTEGRATION_NOT_READY'},503));
    if(path==='/api/detect-layout')return secured(response({success:false,error:'AI 圖片辨識尚未串接',errorCode:'AI_NOT_CONFIGURED'},503));
    const tenant=await provisionWorkspace(env.PLATFORM_DB,c);
    if(path==='/api/startup-park/summary'){
@@ -36,7 +36,7 @@ export default{
     const counts=await env.PLATFORM_DB.batch(Object.values(tables).map(table=>env.PLATFORM_DB.prepare('SELECT COUNT(*) n FROM '+table+' WHERE workspace_id=?').bind(c.source_workspace_id)));
     return secured(response({success:true,...Object.fromEntries(Object.keys(tables).map((key,i)=>[key,Number(counts[i].results[0].n)])),integrations:{line:'not_configured',payments:'not_configured',ai:'not_configured'}}));
    }
-   const siteResult=await sitesRoute(req,env.PLATFORM_DB,tenant,c,path,match[1]);if(siteResult)return secured(siteResult);
+   const siteResult=await sitesRoute(req,env.PLATFORM_DB,tenant,c,path,match[1]);if(siteResult){if(!['GET','HEAD'].includes(req.method))await env.DB.prepare('INSERT INTO activity_events(id,operator_id,business_id,opportunity_id,actor_id,action,detail,created_at) VALUES(?,?,?,NULL,?,?,?,?)').bind(crypto.randomUUID(),a.operator_id,c.workspace.business_id,a.id,'platform_site_operation',JSON.stringify({workspace_id:c.workspace.id,path,status:siteResult.status}),new Date().toISOString()).run();return secured(siteResult);}
    const headers=new Headers(req.headers);headers.delete('authorization');headers.delete('x-workspace-id');headers.delete('cf-access-jwt-assertion');
    let body;if(!['GET','HEAD'].includes(req.method)){
     body=path==='/api/line-hub/account'?await encryptAccountBody(req,env,a.operator_id,c.source_workspace_id):req.body;
