@@ -1,3 +1,21 @@
+# 最新發布：完整 Smart-Menu 平台與借址 CRM
+
+2026-10-08 08:33:59（Asia/Taipei）正式站與獨立測試站已完成發布，遠端版本、資料庫及保護核對成功。
+
+- 原 Smart-Menu 的完整 React／Hono 平台已實際接入台灣創業園驗證身分與業者工作區；不是只有來源存檔或選單預留。原 369 檔 snapshot 不修改，完整 8 模組與後續規格保留。詳見 [本輪可操作範圍與未啟用項目](FULL_PLATFORM_RUNTIME.md)。
+- 入口：業者工作台 → 平台工作區 → 業者工作區 → 開啟完整數位工作區。包含 CRM／分析、圖文選單與模板、商城商品／訂單、行銷草稿、旅遊、經銷／佣金、點數與 AI 用量介面；模組依伺服器權益判斷。一般業務、維運、財務及系統管理身分不會取得企業零售工作區所有權。
+- 借址 CRM 帶入既有租戶、據點、服務起迄、合約類型與付款週期，連回原維運流程；名片／DM、介紹及社群連結可保存為有版本的私有官網草稿。小型 PNG／JPG 每張最多 1 MB，以本專案專用 D1 私有保存。
+- 正式與測試新增各自獨立平台 D1，與原借址 D1 分離；54 份來源 schema（不含 0007 測試 fixture）及新 runtime schema 已套用，來源開發帳號／default 工作區移除。正式既有借址租戶、合約、收款及操作歷程保留。
+- 首次發布在來源 0033 的巢狀 CASE trigger 發生遷移解析錯誤，正式 Worker 未被替換。修正部署副本為等價 WHEN guard，補驗點數餘額與跨工作區，核對新建 D1 的已完成遷移前綴、schema 與無實際工作區後接續；沒有清空資料庫或修改原 snapshot。
+- [最終建置、驗收與發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829)：131 根後端、39 根桌面／手機、1222 來源後端、592 來源前端、12 實際 runtime HTTP／遷移及 4 完整平台桌面／手機，共 2000 項通過；建置、typecheck、Worker dry-run、npm audit 0 通過。
+- [發布 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829/artifacts/11519869325)；[最終建置報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829/artifacts/11519849228)；[桌面／手機截圖](screenshots/platform-runtime-manifest.json)；[PR #19，已合併](https://github.com/fangwl591021/taiwan-startup-park/pull/19)。非秘密版本／資料庫核對保存在 [runtime-deployment-2026-10-08.json](runtime-deployment-2026-10-08.json)。
+- 已發布來源 `5351289d184721b81b47e5dfa1b858e915bef892`；正式 active version `51a37d4d-cd39-48a4-80b5-1b495bc99ab2`；測試 active version `f4d48613-fda3-4a0e-8696-334859d4a4ce`。文件提交不改動發布程式。
+- 既有 OA 加密主鑰保留（key_created:false），平台 signed receiver 繼續運作；根 Access 未放寬，17 項受保護路徑／Webhook 探針通過。正式與測試新資料庫 binding、來源 schema／無開發帳號、數位分潤全 NULL、結算 off、LINE 外送 off 已核對。
+- 來源工作區 OA 接收／外送、LINE Login／LIFF、AI／OCR、金流、實際佣金匯款與付費官網發布尚未啟用。企業數位服務不因借址成交或付款而開通；平台費與分潤全 NULL／待議定。教學影片沿用，不重錄。
+- 桌面／手機截圖與已驗證 CRUD 使用隔離虛構資料；遠端核對真實資料結構／版本／保護，未代替使用者登入正式瀏覽器。原始 PLATFORM_BLUEPRINT.md 完整保留。
+
+以下為歷次發布紀錄。
+
 # 最新發布：四分頁聊天室監控與群組商機
 
 2026-10-07 20:51:19（Asia/Taipei）正式與獨立測試站已更新，實際資料結構、版本與保護核對成功。

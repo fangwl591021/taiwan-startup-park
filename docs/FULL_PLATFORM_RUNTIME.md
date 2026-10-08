@@ -38,7 +38,7 @@
 
 - 原來源：1222 後端＋592 前端、4 組 module typecheck、完整 bundle／Vite build、audit 0。
 - 根工作台：131 個後端／權限流程測試、39 個桌面／手機測試。
-- 實際完整 runtime：10 個 HTTP 測試，涵蓋 Hono 真實 CRUD、跨業者與企業、停權、模組撤銷、CSRF、私有素材、秘密加密、借址 CRM 及網站確認版本；4 個瀏覽器測試，含手機全部來源模組可開啟與無頁面橫向溢出。
+- 實際完整 runtime：12 個 HTTP／遷移測試，涵蓋 Hono 真實 CRUD、跨業者與企業、停權、模組撤銷、CSRF、私有素材、秘密加密、借址 CRM 及網站確認版本；4 個瀏覽器測試，含手機全部來源模組可開啟與無頁面橫向溢出。
 - 教學影片沿用原已發布素材，本輪沒有重錄。
 
 執行副本建立於 .migration-build；scripts/prepare-platform-runtime.mjs 僅修改副本。wrangler.platform-local.json 做完整 Worker dry-run；scripts/build-platform-test-worker.mjs 以實際 Hono 執行程式及隔離 SQLite 建置測試版。這些資料和測試鑰匙不進入正式資料庫。
@@ -65,3 +65,11 @@
 ![桌面完整平台](screenshots/desktop-full-platform.png)
 
 ![手機完整平台](screenshots/mobile-full-platform.png)
+
+## 實際發布結果（2026-10-08）
+
+[Cloudflare release 37708091829](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829) build／deploy 均 success；重新執行全部 2000 項驗收。
+
+發布來源 `5351289d184721b81b47e5dfa1b858e915bef892`；正式與 demo runtime flag on，分別綁定自己的新平台 D1，並保留原借址 D1。來源測試 fixture 未套用；開發帳號清除、既有加密主鑰保留、Access 及外送 off 核對通過。版本／資源／驗收界線見 [發布記錄](DEPLOYMENT_STATUS.md) 與 [非秘密核對資料](runtime-deployment-2026-10-08.json)。
+
+首次來源 0033 的巢狀 CASE 被遷移工具提早切開；scripts/platform-migration-overlay.mjs 只在部署副本改成等價 WHEN guard，測試零餘額、足額、扣除後不足及其他工作區餘額不能混用。重新部署先驗證本次新建資料庫的精確身分、遷移前綴、schema 與沒有實際工作區，再從未完成處續行；沒有刪除或重設資料庫，也不修改原 snapshot。
