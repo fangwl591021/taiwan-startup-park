@@ -6,6 +6,7 @@ import {actor,accessLogin,configured,sandboxAccess} from './auth.js';
 import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueueLine,dispatchOutbox,retryLine,conversationLineStatus} from './line.js';
 import {listPage} from './paging.js';
 import {operationRoute} from './operations.js';
+import {addressAttention} from './address-attention.js';
 import {lineSettingsRoute} from './line-settings.js';
 import {platformRoute,platformAccess} from './platform.js';
 import {platformLoginRoute} from './platform-login.js';
@@ -85,7 +86,7 @@ async function dashboardData(env:Env,a:Actor){
  const results=await env.DB.batch(statements),groups=o?results[1].results:[];
  const stage_counts=Object.fromEntries(stages.map(s=>[s,0]));let open_count=0,pending_payment_count=0;
  for(const r of groups){stage_counts[String(r.stage)]=Number(r.total);if(!['won','lost'].includes(String(r.stage)))open_count+=Number(r.total);pending_payment_count+=Number(r.pending);}
- return {stats:{...results[0].results[0],stage_counts,open_count,pending_payment_count},opportunities:o?results[2].results:[]};
+ return {stats:{...results[0].results[0],stage_counts,open_count,pending_payment_count},opportunities:o?results[2].results:[],attention:await addressAttention(env,a,b)};
 }
 
 async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{

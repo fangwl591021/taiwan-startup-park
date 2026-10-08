@@ -103,6 +103,7 @@ async function api(path:string,method='GET',data?:Row):Promise<any>{
  return promise;
 }
 let dashboardSnapshot:Row;
+let attentionData:Row;
 const listMeta:Row={},listIndex:Row={pipeline:0,tenants:0,chat:0},listCursors:Row={pipeline:[null],tenants:[null],chat:[null]};
 function resetList(kind:string){if(listCursors[kind]){listCursors[kind]=[null];listIndex[kind]=0;}}
 function listPath(kind:string){
@@ -130,7 +131,7 @@ async function loadPageData(){
  }
  if(current==='dashboard'){
   const result=await api('/dashboard');if(revision!==viewRevision||page!==current)return false;
-  dashboardSnapshot=result.stats;opps=result.opportunities;
+  dashboardSnapshot=result.stats;opps=result.opportunities;attentionData=result.attention;
  }else if(['pipeline','tenants','chat'].includes(current)){
   const [result,summary]=await Promise.all([api(listPath(current)),current==='pipeline'?api('/dashboard'):Promise.resolve(null)]);
   if(revision!==viewRevision||page!==current)return false;
@@ -283,6 +284,21 @@ function platformContent(){
  return '';
 }
 function dashboard(){
+ const labels:Row={contracts:'到期合約',invoices:'逾期地址款',mail:'待領信件／包裹',tickets:'未結案維運'};
+ const tabs:Row={contracts:'contracts',invoices:'billing',mail:'mail',tickets:'tickets'};
+ const groups=attentionData?.groups;
+ if(!groups)return dashboardBase();
+ const panels=Object.entries(labels).filter(([key])=>groups[key]!==null).map(([key,label])=>{
+  const group=groups[key];
+  const rows=group.items.map((r:Row)=>{
+   const detail=key==='contracts'?r.location_name+' · '+r.ends_on+' · '+(r.period_status==='expired'?'已到期':'30 天內到期'):key==='invoices'?r.due_on+' · 待收 '+money(r.balance):key==='mail'?(r.kind==='package'?'包裹':'信件')+' · 收件 '+date(r.created_at):r.title+' · '+ticketLabels[r.status];
+   return '<li><button class="case-row" data-attention-business="'+e(r.business_id)+'" data-attention-tab="'+tabs[key]+'"><span class="case-main"><strong>'+e(r.business_name)+'</strong><small>'+e(detail)+'</small></span><span class="row-arrow" aria-hidden="true">›</span></button></li>';
+  }).join('');
+  return '<section class="panel"><div class="panel-heading"><h2>'+label+' <span class="count">'+group.total+'</span></h2></div>'+(rows?'<ul class="attention-list">'+rows+'</ul>':empty('目前沒有'+label,'依你可存取的租戶資料顯示。'))+(group.total>group.items.length?'<p class="muted">共 '+group.total+' 筆，先顯示前 '+group.items.length+' 筆；可至租戶管理查看其餘紀錄。</p>':'')+'</section>';
+ }).join('');
+ return '<section class="panel"><div class="panel-heading"><h2>借址服務待辦</h2><button data-action="refresh">更新待辦</button></div><p class="panel-description">台北日期 '+e(attentionData.as_of)+' · 到期範圍至 '+e(attentionData.through)+'。已確認且接續次日的合約不重複列入；草稿續約仍待確認。</p><p class="muted">依承辦與角色顯示；人工處理，不自動續約、扣款或通知。</p></section><div class="dashboard-grid attention-grid">'+panels+'</div>'+dashboardBase();
+}
+function dashboardBase(){
  const open=opps.filter(o=>!['won','lost'].includes(o.stage));
  const stages=['contact','onboarding','billing','won'];
  return '<div class="metrics"><article><span>進行中案件</span><strong>'+(dashboardSnapshot?.open_count||0)+'<small>件</small></strong><p>持續跟進每一次機會</p></article><article><span>待核對收款</span><strong>'+(dashboardSnapshot?.pending_payment_count||0)+'<small>件</small></strong><p>案件階段與收款分開管理</p></article><article><span>已建檔租戶</span><strong>'+(dashboardSnapshot?.tenant_count||0)+'<small>家</small></strong><p>沿用成交企業與聯絡人</p></article><article><span>功能申請中</span><strong>'+(dashboardSnapshot?.request_count||0)+'<small>項</small></strong><p>整合未串接，尚未開通</p></article></div><div class="dashboard-grid"><section class="panel"><div class="panel-heading"><h2>成交進度</h2><button class="text-button" data-page="pipeline" '+(!salesView()?'disabled':'')+'>查看全部 →</button></div><div class="funnel">'+stages.map((s,i)=>'<div><span class="step-number">0'+(i+1)+'</span><b>'+stageNames[s]+'</b><strong>'+(dashboardSnapshot?.stage_counts[s]||0)+'</strong><small>件案件</small></div>').join('')+'</div><div class="panel-heading"><h2>下一步，值得關注</h2><span class="muted">依跟進時間</span></div>'+caseRows(open.slice().sort((a,b)=>(a.followup_at||'z').localeCompare(b.followup_at||'z')).slice(0,4))+'</section><section class="panel service-intro"><span class="section-icon">✧</span><p class="eyebrow">CONTINUING THE CONNECTION</p><h2>先做好借址登記<br>接續長期服務</h2><p>第一期管理借址成交、合約、收款與租戶維運；官網、商城及 LINE OA 串接保留為後續功能。</p><div class="mini-services"><span>品牌官網</span><span>獨立商城</span><span>LINE OA</span><span>CRM</span></div><button data-page="tenants">管理租戶與申請 →</button><small>數位分潤標準待議定，不收費、不開通。</small></section></div><section class="integration-panel"><div><h2>整合狀態</h2><p>連線設定完成前，所有操作均為本地驗收。</p></div><div>'+badge(me.demo?'LINE OA · 尚未串接':'LINE OA · 依對話設定')+badge('金流 · 尚未串接')+badge('AI · 尚未啟用')+'</div></section>';
@@ -475,6 +491,7 @@ document.addEventListener('submit',async event=>{
 document.addEventListener('click',async event=>{
  const target=(event.target as HTMLElement).closest<HTMLElement>('button,a');if(!target)return;
  const d=target.dataset;try{
+ if(d.attentionBusiness){opsBusiness=d.attentionBusiness;opsTab=d.attentionTab||'overview';page='operations';render(true);await refresh();return;}
  if(await workspaces.click(target))return;
  if(d.workspace){
   event.preventDefault();if(d.workspace==='platform'&&!me.platform_access)return;
