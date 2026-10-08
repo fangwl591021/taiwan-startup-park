@@ -84,3 +84,9 @@ test('website drafts escape untrusted material, keep source/version, and refuse 
  r=await a.api('pw-op-op-a','/api/site-drafts','POST',{name:'x',description:'',social_urls:['javascript:alert(1)'],asset_ids:[]});assert.equal(r.status,400);
  r=await a.api('pw-op-op-a','/api/site-drafts','POST',{name:'x',description:'',social_urls:[],asset_ids:['foreign']});assert.equal(r.status,404);
 });
+
+test('borrowed CRM bridge includes real term dates and never leaks another operator',async t=>{
+ const{as}=await fixture(t);const a=await as('owner-a'),b=await as('owner-b');
+ const own=await a.api('pw-op-op-a','/api/startup-park/borrowed-enterprises');assert.equal(own.status,200);assert.equal(own.data.items.length,1);assert.equal(own.data.items[0].id,'b4');assert('service_starts_on' in own.data.items[0]);assert('term_kind' in own.data.items[0]);
+ const other=await b.api('pw-op-op-b','/api/startup-park/borrowed-enterprises');assert.equal(other.status,200);assert.equal(other.data.items.length,0);
+});

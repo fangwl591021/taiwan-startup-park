@@ -1,3 +1,4 @@
+import {tenantModuleForPath} from '../../.migration-build/smart-menu/backend/src/modules/entitlements.ts';
 import addressWorker from '../../dist/worker.js';
 import sourceApp from '../../.migration-build/smart-menu/backend/src/index.ts';
 import {actor} from '../../dist/auth.js';
@@ -22,12 +23,21 @@ export default{
    const path=match[2];
    if(!path.startsWith('/api/')||/%|\/\/|\.\./.test(path)||['/api/system/','/api/member/'].some(p=>path.startsWith(p))||path==='/api/intelligence/conversions'||path==='/api/commerce/payments/newebpay/notify')return secured(response({success:false,error:'找不到可存取的操作'},404));
    if(!['GET','HEAD'].includes(req.method)&&(req.headers.get('origin')!==url.origin||req.headers.get('x-requested-with')!=='tsp'))return secured(response({success:false,error:'請从已驗證工作台操作'},403));
+   const moduleKey=tenantModuleForPath(path)||(/^\/api\/line(?:-|\/)/.test(path)||path.startsWith('/api/site-')?'CORE_MENU':path.startsWith('/api/referral-growth')?'CRM':path.startsWith('/api/workspaces/conversion-api-keys')||path.startsWith('/api/intelligence/')?'COMMERCE':null);
+   if(moduleKey&&!c.modules.some(m=>m.key===moduleKey&&m.enabled))return secured(response({success:false,error:'MODULE_NOT_ENABLED',message:'此工作區尚未啟用此模組'},403));
+   if(path.startsWith('/api/public/'))return secured(response({success:false,error:'公開名片分享尚未啟用'},409));
    if(!env.PLATFORM_DB)return secured(response({success:false,error:'獨立數位資料庫尚未就緒'},503));
+   if(path==='/api/startup-park/borrowed-enterprises'){
+    if(a.role!=='operator_owner'||c.workspace.scope_kind!=='operator')return secured(response({success:false,error:'沒有借址企業管理權限'},403));
+    const q=new URLSearchParams(url.search);q.set('paged','1');q.set('limit','50');
+    const result=await addressWorker.fetch(new Request(url.origin+'/api/tenants?'+q,{headers:req.headers}),env,ctx);
+    return secured(result);
+   }
    if(path==='/api/auth/me')return secured(response({success:true,user:{id:a.id,display_name:a.name,status:'active',is_system_admin:0},activeWorkspaceId:c.source_workspace_id,activeRole:c.source_role,memberships:[{workspace_id:c.source_workspace_id,workspace_name:c.workspace.name,role:c.source_role,status:'active'}],borrowedWorkspace:c.workspace}));
    if(path.startsWith('/api/auth/'))return secured(response({success:false,error:'請在主工作台管理登入身分'},409));
    if(path==='/api/members'||path.startsWith('/api/members/'))return secured(response({success:false,error:'操作人員與企業授權由主工作台管理'},409));
    // External services stay explicit and disabled until separately configured.
-   const lineAction=/\/(publish|set-default|sync|execute|send|dispatch|probe-https)(?:\/|$)/.test(path);
+   const lineAction=/\/(publish|set-default|sync|execute|send|dispatch|probe-https|https-probe|rollback|disable|enable)(?:\/|$)/.test(path);
    if(lineAction&&!path.startsWith('/api/site-drafts')&&!['GET','HEAD'].includes(req.method))return secured(response({success:false,error:'外部 LINE／金流／AI 執行尚未启用；草稿與內部管理可正常使用',errorCode:'INTEGRATION_NOT_READY'},503));
    if(path==='/api/detect-layout')return secured(response({success:false,error:'AI 圖片辨識尚未串接',errorCode:'AI_NOT_CONFIGURED'},503));
    const tenant=await provisionWorkspace(env.PLATFORM_DB,c);

@@ -5,7 +5,7 @@ test('desktop complete source workspace, collapsible navigation and real empty c
  await expect(page.getByRole('heading',{name:'企業數位營運工作區'})).toBeVisible();
  await expect(page.getByText('商城訂單',{exact:true})).toBeVisible();
  await expect(page.locator('body')).not.toContainText('正常連線中');
- for(const label of ['圖文選單專案','模板中心','CRM 客戶管理','行銷活動','商城','旅遊管理','AI 用量','品牌設定'])await expect(page.locator('nav').getByRole('button',{name:label,exact:true})).toBeVisible();
+ for(const label of ['圖文選單專案','模板中心','CRM 客戶管理','行銷活動','商城','旅遊管理','AI 用量','LINE OA 設定','品牌設定'])await expect(page.locator('nav').getByRole('button',{name:label,exact:true})).toBeVisible();
  await page.screenshot({path:'docs/screenshots/desktop-full-platform.png',fullPage:true});
  await page.getByRole('button',{name:'收合或展開工作區選單'}).click();await expect(page.locator('aside')).not.toBeVisible();await page.getByRole('button',{name:'收合或展開工作區選單'}).click();
  await page.locator('nav').getByRole('button',{name:'CRM 客戶管理',exact:true}).click();await expect(page.locator('main')).toContainText('CRM');await page.screenshot({path:'docs/screenshots/desktop-full-platform-crm.png',fullPage:true});
