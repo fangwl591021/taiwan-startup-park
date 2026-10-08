@@ -14,6 +14,7 @@ app=replaceOnce(app,"import SmartGuide from './components/SmartGuide';","import 
 const start=app.indexOf('const PRODUCTION_WORKER_BASE_URL ='),end=app.indexOf('const LEGACY_RICH_MENU_DIMENSIONS');
 if(start<0||end<start)throw new Error('Missing API configuration');
 app=app.slice(0,start)+`const workspaceId = new URLSearchParams(location.search).get('workspace') || '';
+const PRODUCTION_WORKER_BASE_URL = location.origin;
 const API_BASE_URL = '/api/platform-runtime/' + encodeURIComponent(workspaceId);
 const apiUrl = (path = '') => { if(!/^\\/api\\//.test(path)||path.includes('..'))throw new Error('無效工作區路徑');return API_BASE_URL + path; };
 
@@ -58,10 +59,11 @@ app=replaceOnce(app,"setCurrentView('member-linehub');\n                }}\n    
 app=replaceOnce(app,"<AccountView session={session} onSessionChanged={loadSession} />",'<div><h2>已驗證帳號</h2><p>{session.user?.display_name}</p><p>登入與停權由台灣創業園主工作台管理。</p><a href="/" className="text-blue-800 underline">返回主工作台</a></div>');
 app=replaceOnce(app,'<CrmWorkspace request={authFetch} userRole={activeRole} />','<><BorrowedCompanies request={authFetch}/><CrmWorkspace request={authFetch} userRole={activeRole} /></>');
 app=replaceOnce(app,"{currentView === 'sites' && tenantViewAccessible && <RuntimeSites request={authFetch} />}","{currentView === 'line-settings' && tenantViewAccessible && <><p className='mb-4 rounded border border-amber-300 bg-amber-50 p-4'>此工作區 OA 設定會加密保存；接收與外送尚未啟用。業者正式接收設定與平台 OA 請至借址主工作台整合中心管理。</p><LineHubView member={null} projectId={null} aiEnabled={false} onBack={()=>setCurrentView('dashboard')}/></>}{currentView === 'sites' && tenantViewAccessible && <RuntimeSites request={authFetch} />}");
+app=replaceOnce(app,'<span className="text-white font-bold text-sm">SM</span>','<span className="text-white font-bold text-sm">園</span>');
 await writeFile(root+'/frontend/src/App.jsx',app);
 let modules=await readFile(root+'/frontend/src/module-entitlements.js','utf8');modules=replaceOnce(modules,"  projects: 'CORE_MENU',","  projects: 'CORE_MENU',\n  sites: 'CORE_MENU',\n  'line-settings': 'CORE_MENU',");await writeFile(root+'/frontend/src/module-entitlements.js',modules);
 await cp('platform/runtime/StartupParkWorkspace.jsx',root+'/frontend/src/components/StartupParkWorkspace.jsx');
 await writeFile(root+'/frontend/vite.config.js',"import {defineConfig} from 'vite';import react from '@vitejs/plugin-react';export default defineConfig({base:'/platform/',plugins:[react()],build:{outDir:'dist'}});\n");
-await writeFile(root+'/frontend/src/index.css',(await readFile(root+'/frontend/src/index.css','utf8'))+"\nhtml{font-size:17px}body{color:#15384b}h1,h2,h3,label{color:#14549a!important} .text-gray-400,.text-gray-500{color:#405a70!important} .text-xs{font-size:.88rem} .text-sm{font-size:1rem}nav{overflow-y:auto} @media(max-width:767px){.tsp-runtime-sidebar{position:absolute;z-index:20;left:0;top:64px;bottom:0;box-shadow:0 10px 30px #0003} header{padding-left:12px!important;padding-right:12px!important} main>div{padding:16px!important}}");
+await writeFile(root+'/frontend/src/index.css',(await readFile(root+'/frontend/src/index.css','utf8'))+"\nhtml{font-size:17px}body{color:#15384b}h1,h2,h3,label{color:#14549a!important} button.bg-black,aside .bg-black{background-color:#06a94e!important} .text-gray-400,.text-gray-500{color:#405a70!important} .text-xs{font-size:.88rem} .text-sm{font-size:1rem}nav{overflow-y:auto} @media(max-width:767px){.tsp-runtime-sidebar{position:absolute;z-index:20;left:0;top:64px;bottom:0;box-shadow:0 10px 30px #0003} header{padding-left:12px!important;padding-right:12px!important} main>div{padding:16px!important}}");
 await mkdir('reports',{recursive:true});await writeFile('reports/platform-runtime-overlay.json',JSON.stringify({server_cookie_auth:true,source_default_workspace:false,client_bearer_tokens:false,legacy_entitlement_default:false,source_data_resources:false,external_integrations:'not_configured',upstream_snapshot_unchanged:true},null,2)+'\n');
 console.log('Applied reviewed runtime adapter to build copy only.');

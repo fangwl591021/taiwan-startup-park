@@ -47,13 +47,15 @@ export default{
     return secured(response({success:true,...Object.fromEntries(Object.keys(tables).map((key,i)=>[key,Number(counts[i].results[0].n)])),integrations:{line:'not_configured',payments:'not_configured',ai:'not_configured'}}));
    }
    const siteResult=await sitesRoute(req,env.PLATFORM_DB,tenant,c,path,match[1]);if(siteResult){if(!['GET','HEAD'].includes(req.method))await env.DB.prepare('INSERT INTO activity_events(id,operator_id,business_id,opportunity_id,actor_id,action,detail,created_at) VALUES(?,?,?,NULL,?,?,?,?)').bind(crypto.randomUUID(),a.operator_id,c.workspace.business_id,a.id,'platform_site_operation',JSON.stringify({workspace_id:c.workspace.id,path,status:siteResult.status}),new Date().toISOString()).run();return secured(siteResult);}
-   const headers=new Headers(req.headers);headers.delete('authorization');headers.delete('x-workspace-id');headers.delete('cf-access-jwt-assertion');
+   const headers=new Headers(req.headers);headers.delete('content-length');headers.delete('authorization');headers.delete('x-workspace-id');headers.delete('cf-access-jwt-assertion');
    let body;if(!['GET','HEAD'].includes(req.method)){
     body=path==='/api/line-hub/account'?await encryptAccountBody(req,env,a.operator_id,c.source_workspace_id):req.body;
    }
    const request=new Request(url.origin+path+url.search,{method:req.method,headers,...(body?{body,duplex:'half'}:{})});
    const sourceEnv={smart_menu_db:credentialDatabase(env.PLATFORM_DB,env,a.operator_id,c.source_workspace_id),smart_menu_assets:privateAssetBucket(env.PLATFORM_DB,c.source_workspace_id),TENANT_MODE:'session',TSP_CONTEXT:tenant};
-   const result=await sourceApp.fetch(request,sourceEnv,ctx||{waitUntil(){}});
+   let result=await sourceApp.fetch(request,sourceEnv,ctx||{waitUntil(){}});
+   if(path==='/api/line-hub'&&req.method==='GET'&&result.ok){const d=await result.json();if(d.lineAccount)d.lineAccount.webhookPath=null;result=response({...d,integrationStatus:'not_configured',message:'設定僅加密保存，訊息接收及外送尚未啟用'});}
+   if(path==='/api/line-hub/account'&&result.ok)result=response({success:true,webhookPath:null,integrationStatus:'not_configured'});
    if(!['GET','HEAD'].includes(req.method)){
     await env.DB.prepare('INSERT INTO activity_events(id,operator_id,business_id,opportunity_id,actor_id,action,detail,created_at) VALUES(?,?,?,NULL,?,?,?,?)').bind(crypto.randomUUID(),a.operator_id,c.workspace.business_id,a.id,'platform_runtime_operation',JSON.stringify({workspace_id:c.workspace.id,method:req.method,path,status:result.status}),new Date().toISOString()).run();
    }
