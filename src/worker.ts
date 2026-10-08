@@ -401,7 +401,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   let extra='';const args:unknown[]=[a.operator_id];
   if(businessId){extra=' AND e.business_id=?';args.push(businessId);}
   if(a.role==='operator_service')extra+=" AND e.action NOT IN('receivable_created','receivable_voided','ledger_recorded','payment_recorded')";
-  if(a.role!=='operator_owner')extra+=" AND e.action NOT LIKE 'line_connection_%'";
+  if(a.role!=='operator_owner')extra+=" AND e.action NOT LIKE 'line_connection_%' AND e.action NOT IN('platform_runtime_operation','platform_site_operation')";
   if(a.role==='operator_finance')extra+=" AND e.action NOT IN('mail_received','mail_status_changed','ticket_created','ticket_status_changed')";
   if(a.role==='operator_sales'){extra+=' AND (e.opportunity_id IS NULL OR EXISTS(SELECT 1 FROM opportunities o WHERE o.id=e.opportunity_id AND o.operator_id=e.operator_id AND o.owner_id=?))';args.push(a.id);}
   return json((await stmt(env,'SELECT e.id,e.action,e.detail,e.created_at,e.business_id,e.opportunity_id,u.name AS actor_name FROM activity_events e JOIN staff_users u ON u.id=e.actor_id WHERE e.operator_id=?'+extra+' ORDER BY e.created_at DESC,e.rowid DESC LIMIT 100',...args).all()).results);
