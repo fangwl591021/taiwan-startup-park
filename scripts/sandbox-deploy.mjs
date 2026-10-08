@@ -23,7 +23,8 @@ if(mode==='prepare'){
  const response=await fetch(root+'/workers/scripts/'+WORKER+'/settings',{headers:{Authorization:'Bearer '+env.CLOUDFLARE_API_TOKEN},signal:AbortSignal.timeout(20000)});
  if(response.status!==404){const existing=await response.json();if(!response.ok||existing.success!==true)throw new Error('無法核對現有測試 Worker');
   const bindings=existing.result.bindings||[];
-  if(bindings.some(b=>b.type==='d1'&&(b.name!=='DB'||b.id!==db.uuid))||bindings.some(b=>b.type==='secret_text'&&b.name!=='SANDBOX_OWNER_EMAIL'))throw new Error('現有測試 Worker 有非預期資料庫或密鑰');
+  const extra=bindings.find(b=>b.type==='d1'&&b.name==='PLATFORM_DB');if(extra){const source=await cf('/d1/database/'+extra.id);if(source.name!=='taiwan-startup-park-platform-demo'||extra.id===db.uuid)throw new Error('測試原平台資料庫不符');}
+  if(bindings.some(b=>b.type==='d1'&&((b.name==='DB'&&b.id!==db.uuid)||!['DB','PLATFORM_DB'].includes(b.name)))||bindings.some(b=>b.type==='secret_text'&&b.name!=='SANDBOX_OWNER_EMAIL'))throw new Error('現有測試 Worker 有非預期資料庫或密鑰');
  }
  const org=await cf('/access/organizations');if(!/^[a-z0-9-]+\.cloudflareaccess\.com$/.test(org.auth_domain||''))throw new Error('Access 組織尚未就緒');
  let app;for(let page=1;page<=10&&!app;page++){const rows=await cf('/access/apps?per_page=100&page='+page);app=rows.find(a=>a.domain===HOST);if(rows.length<100)break;}
@@ -63,7 +64,7 @@ if(mode==='prepare'){
   const location=r.headers.get('location');
   if(![302,303,307,308].includes(r.status)||!location||!new URL(location).hostname.endsWith('.cloudflareaccess.com'))throw new Error('未登入測試 API 沒有 Access 保護');
   const bindings=(await cf('/workers/scripts/'+WORKER+'/settings')).bindings||[];
-  if(bindings.filter(b=>b.type==='d1').length!==1||!bindings.some(b=>b.name==='DB'&&b.type==='d1'&&b.id===id)||bindings.some(b=>b.name==='LINE_CHANNELS_JSON'||b.name==='LINE_CHANNEL_ACCESS_TOKEN'))throw new Error('已發布 Worker 隔離檢查失敗');
+  if(bindings.filter(b=>b.type==='d1').length!==config.d1_databases.length||config.d1_databases.some(expected=>!bindings.some(b=>b.name===expected.binding&&b.type==='d1'&&b.id===expected.database_id))||bindings.some(b=>b.name==='LINE_CHANNELS_JSON'||b.name==='LINE_CHANNEL_ACCESS_TOKEN'))throw new Error('已發布 Worker 隔離檢查失敗');
   console.log('測試區部署完成：獨立 D1、限定管理員 Access、真實 LINE 外送關閉；未登入 HTTP '+r.status);
  }
 }else throw new Error('模式必須為 prepare、seed 或 verify');

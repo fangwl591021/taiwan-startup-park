@@ -40,7 +40,8 @@ export async function inspectTarget(env,fetcher=fetch){
  if(!Array.isArray(policies)||!policies.some(p=>p.decision==='allow')||policies.some(p=>p.decision==='bypass'))throw new Error('Access 須有 allow policy，不能對整個工作台 bypass');
  const settings=await cf('/workers/scripts/taiwan-startup-park/settings');
  const existing=(settings.bindings||[]).filter(b=>b.type==='d1');
- if(existing.some(b=>b.id!==env.D1_DATABASE_ID||b.name!=='DB'))throw new Error('既有 Worker 使用不同 D1，需先核對遷移方案');
+ if(existing.some(b=>b.name!=='DB'&&b.name!=='PLATFORM_DB')||existing.some(b=>b.name==='DB'&&b.id!==env.D1_DATABASE_ID))throw new Error('既有 Worker 使用不同 D1，需先核對遷移方案');
+ const platformBinding=existing.find(b=>b.name==='PLATFORM_DB');if(platformBinding){const platformDb=await cf('/d1/database/'+platformBinding.id);if(platformDb.name!=='taiwan-startup-park-platform-prod'||platformBinding.id===env.D1_DATABASE_ID)throw new Error('原平台資料庫不是本專案獨立資源');}
  // Do not deploy a login screen that has no valid operator account.
  const query=await cf('/d1/database/'+env.D1_DATABASE_ID+'/query',{sql:"SELECT COUNT(*) AS n FROM auth_identities i JOIN staff_users u ON u.id=i.user_id WHERE i.issuer=? AND u.active=1 AND u.role='operator_owner'",params:[env.ACCESS_ISSUER]});
  if(!Array.isArray(query)||query[0]?.success!==true||Number(query[0]?.results?.[0]?.n)<1||!Number.isFinite(Number(query[0]?.results?.[0]?.n)))throw new Error('正式資料庫尚未有有效管理員 Access 綁定，先完成初始化');

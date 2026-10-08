@@ -7,7 +7,7 @@ const DOMAIN=HOST+'/api/line/webhook/*';
 const SECRET='LINE_CREDENTIALS_KEY';
 export async function provisionLineSettings(env,config,fetcher=fetch){
  if(!/^[a-f0-9]{32}$/i.test(env.CLOUDFLARE_ACCOUNT_ID||'')||!env.CLOUDFLARE_API_TOKEN)throw Error('缺少發布授權');
- if(config.name!==WORKER||config.account_id!==env.CLOUDFLARE_ACCOUNT_ID||config.vars?.APP_ORIGIN!=='https://'+HOST||config.vars?.APP_ENV!=='production'||config.vars?.LINE_SEND_ENABLED!=='off'||config.d1_databases?.length!==1||config.d1_databases[0].database_name!=='taiwan-startup-park-prod')throw Error('OA 設定資源目標不符');
+ if(config.name!==WORKER||config.account_id!==env.CLOUDFLARE_ACCOUNT_ID||config.vars?.APP_ORIGIN!=='https://'+HOST||config.vars?.APP_ENV!=='production'||config.vars?.LINE_SEND_ENABLED!=='off'||![1,2].includes(config.d1_databases?.length)||config.d1_databases[0].database_name!=='taiwan-startup-park-prod'||(config.d1_databases.length===2&&(config.d1_databases[1].binding!=='PLATFORM_DB'||config.d1_databases[1].database_name!=='taiwan-startup-park-platform-prod'||config.d1_databases[1].database_id===config.d1_databases[0].database_id)))throw Error('OA 設定資源目標不符');
  const api='https://api.cloudflare.com/client/v4/accounts/'+env.CLOUDFLARE_ACCOUNT_ID;
  async function cf(path,method='GET',body){
   const r=await fetcher(api+path,{method,headers:{Authorization:'Bearer '+env.CLOUDFLARE_API_TOKEN,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),redirect:'error',signal:AbortSignal.timeout(20000)});
@@ -18,7 +18,7 @@ export async function provisionLineSettings(env,config,fetcher=fetch){
  const dbId=config.d1_databases[0].database_id,db=await cf('/d1/database/'+dbId);
  if(db.name!=='taiwan-startup-park-prod'||db.uuid!==dbId)throw Error('非專案資料庫');
  const settings=await cf('/workers/scripts/'+WORKER+'/settings'),bindings=settings.bindings||[];
- if(bindings.filter(b=>b.type==='d1').length!==1||!bindings.some(b=>b.type==='d1'&&b.name==='DB'&&b.id===dbId))throw Error('實際資料庫綁定不符');
+ if(bindings.filter(b=>b.type==='d1').length!==config.d1_databases.length||config.d1_databases.some(expected=>!bindings.some(b=>b.type==='d1'&&b.name===expected.binding&&b.id===expected.database_id)))throw Error('實際資料庫綁定不符');
  const existing=bindings.find(b=>b.name===SECRET);
  if(existing&&existing.type!=='secret_text')throw Error('加密主鑰綁定類型不符');
  let keyCreated=false;

@@ -16,13 +16,20 @@ const reports=[];
 for(const [file,worker,databaseName,appEnv,demoMode] of targets){
  const config=JSON.parse(await readFile(file,'utf8'));
  const dbId=config.d1_databases?.[0]?.database_id;
- if(config.name!==worker||config.account_id!==account||!dbId||config.d1_databases.length!==1)throw new Error('發布目標設定不符');
+ if(config.name!==worker||config.account_id!==account||!dbId||![1,2].includes(config.d1_databases.length))throw new Error('發布目標設定不符');
  const info=await cf('/d1/database/'+dbId);
  if(info.name!==databaseName||info.uuid!==dbId)throw new Error('專用資料庫不符');
  const bindings=(await cf('/workers/scripts/'+worker+'/settings')).bindings||[];
  const plain=name=>bindings.find(b=>b.name===name&&b.type==='plain_text')?.text;
- if(bindings.filter(b=>b.type==='d1').length!==1||!bindings.some(b=>b.type==='d1'&&b.name==='DB'&&b.id===dbId))throw new Error('實際 DB binding 不符');
+ if(bindings.filter(b=>b.type==='d1').length!==config.d1_databases.length||config.d1_databases.some(expected=>!bindings.some(b=>b.type==='d1'&&b.name===expected.binding&&b.id===expected.database_id)))throw new Error('實際 DB binding 不符');
  if(plain('APP_ENV')!==appEnv||plain('DEMO_MODE')!==demoMode||plain('LINE_SEND_ENABLED')!=='off')throw new Error('第一期環境或外送關閉設定不符');
+ const platformDb=config.d1_databases.find(d=>d.binding==='PLATFORM_DB');
+ if(platformDb){
+  const expectedName=appEnv==='production'?'taiwan-startup-park-platform-prod':'taiwan-startup-park-platform-demo';
+  const info=await cf('/d1/database/'+platformDb.database_id);if(info.name!==expectedName||info.uuid===dbId||plain('PLATFORM_RUNTIME_ENABLED')!=='on')throw new Error('完整平台資料層未獨立啟用');
+  const sourceCheck=await cf('/d1/database/'+platformDb.database_id+'/query',{sql:"SELECT (SELECT COUNT(*) FROM users WHERE id='usr_dev_owner')+(SELECT COUNT(*) FROM workspaces WHERE id IN('default','ws_test_b')) AS seeded_accounts,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN('startup_park_bridge_bindings','startup_park_private_objects','startup_park_site_drafts','commerce_orders','crm_people')) AS core_tables"});
+  if(sourceCheck[0]?.success!==true||Number(sourceCheck[0].results[0].seeded_accounts)!==0||Number(sourceCheck[0].results[0].core_tables)!==5)throw new Error('完整平台資料結構或測試帳號隔離不符');
+ }
  const query=await cf('/d1/database/'+dbId+'/query',{sql:`SELECT
  (SELECT COUNT(*) FROM operators) AS operator_count,
  COUNT(*) AS term_count,
