@@ -1,5 +1,7 @@
 # Smart-Menu-Studio 完整平台移植與借址模型
 
+目前已接入的執行範圍、驗收與上線流程以 [FULL_PLATFORM_RUNTIME.md](FULL_PLATFORM_RUNTIME.md) 為準；以下保留來源匯入及第一段橋接的歷程。
+
 日期：2026-10-08（Asia/Taipei）
 
 ## 目前狀態
