@@ -90,3 +90,12 @@ test('borrowed CRM bridge includes real term dates and never leaks another opera
  const own=await a.api('pw-op-op-a','/api/startup-park/borrowed-enterprises');assert.equal(own.status,200);assert.equal(own.data.items.length,1);assert.equal(own.data.items[0].id,'b4');assert('service_starts_on' in own.data.items[0]);assert('term_kind' in own.data.items[0]);
  const other=await b.api('pw-op-op-b','/api/startup-park/borrowed-enterprises');assert.equal(other.status,200);assert.equal(other.data.items.length,0);
 });
+
+test('core module permission does not imply CRM, OA or commission data access',async t=>{
+ const{as,db}=await fixture(t);const owner=await as('owner-a'),enterprise=await as('business-admin');
+ await owner.root('/platform-workspaces/pw-biz-b4/members/business-admin','PUT',{active:true,version:0,reference:'TEST ONLY scoped enterprise'});
+ db.sqlite.prepare("UPDATE platform_workspace_entitlements SET enabled=1,version=version+1 WHERE workspace_id='pw-biz-b4' AND module='CRM'").run();
+ assert.equal((await enterprise.api('pw-biz-b4','/api/crm/people')).status,200);
+ assert.equal((await enterprise.api('pw-biz-b4','/api/line-hub')).status,403);
+ assert.equal((await enterprise.api('pw-biz-b4','/api/commission-programs')).status,403);
+});

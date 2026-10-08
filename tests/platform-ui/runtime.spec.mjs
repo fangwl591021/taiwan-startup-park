@@ -27,3 +27,12 @@ test('sales cannot open owner digital workspace or force another operator by URL
  const r=await page.request.get('/api/platform-runtime/pw-op-op-b/api/projects');expect(r.status()).toBe(404);
  await expect(page.locator('body')).not.toContainText('聊天室 AI 監控');
 });
+
+test('all source modules can be opened on a phone without document overflow',async({page})=>{
+ await login(page);await page.setViewportSize({width:390,height:844});await page.goto('/platform/?workspace=pw-op-op-a');
+ await expect(page.getByRole('heading',{name:'企業數位營運工作區'})).toBeVisible();
+ for(const label of ['圖文選單專案','模板中心','CRM 客戶管理','行銷活動','商城','旅遊管理','AI 用量','LINE OA 設定','品牌設定']){
+  await page.getByRole('button',{name:'收合或展開工作區選單'}).click();await page.locator('nav').getByRole('button',{name:label,exact:true}).click();await expect(page.locator('aside')).not.toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label).toBe(true);
+ }
+});

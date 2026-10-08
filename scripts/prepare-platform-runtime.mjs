@@ -19,25 +19,27 @@ const apiUrl = (path = '') => { if(!/^\\/api\\//.test(path)||path.includes('..')
 
 `+app.slice(end);
 app=replaceOnce(app,"const getAuthToken = () => localStorage.getItem(AUTH_TOKEN_KEY) || '';","// Marker only: every API request is verified by the HttpOnly root session.\nconst getAuthToken = () => workspaceId ? 'server-session' : '';");
+app=replaceOnce(app,'const apiMemoryCache = new Map();','const apiMemoryCache = new Map();\nlet actorScope=\'\';');
 const authStart=app.indexOf('const authFetch = async'),authEnd=app.indexOf('const apiMemoryCache',authStart);
 app=app.slice(0,authStart)+`const authFetch = async (path, options = {}) => {
  const headers = new Headers(options.headers || {});headers.delete('Authorization');
  if(!['GET','HEAD'].includes((options.method || 'GET').toUpperCase())){headers.set('X-Requested-With','tsp');apiMemoryCache.clear();}
  const response = await fetch(apiUrl(path), {...options,headers,credentials:'same-origin',cache:'no-store'});
- if([401,403,409].includes(response.status)){apiMemoryCache.clear();if(response.status===401)location.assign('/');}
+ if(path==='/api/auth/me'&&response.ok){const identity=await response.clone().json();const scope=[identity.user?.id,identity.activeWorkspaceId,identity.activeRole].join(':');if(scope!==actorScope){apiMemoryCache.clear();actorScope=scope;}}\n if([401,403,409].includes(response.status)){apiMemoryCache.clear();if(response.status===401)location.assign('/');}
  if(response.status===403)window.dispatchEvent(new CustomEvent('smart-menu:module-not-enabled'));
  return response;
 };
 
 `+app.slice(authEnd);
-app=replaceOnce(app,"const cached = apiMemoryCache.get(path);","const cached = apiMemoryCache.get(workspaceId + ':' + path);");
+app=replaceOnce(app,"const cached = apiMemoryCache.get(path);","const cached = apiMemoryCache.get(workspaceId + ':' + actorScope + ':' + path);");
 app=replaceOnce(app,"apiMemoryCache.set(path, {","apiMemoryCache.set(workspaceId + ':' + path, {");
-app=replaceOnce(app,"key.startsWith(prefix)","key.startsWith(workspaceId + ':' + prefix)");
+app=replaceOnce(app,"key.startsWith(prefix)","key.startsWith(workspaceId + ':' + actorScope + ':' + prefix)");
 const dashStart=app.indexOf('const DashboardView ='),dashEnd=app.indexOf('const ProjectsView =',dashStart);
 app=app.slice(0,dashStart)+"const DashboardView = ({onNavigate}) => <RuntimeDashboard request={authFetch} onNavigate={onNavigate} />;\n\n"+app.slice(dashEnd);
 app=replaceOnce(app,"  const [currentView, setCurrentView] = useState('dashboard');","  const [currentView, setCurrentView] = useState('dashboard');\n  const [navOpen,setNavOpen]=useState(()=>!matchMedia('(max-width: 767px)').matches);");
 app=replaceOnce(app,"await authFetch('/api/auth/logout', { method: 'POST' });","await fetch('/api/logout',{method:'POST',credentials:'same-origin',headers:{'X-Requested-With':'tsp'}});");
 app=replaceOnce(app,"    setSession(null);\n    setCurrentView('dashboard');","    apiMemoryCache.clear();\n    location.assign('/');");
+app=replaceOnce(app,"    loadSession();\n  }, []);","    loadSession();\n    const refresh=()=>loadSession();window.addEventListener('focus',refresh);return()=>window.removeEventListener('focus',refresh);\n  }, []);");
 const loginStart=app.indexOf('  if (!session) {',app.indexOf('function AppShell')),loginEnd=app.indexOf('  const activeWorkspace =',loginStart);
 app=app.slice(0,loginStart)+`  if (!session) return <main className="p-8 text-blue-950"><h1 className="text-2xl font-bold">數位工作區尚無可用身分</h1><p>請從主工作台選擇已授權的工作區。</p><a href="/">返回台灣創業園</a></main>;
 

@@ -18,7 +18,7 @@ export async function provisionLineSettings(env,config,fetcher=fetch){
  const dbId=config.d1_databases[0].database_id,db=await cf('/d1/database/'+dbId);
  if(db.name!=='taiwan-startup-park-prod'||db.uuid!==dbId)throw Error('非專案資料庫');
  const settings=await cf('/workers/scripts/'+WORKER+'/settings'),bindings=settings.bindings||[];
- if(bindings.filter(b=>b.type==='d1').length!==config.d1_databases.length||config.d1_databases.some(expected=>!bindings.some(b=>b.type==='d1'&&b.name===expected.binding&&b.id===expected.database_id)))throw Error('實際資料庫綁定不符');
+ if(bindings.filter(b=>b.type==='d1').length!==config.d1_databases.length||config.d1_databases.some((expected,index)=>!bindings.some(b=>b.type==='d1'&&b.name===(expected.binding||(index===0?'DB':null))&&b.id===expected.database_id)))throw Error('實際資料庫綁定不符');
  const existing=bindings.find(b=>b.name===SECRET);
  if(existing&&existing.type!=='secret_text')throw Error('加密主鑰綁定類型不符');
  let keyCreated=false;
