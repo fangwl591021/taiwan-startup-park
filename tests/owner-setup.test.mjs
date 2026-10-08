@@ -62,18 +62,20 @@ test('setup Worker exposes no customer API; bound owner can use normal productio
  const me=await call({implementation:worker,path:'/api/me',method:'GET',cookie:login.cookie.split(';')[0]});
  assert.equal(me.status,200);assert.equal(me.data.role,'operator_owner');assert.equal(me.data.demo,false);
 });
-function fakeCloudflare({staff=0,owners=0,policies=[],wrongDatabase=false}={}){
+function fakeCloudflare({staff=0,owners=0,policies=[],wrongDatabase=false,bindings=[],platformName='taiwan-startup-park-platform-prod'}={}){
  const resources={worker:'taiwan-startup-park',hostname:'taiwan-startup-park.fangwl591021.workers.dev',D1_DATABASE_ID:'2c2ef714-429f-4ac2-9a4b-417a242627fb',ACCESS_ISSUER:'https://test.cloudflareaccess.com',ACCESS_AUD:'a'.repeat(64),access_application_id:'app'};
  const env={CLOUDFLARE_API_TOKEN:'test-token',CLOUDFLARE_ACCOUNT_ID:'b'.repeat(32),INITIAL_OWNER_EMAIL:'owner@example.invalid'};
+ resources.PLATFORM_DATABASE_ID='bce2ab64-bc4e-4c69-b2b7-5af1fb4700d4';
  const calls=[],rules=[...policies];
  const fetcher=async(url,options)=>{
   const path=url.split('/accounts/'+env.CLOUDFLARE_ACCOUNT_ID)[1];calls.push({path,method:options.method});
   let result;
   if(path==='/workers/subdomain')result={subdomain:'fangwl591021'};
   else if(path==='/d1/database/'+resources.D1_DATABASE_ID)result={name:wrongDatabase?'other':'taiwan-startup-park-prod'};
+  else if(path==='/d1/database/'+resources.PLATFORM_DATABASE_ID)result={name:platformName,uuid:resources.PLATFORM_DATABASE_ID};
   else if(path==='/access/organizations')result={auth_domain:'test.cloudflareaccess.com'};
   else if(path==='/access/apps/app')result={domain:resources.hostname,aud:resources.ACCESS_AUD,type:'self_hosted'};
-  else if(path.endsWith('/settings'))result={bindings:[]};
+  else if(path.endsWith('/settings'))result={bindings};
   else if(path.endsWith('/query'))result=[{success:true,results:[{operators:staff?1:0,staff,identities:owners,owners}]}];
   else if(path.endsWith('/policies')){if(options.method==='POST')rules.push(JSON.parse(options.body));result=options.method==='POST'?rules.at(-1):rules;}
   else if(path.endsWith('/deployments'))result={deployments:[]};
@@ -82,6 +84,24 @@ function fakeCloudflare({staff=0,owners=0,policies=[],wrongDatabase=false}={}){
  };
  return {resources,env,fetcher,calls};
 }
+test('runtime owner preflight accepts the exact two existing databases using reads only',async()=>{
+ const bindings=[{type:'d1',name:'DB',id:'2c2ef714-429f-4ac2-9a4b-417a242627fb'},{type:'d1',name:'PLATFORM_DB',id:'bce2ab64-bc4e-4c69-b2b7-5af1fb4700d4'}];
+ const f=fakeCloudflare({staff:1,owners:1,bindings});
+ assert.deepEqual(await prepareOwnerSetup(f.env,f.resources,{name:'taiwan-startup-park',main:'dist/worker.js'},f.fetcher),{ready:true});
+ assert(f.calls.every(c=>c.method==='GET'||c.path.endsWith('/query')));assert(!f.calls.some(c=>c.path.endsWith('/policies')));
+});
+test('runtime preflight rejects wrong, missing or duplicate database bindings before inspecting owner data',async()=>{
+ const root={type:'d1',name:'DB',id:'2c2ef714-429f-4ac2-9a4b-417a242627fb'},platform={type:'d1',name:'PLATFORM_DB',id:'bce2ab64-bc4e-4c69-b2b7-5af1fb4700d4'};
+ for(const bindings of [[root,{...platform,id:'foreign'}],[root,{...platform,id:root.id}],[platform],[root,{...platform,name:'OTHER'}],[root,root]]){
+  const f=fakeCloudflare({staff:1,owners:1,bindings});await assert.rejects(prepareOwnerSetup(f.env,f.resources,{name:'taiwan-startup-park',main:'dist/worker.js'},f.fetcher),/資料庫/);
+  assert(!f.calls.some(c=>c.path.endsWith('/query')));
+ }
+ const f=fakeCloudflare({staff:1,owners:1,bindings:[root,platform],platformName:'other-project'});await assert.rejects(prepareOwnerSetup(f.env,f.resources,{name:'taiwan-startup-park',main:'dist/worker.js'},f.fetcher),/身分/);
+});
+test('existing complete runtime with no active owner never falls back to a setup deployment',async()=>{
+ const f=fakeCloudflare({bindings:[{type:'d1',name:'DB',id:'2c2ef714-429f-4ac2-9a4b-417a242627fb'},{type:'d1',name:'PLATFORM_DB',id:'bce2ab64-bc4e-4c69-b2b7-5af1fb4700d4'}]});
+ await assert.rejects(prepareOwnerSetup(f.env,f.resources,{name:'taiwan-startup-park',main:'dist/worker.js'},f.fetcher),/停止首次初始化/);assert(!f.calls.some(c=>c.path.endsWith('/policies')));
+});
 test('initialization pipeline limits policy to secret email and removes assets; valid owner skips setup',async()=>{
  const f=fakeCloudflare();const r=await prepareOwnerSetup(f.env,f.resources,{name:'taiwan-startup-park',main:'dist/worker.js',assets:{directory:'dist/public'}},f.fetcher);
  assert.equal(r.ready,false);assert.equal(r.config.main,'dist/owner-setup.js');assert.equal(r.config.assets,undefined);assert.equal(r.config.vars.DEMO_MODE,'off');

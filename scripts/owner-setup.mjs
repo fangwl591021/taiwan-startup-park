@@ -16,12 +16,20 @@ export async function prepareOwnerSetup(env,resources,base,fetcher=fetch){
  const app=await cf('/access/apps/'+encodeURIComponent(resources.access_application_id));
  if(app.domain!==resources.hostname||app.aud!==env.ACCESS_AUD||app.type!=='self_hosted')throw new Error('初始化 Access 應用程式不符');
  const settings=await cf('/workers/scripts/taiwan-startup-park/settings');
- if((settings.bindings||[]).filter(b=>b.type==='d1').some(b=>b.id!==env.D1_DATABASE_ID||b.name!=='DB'))throw new Error('既有 Worker 資料庫不符');
+ const bindings=(settings.bindings||[]).filter(b=>b.type==='d1');
+ if(bindings.some(b=>!['DB','PLATFORM_DB'].includes(b.name)||b.name==='DB'&&b.id!==env.D1_DATABASE_ID)||new Set(bindings.map(b=>b.name)).size!==bindings.length)throw new Error('既有 Worker 資料庫不符');
+ const platform=bindings.find(b=>b.name==='PLATFORM_DB');
+ if(platform){
+  if(platform.id!==resources.PLATFORM_DATABASE_ID||platform.id===env.D1_DATABASE_ID||!bindings.some(b=>b.name==='DB'))throw new Error('既有平台資料庫身分不符');
+  const db=await cf('/d1/database/'+platform.id);
+  if(db.name!=='taiwan-startup-park-platform-prod'||db.uuid!==platform.id)throw new Error('既有平台資料庫身分不符');
+ }
  const query=await cf('/d1/database/'+env.D1_DATABASE_ID+'/query',{sql:"SELECT (SELECT COUNT(*) FROM operators) AS operators,(SELECT COUNT(*) FROM staff_users) AS staff,(SELECT COUNT(*) FROM auth_identities) AS identities,(SELECT COUNT(*) FROM auth_identities i JOIN staff_users u ON u.id=i.user_id WHERE i.issuer=? AND u.active=1 AND u.role='operator_owner') AS owners",params:[env.ACCESS_ISSUER]});
  if(query[0]?.success!==true||!query[0]?.results?.[0])throw new Error('初始化資料庫檢查失敗');
  const counts=query[0].results[0];
  for(const k of ['operators','staff','identities','owners'])if(!Number.isSafeInteger(counts[k])||counts[k]<0)throw new Error('初始化資料庫數量無效');
  if(counts.owners>0)return {ready:true};
+ if(platform)throw new Error('完整平台已存在但無有效管理員，停止首次初始化');
  if(counts.operators||counts.staff||counts.identities)throw new Error('已有操作人員，停止首次初始化');
  const email=env.INITIAL_OWNER_EMAIL?.trim().toLowerCase();
  if(!email||email.length>254||!/^\S+@[^@\s]+\.[^@\s]+$/.test(email))throw new Error('缺少有效 INITIAL_OWNER_EMAIL Secret');
