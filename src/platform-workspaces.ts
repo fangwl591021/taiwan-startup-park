@@ -32,11 +32,12 @@ function workspaceScope(a:Actor){
 }
 const from='platform_workspaces w JOIN operators o ON o.id=w.operator_id LEFT JOIN businesses b ON b.id=w.business_id AND b.operator_id=w.operator_id';
 const select="w.*,CASE WHEN w.scope_kind='operator' THEN o.name ELSE b.name END AS name,b.is_tenant";
-function projection(w:Row,a:Actor){
+function projection(w:Row,a:Actor,env?:Env){
+ const runtime=env?.PLATFORM_RUNTIME_ENABLED==='on';const access=runtime&&((w.scope_kind==='operator'&&a.role==='operator_owner')||(w.scope_kind==='business'&&a.role==='business_admin'));
  // Viewing a borrowed-address customer never grants that company's retail CRM/OA.
  return {id:w.id,name:w.name,operator_id:w.operator_id,business_id:w.business_id,scope_kind:w.scope_kind,status:w.status,version:w.version,created_at:w.created_at,updated_at:w.updated_at,
   access:a.role==='business_admin'?'enterprise_membership':w.scope_kind==='operator'?'operator_owner':'borrowed_address_service',
-  source_access:false,runtime_integrated:false,source_status:'pending_integration'};
+  source_access:access,runtime_integrated:runtime,source_status:runtime?'integrated':'pending_integration'};
 }
 async function workspace(env:Env,a:Actor,id:string){
  const scope=workspaceScope(a);
@@ -47,7 +48,7 @@ async function workspace(env:Env,a:Actor,id:string){
 async function modules(env:Env,w:Row){
  const rows=(await stmt(env,'SELECT module,enabled,version FROM platform_workspace_entitlements WHERE operator_id=? AND workspace_id=?',w.operator_id,w.id).all()).results;
  if(rows.length!==sourceModuleCatalog.length||sourceModuleCatalog.some(c=>!rows.some(r=>r.module===c.key)))fail(503,'工作區權益尚未完整建立');
- return sourceModuleCatalog.map(c=>{const r=rows.find(r=>r.module===c.key)!;return {...c,enabled:false,configured_enabled:!!r.enabled,version:r.version,status:'pending_integration',price:null,revenue_share:null};});
+ return sourceModuleCatalog.map(c=>{const r=rows.find(r=>r.module===c.key)!;return {...c,enabled:env.PLATFORM_RUNTIME_ENABLED==='on'&&!!r.enabled,configured_enabled:!!r.enabled,version:r.version,status:env.PLATFORM_RUNTIME_ENABLED==='on'?(r.enabled?'available':'not_enabled'):'pending_integration',price:null,revenue_share:null};});
 }
 async function addressSummary(env:Env,w:Row){
  if(w.scope_kind!=='business')return null;
@@ -60,7 +61,7 @@ async function addressSummary(env:Env,w:Row){
 // Future in-process source adapter must use this result, never request role/workspace headers.
 async function contextFromWorkspace(env:Env,a:Actor,w:Row){
  if(w.status!=='active')fail(409,'此工作區已暫停');
- return {workspace:projection(w,a),source_workspace_id:w.source_workspace_id,
+ return {workspace:projection(w,a,env),source_workspace_id:w.source_workspace_id,
   actor:{id:a.id,name:a.name,operator_id:a.operator_id,role:a.role},
   modules:await modules(env,w),source_role:null,source_access:false,runtime_integrated:false};
 }
@@ -74,12 +75,12 @@ export async function platformWorkspacesRoute(req:Request,env:Env,actor:Actor):P
  if(path==='/api/platform-workspaces'&&req.method==='GET'){
   const s=workspaceScope(a),q=(url.searchParams.get('q')||'').slice(0,100);
   const page=await listPage(env,url,{select,from,where:s.sql+" AND (CASE WHEN w.scope_kind='operator' THEN o.name ELSE b.name END LIKE ?)",args:[...s.args,'%'+q+'%'],time:'w.updated_at',id:'w.id',timeKey:'updated_at'});
-  return json({...page,items:page.items.map(w=>projection(w,a)),runtime_integrated:false});
+  return json({...page,items:page.items.map(w=>projection(w,a,env)),runtime_integrated:env.PLATFORM_RUNTIME_ENABLED==='on'});
  }
  const match=path.match(/^\/api\/platform-workspaces\/([^/]+)(?:\/(context|members)(?:\/([^/]+))?)?$/);
  if(!match)fail(404,'找不到工作區操作');
  const w=await workspace(env,a,match[1]);
- if(!match[2]&&req.method==='GET')return json({...projection(w,a),modules:await modules(env,w),address:await addressSummary(env,w),note:'原平台完整模組已保留；執行路由尚在整合，不代表已開通。'});
+ if(!match[2]&&req.method==='GET')return json({...projection(w,a,env),modules:await modules(env,w),address:await addressSummary(env,w),note:env.PLATFORM_RUNTIME_ENABLED==='on'?'完整原平台已接入；企业数位服务另行核准，LINE／金流／AI 状态独立确认。':'原平台完整模組已保留；執行路由尚在整合，不代表已開通。'});
  if(match[2]==='context'&&!match[3]&&req.method==='GET')return json(await contextFromWorkspace(env,a,w));
  if(!match[2]&&req.method==='PATCH'){
   role(a,['operator_owner']);const d=await body(req,['status','version','reference']),v=version(d.version),reference=text(d.reference,'設定依據',500);
@@ -89,7 +90,7 @@ export async function platformWorkspacesRoute(req:Request,env:Env,actor:Actor):P
    audit(env,a,w.business_id as string|null,null,'platform_workspace_status_changed',{workspace_id:w.id,from:w.status,to:d.status,reference},true)
   ]);
   if(!result[0].meta.changes)fail(409,'工作區已更新，請重新整理');
-  return json({ok:true,workspace:projection((await workspace(env,a,match[1])),a)});
+  return json({ok:true,workspace:projection((await workspace(env,a,match[1])),a,env)});
  }
  if(match[2]==='members'){
   role(a,['operator_owner']);if(w.scope_kind!=='business')fail(400,'企業管理員僅能加入企業工作區');
