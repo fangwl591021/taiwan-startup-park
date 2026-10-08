@@ -1,4 +1,6 @@
-import {readFile,writeFile,mkdir,cp,readdir} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,readdir} from 'node:fs/promises';
+import {DatabaseSync} from 'node:sqlite';
+import {platformMigrationSQL} from './platform-migration-overlay.mjs';
 const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;
 if(!token||!/^[a-f0-9]{32}$/i.test(account||''))throw new Error('Missing verified deployment account');
 const sandbox=process.argv[2]==='sandbox';
@@ -18,9 +20,28 @@ if(db.name!==name||db.uuid===root.uuid)throw new Error('Platform database must b
 const checked=await cf('/d1/database/'+db.uuid);if(checked.name!==name||checked.uuid!==db.uuid)throw new Error('Platform resource identity mismatch');
 const tables=await cf('/d1/database/'+db.uuid+'/query',{sql:"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '_cf%' AND name NOT LIKE 'sqlite_%'"});
 if(tables[0]?.success!==true)throw new Error('Cannot inspect platform schema');
-const names=tables[0].results.map(x=>x.name);if(names.includes('operators')||names.includes('businesses')||(names.length&&(!names.includes('workspaces')||!names.includes('startup_park_bridge_bindings'))))throw new Error('Existing database contains unrelated or incomplete data; refusing reuse');
+const names=tables[0].results.map(x=>x.name);
+if(names.includes('operators')||names.includes('businesses'))throw new Error('Existing database contains address data; refusing reuse');
+if(names.length&&!names.includes('startup_park_bridge_bindings')){
+ // Resume only the database created by our failed release, after verifying its migration ledger/schema.
+ const recovery=JSON.parse(await readFile('config/platform-migration-recovery.json','utf8'));
+ if(sandbox||recovery.worker!==expectedWorker||recovery.database_name!==name||recovery.database_id!==db.uuid||recovery.address_database_id!==root.uuid)throw new Error('Unrecognized incomplete database; refusing reuse');
+ const ledger=await cf('/d1/database/'+db.uuid+'/query',{sql:'SELECT name FROM d1_migrations ORDER BY id'});
+ if(ledger[0]?.success!==true)throw new Error('Cannot verify migration recovery ledger');
+ const files=(await readdir('platform/upstream-smart-menu/backend/migrations')).filter(x=>x.endsWith('.sql')&&x!=='0007_tenant_isolation_test.sql').sort();
+ const applied=ledger[0].results.map(x=>x.name);
+ if(!applied.length||applied.some((x,i)=>x!==files[i]))throw new Error('Incomplete migration ledger is not the expected source prefix');
+ const mirror=new DatabaseSync(':memory:');
+ for(const file of applied)mirror.exec(platformMigrationSQL(file,await readFile('platform/upstream-smart-menu/backend/migrations/'+file,'utf8')));
+ const expected=mirror.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(x=>x.name);
+ const actual=names.filter(x=>x!=='d1_migrations').sort();mirror.close();
+ if(JSON.stringify(expected)!==JSON.stringify(actual))throw new Error('Incomplete database schema does not match recorded migrations');
+ const seeds=await cf('/d1/database/'+db.uuid+'/query',{sql:"SELECT (SELECT COUNT(*) FROM users WHERE id<>'usr_dev_owner') AS actual_users,(SELECT COUNT(*) FROM workspaces WHERE id<>'default') AS actual_workspaces"});
+ if(seeds[0]?.success!==true||seeds[0].results[0].actual_users||seeds[0].results[0].actual_workspaces)throw new Error('Incomplete database contains real workspaces; refusing recovery');
+ console.log('PLATFORM_MIGRATION_RESUME_VERIFIED '+JSON.stringify({database_name:name,completed_migrations:applied.length,no_actual_workspaces:true}));
+}
 const directory='platform/runtime/migrations';await mkdir(directory,{recursive:true});
-for(const entry of (await readdir('platform/upstream-smart-menu/backend/migrations')).filter(x=>x.endsWith('.sql')&&x!=='0007_tenant_isolation_test.sql').sort())await cp('platform/upstream-smart-menu/backend/migrations/'+entry,directory+'/'+entry);
+for(const entry of (await readdir('platform/upstream-smart-menu/backend/migrations')).filter(x=>x.endsWith('.sql')&&x!=='0007_tenant_isolation_test.sql').sort())await writeFile(directory+'/'+entry,platformMigrationSQL(entry,await readFile('platform/upstream-smart-menu/backend/migrations/'+entry,'utf8')));
 await writeFile(directory+'/0059_startup_park_runtime.sql',"DELETE FROM workspace_members WHERE user_id='usr_dev_owner'; DELETE FROM users WHERE id='usr_dev_owner'; DELETE FROM workspace_profiles WHERE workspace_id='default'; DELETE FROM workspaces WHERE id='default';\n"+await readFile('platform/runtime/schema.sql','utf8'));
 config.main='platform/runtime/worker.mjs';config.compatibility_flags=['nodejs_compat'];
 config.vars.PLATFORM_RUNTIME_ENABLED='on';

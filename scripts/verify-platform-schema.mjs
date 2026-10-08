@@ -1,4 +1,5 @@
 import {DatabaseSync} from 'node:sqlite';
+import {platformMigrationSQL} from './platform-migration-overlay.mjs';
 import {readdir,readFile,mkdir,writeFile} from 'node:fs/promises';
 const dir='platform/upstream-smart-menu/backend/migrations';
 const db=new DatabaseSync(':memory:');
@@ -6,7 +7,7 @@ const files=(await readdir(dir)).filter(f=>f.endsWith('.sql')).sort();
 const applied=[];const skipped=[];
 for(const file of files){
  if(file==='0007_tenant_isolation_test.sql'){skipped.push(file);continue;}
- try{db.exec(await readFile(dir+'/'+file,'utf8'));applied.push(file);}
+ try{db.exec(platformMigrationSQL(file,await readFile(dir+'/'+file,'utf8')));applied.push(file);}
  catch(e){console.error('PLATFORM_SCHEMA_FAILURE '+JSON.stringify({file,error:e.message,applied:applied.length}));throw e;}
 }
 db.exec("DELETE FROM workspace_members WHERE user_id='usr_dev_owner'; DELETE FROM users WHERE id='usr_dev_owner'; DELETE FROM workspace_profiles WHERE workspace_id='default'; DELETE FROM workspaces WHERE id='default';");
