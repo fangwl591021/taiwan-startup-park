@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "code_commit": "0f1a15dcae3453fd4595c9c375e9ed88f9008237",
+  "acceptance_run": 37703344956,
+  "source_run": 37703344947,
+  "fixture_only": true,
+  "production_deployed": false,
+  "runtime_integrated": false,
+  "backend_tests": 131,
+  "browser_tests": 39,
+  "source_backend_tests": 1222,
+  "source_frontend_tests": 592,
+  "files": [
+    {
+      "path": "docs/screenshots/desktop-platform-workspaces.png",
+      "size": 208885,
+      "sha256": "933e1be69e8f6bc05f098108d0bc754d07ad39f2e99df6130ff90cc7f3c4f186",
+      "git_blob_sha": "ea42266885fc2edeb5671b7c457a291701c33978"
+    },
+    {
+      "path": "docs/screenshots/mobile-platform-workspaces.png",
+      "size": 158735,
+      "sha256": "06ae9ab4059858736f7c416ae08ec944193729ef301e142c77aac88f89d8940f",
+      "git_blob_sha": "1419a876b8617610d4574413a1b46e05cfd981a1"
+    },
+    {
+      "path": "docs/screenshots/desktop-platform-workspace-detail.png",
+      "size": 248208,
+      "sha256": "9b3f5d7598ff4cdd84e0807f15035eac7b837bd7ed9a600b4f07be9b999667f5",
+      "git_blob_sha": "380db9290ac7057021a789e6182d29827e85cb84"
+    },
+    {
+      "path": "docs/screenshots/mobile-platform-workspace-detail.png",
+      "size": 161452,
+      "sha256": "d027093c42bcc0e6f8fecf98e21e65a29aa164f82c18ef958db70e91a15baf5d",
+      "git_blob_sha": "a18abb6b13ea635eeb4eade08a0c1cf1c925e840"
+    },
+    {
+      "path": "docs/screenshots/desktop-enterprise-workspace.png",
+      "size": 181251,
+      "sha256": "96bf4186d223a22acc5b19cebc760e468ee9fb3a02e6bac6e3f88f0ee5ca3550",
+      "git_blob_sha": "f178fad0757f77b03392cca93ff85864796e5a36"
+    },
+    {
+      "path": "docs/screenshots/mobile-enterprise-workspace.png",
+      "size": 135720,
+      "sha256": "5f557c268e379c90f2c5e1dd4e943f8acef71794e1825ff9eec4446939cecf70",
+      "git_blob_sha": "a5a2d353be8668bdc6773bd8e973c9eaaef1f999"
+    }
+  ]
+}

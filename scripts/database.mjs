@@ -55,6 +55,13 @@ export function database(path=':memory:'){
   sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0014_chat_monitor.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
   catch(e){sqlite.exec('ROLLBACK');throw e;}
  }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_workspaces'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0015_platform_workspace_bridge.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_runtime_revision'").get()){
+  sqlite.exec(readFileSync(new URL('../migrations/0016_platform_internal_tools.sql',import.meta.url),'utf8'));
+ }
  function prepare(sql,values=[]){
   const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return {results:st.all(...values),meta:{changes:0}};
    const r=st.run(...values);return {results:[],meta:{changes:Number(r.changes)}};};

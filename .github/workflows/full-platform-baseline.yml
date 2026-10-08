@@ -1,0 +1,64 @@
+name: Full platform source baseline
+on:
+  push:
+    branches: [feature/full-platform-migration]
+permissions:
+  contents: read
+jobs:
+  source-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      VITE_API_BASE_URL: 'http://127.0.0.1:8788'
+      VITE_PRODUCTION_WORKER_BASE_URL: 'http://127.0.0.1:8788'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify every imported file and prepare isolated build copy
+        run: node scripts/verify-upstream-platform.mjs --prepare
+      - name: Verify fresh isolated full platform schema without demonstration accounts
+        run: node scripts/verify-platform-schema.mjs
+      - name: Install reviewed locked backend dependency overlay
+        working-directory: .migration-build/smart-menu/backend
+        run: npm ci
+      - name: Original backend module typechecks
+        working-directory: .migration-build/smart-menu/backend
+        run: npm run typecheck
+      - name: Original backend tests
+        working-directory: .migration-build/smart-menu/backend
+        run: npm test
+      - name: Bundle original backend using local placeholder resources
+        working-directory: .migration-build/smart-menu/backend
+        run: npx wrangler deploy --dry-run --config wrangler.jsonc --outdir worker-build
+      - name: Install reviewed locked frontend dependency overlay
+        working-directory: .migration-build/smart-menu/frontend
+        run: npm ci
+      - name: Original frontend tests
+        working-directory: .migration-build/smart-menu/frontend
+        run: npm test
+      - name: Build complete original frontend using local API origin
+        working-directory: .migration-build/smart-menu/frontend
+        run: npm run build
+      - name: Audit imported dependencies before runtime integration
+        run: node scripts/audit-upstream-platform.mjs
+      - name: Save source and baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-platform-source-baseline
+          path: |
+            platform/upstream-smart-menu
+            config/platform-source-lock.json
+            config/platform-dependency-overlay.json
+            platform/dependency-overlays
+            docs/FULL_PLATFORM_MIGRATION.md
+            full-platform-source-report.json
+            full-platform-backend-audit.json
+            full-platform-frontend-audit.json
+            .migration-build/smart-menu/backend/worker-build
+            .migration-build/smart-menu/frontend/dist
+          if-no-files-found: warn

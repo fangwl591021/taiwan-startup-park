@@ -18,7 +18,7 @@ export async function moduleState(env:Env,operator:string){
 }
 export async function moduleRoute(req:Request,env:Env,a:Actor):Promise<Response|null>{
  const path=new URL(req.url).pathname;
- if(path==='/api/workspace/modules'&&req.method==='GET'){role(a,['operator_owner','operator_sales','operator_service','operator_finance']);return json({modules:await moduleState(env,a.operator_id),fees_agreed:false,ai_enabled:false});}
+ if(path==='/api/workspace/modules'&&req.method==='GET'){role(a,['operator_owner','operator_sales','operator_service','operator_finance']);return json({modules:(await moduleState(env,a.operator_id)).filter(m=>m.key!=='monitor'||a.role==='operator_owner'),fees_agreed:false,ai_enabled:false});}
  if(!path.startsWith('/api/platform/modules'))return null;
  if(!await platformAccess(env,a))fail(403,'僅系統總管理員可管理模組');
  if(path==='/api/platform/modules'&&req.method==='GET'){
