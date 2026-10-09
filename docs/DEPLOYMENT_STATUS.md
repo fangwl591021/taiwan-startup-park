@@ -1,3 +1,18 @@
+# 最新發布：聊天室修改選單與 LIFF 原圖上傳
+
+2026/10/9 09:50:22（Asia/Taipei）正式站與獨立展示站已完成發布，Worker 版本、資料結構及正式上傳頁檔案核對成功。
+
+- 入口：業者工作台 → 完整數位工作區 → 聊天室修改選單。支援 LINE UID 授權、私訊「修改選單」選擇已發布選單、聊天室收圖、LIFF 原圖上傳與座標調整、發布紀錄及既有使用者連結更新。保留按鈕名稱、功能、ID 與首頁；完成／失敗／待核對結果顯示在頁面與紀錄，不發終端 push。
+- 管理員需設定自己的工作區 OA 憑證、啟用連線、設定獨立 Webhook 並授權 UID；LIFF 另需同 Provider 的 LINE Login Channel 與 LIFF。原 SaaS 的憑證、OA、資料庫未複製，既有平台 OA 接收器未改址。詳見 [設定與操作](MENU_CHAT_PORT.md)。
+- [最終建置、驗收與發布成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37871310240)：139 根後端、42 根桌面／手機、1222 來源後端、592 來源前端、36 移植／實際 runtime、6 完整平台／上傳桌面手機，共 2037 項通過。TypeScript、來源 369 檔完整性、Vite、Worker bundle／dry-run 與依賴檢查通過。[PR #22](https://github.com/fangwl591021/taiwan-startup-park/pull/22) 與 [入口修正 PR #23](https://github.com/fangwl591021/taiwan-startup-park/pull/23) 已合併。
+- 兩個專用平台 D1 的 0060_menu_chat.sql 已套用；遠端唯讀核對各 10 張新表、6 個 revision trigger、projects.sync_revision，以及 0059／0060 各一筆已套用紀錄。沒有重建資料庫或種入授權 UID。正式既有借址與平台資料保留。
+- 首輪線上核對發現 Assets 將 .html 轉址至受保護路徑，已改為內部讀取 canonical 路徑，補入回歸測試及發布檢查。最終正式上傳頁與 4 個 JS／CSS 的 SHA-256 均符合本次建置，直接回應 200；管理 API 仍為 Access 302。展示站保留完整登入保護且不啟用 LINE 發布。
+- 正式發布來源 f39180721d589a42933e17fcd17035606d5be7b3；正式 active version ed1b3441-5fa2-4734-82ec-75c89554c2b7；展示 active version 6ea84870-202b-4702-b8f4-45d74ee4595a。後續文件提交不更動已發布程式。
+- 既有加密主鑰保留（key_created:false），根 Access 不變；原 LINE 外送 off、分潤全 NULL 與結算 off 保留。新圖文選單發布只允許個別工作區明確啟用，預設授權名單為空。中斷發布要求核對，不自動重發；refresh 依 batch 狀態及完成收據更新。
+- 手機驗收使用隔離的虛構 UID、Token、圖片與 LINE API；遠端驗證核對真實版本、schema、保護及靜態檔案。真人 LINE／LIFF 發布驗收尚待該工作區完成設定，沒有對真實 OA 發布測試圖片。不重錄教學影片。
+
+以下為歷次發布紀錄。
+
 # 最新發布：完整 Smart-Menu 平台與借址 CRM
 
 2026-10-08 08:33:59（Asia/Taipei）正式站與獨立測試站已完成發布，遠端版本、資料庫及保護核對成功。
