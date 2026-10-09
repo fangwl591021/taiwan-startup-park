@@ -43,8 +43,10 @@ if(names.length&&!names.includes('startup_park_bridge_bindings')){
 const directory='platform/runtime/migrations';await mkdir(directory,{recursive:true});
 for(const entry of (await readdir('platform/upstream-smart-menu/backend/migrations')).filter(x=>x.endsWith('.sql')&&x!=='0007_tenant_isolation_test.sql').sort())await writeFile(directory+'/'+entry,platformMigrationSQL(entry,await readFile('platform/upstream-smart-menu/backend/migrations/'+entry,'utf8')));
 await writeFile(directory+'/0059_startup_park_runtime.sql',"DELETE FROM workspace_members WHERE user_id='usr_dev_owner'; DELETE FROM users WHERE id='usr_dev_owner'; DELETE FROM workspace_profiles WHERE workspace_id='default'; DELETE FROM workspaces WHERE id='default';\n"+await readFile('platform/runtime/schema.sql','utf8'));
-config.main='platform/runtime/worker.mjs';config.compatibility_flags=['nodejs_compat'];
+await writeFile(directory+'/0060_menu_chat.sql',await readFile('platform/runtime/menu-chat/0060_menu_chat.sql','utf8'));
+ config.main='platform/runtime/worker.mjs';config.compatibility_flags=['nodejs_compat'];
 config.vars.PLATFORM_RUNTIME_ENABLED='on';
+if(!sandbox)config.triggers={crons:[...new Set([...(config.triggers?.crons||[]),'* * * * *'])]};
 config.d1_databases=[config.d1_databases[0],{binding:'PLATFORM_DB',database_name:name,database_id:db.uuid,migrations_dir:directory}];
 config.assets={...config.assets,directory:'dist/public',run_worker_first:['/api/*','/platform/*']};
 await writeFile(file,JSON.stringify(config,null,2)+'\n');

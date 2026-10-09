@@ -5,6 +5,7 @@ export function platformDatabase(){
  for(const file of readdirSync('platform/upstream-smart-menu/backend/migrations').filter(x=>x.endsWith('.sql')&&x!=='0007_tenant_isolation_test.sql').sort())sqlite.exec(readFileSync('platform/upstream-smart-menu/backend/migrations/'+file,'utf8'));
  sqlite.exec("DELETE FROM workspace_members WHERE user_id='usr_dev_owner'; DELETE FROM users WHERE id='usr_dev_owner'; DELETE FROM workspace_profiles WHERE workspace_id='default'; DELETE FROM workspaces WHERE id='default';");
  sqlite.exec(readFileSync('platform/runtime/schema.sql','utf8'));
+ sqlite.exec(readFileSync('platform/runtime/menu-chat/0060_menu_chat.sql','utf8'));
  function prepare(sql,values=[]){
   const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return{success:true,results:st.all(...values),meta:{changes:0}};const r=st.run(...values);return{success:true,results:[],meta:{changes:Number(r.changes)}};};
   const bindValue=v=>v instanceof ArrayBuffer?new Uint8Array(v):v;

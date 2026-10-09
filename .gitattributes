@@ -1,0 +1,3 @@
+# Imported manifests verify Git blob bytes; keep their original bytes on Windows.
+platform/upstream-smart-menu/** -text
+platform/dependency-overlays/** -text

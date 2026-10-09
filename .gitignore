@@ -19,4 +19,9 @@ sandbox-resources.json
 .sandbox-seed.sql
 .sandbox-build/
 .tutorial-recording/
+.migration-build/
+.platform-worker-build/
+reports/
+full-platform-source-report.json
+platform/runtime/migrations/
 docs/tutorial/
