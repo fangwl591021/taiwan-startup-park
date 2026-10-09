@@ -1,0 +1,73 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;
+if(!/^[a-f0-9]{32}$/i.test(account||'')||!token)throw new Error('發布驗證缺少帳號授權');
+const api='https://api.cloudflare.com/client/v4/accounts/'+account;
+async function cf(path,body){
+ const r=await fetch(api+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),redirect:'error',signal:AbortSignal.timeout(20000)});
+ const d=await r.json();
+ if(!r.ok||d.success!==true)throw new Error('發布驗證 HTTP '+r.status);
+ return d.result;
+}
+const targets=[
+ ['wrangler.production.json','taiwan-startup-park','taiwan-startup-park-prod','production','off'],
+ ['wrangler.sandbox.json','taiwan-startup-park-demo','taiwan-startup-park-demo','sandbox','on']
+];
+const reports=[];
+for(const [file,worker,databaseName,appEnv,demoMode] of targets){
+ const config=JSON.parse(await readFile(file,'utf8'));
+ const dbId=config.d1_databases?.[0]?.database_id;
+ if(config.name!==worker||config.account_id!==account||!dbId||![1,2].includes(config.d1_databases.length))throw new Error('發布目標設定不符');
+ const info=await cf('/d1/database/'+dbId);
+ if(info.name!==databaseName||info.uuid!==dbId)throw new Error('專用資料庫不符');
+ const bindings=(await cf('/workers/scripts/'+worker+'/settings')).bindings||[];
+ const plain=name=>bindings.find(b=>b.name===name&&b.type==='plain_text')?.text;
+ if(bindings.filter(b=>b.type==='d1').length!==config.d1_databases.length||config.d1_databases.some(expected=>!bindings.some(b=>b.type==='d1'&&b.name===expected.binding&&b.id===expected.database_id)))throw new Error('實際 DB binding 不符');
+ if(plain('APP_ENV')!==appEnv||plain('DEMO_MODE')!==demoMode||plain('LINE_SEND_ENABLED')!=='off')throw new Error('第一期環境或外送關閉設定不符');
+ const platformDb=config.d1_databases.find(d=>d.binding==='PLATFORM_DB');
+ if(platformDb){
+  const expectedName=appEnv==='production'?'taiwan-startup-park-platform-prod':'taiwan-startup-park-platform-demo';
+  const info=await cf('/d1/database/'+platformDb.database_id);if(info.name!==expectedName||info.uuid===dbId||plain('PLATFORM_RUNTIME_ENABLED')!=='on')throw new Error('完整平台資料層未獨立啟用');
+  const sourceCheck=await cf('/d1/database/'+platformDb.database_id+'/query',{sql:"SELECT (SELECT COUNT(*) FROM users WHERE id='usr_dev_owner')+(SELECT COUNT(*) FROM workspaces WHERE id IN('default','ws_test_b')) AS seeded_accounts,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN('startup_park_bridge_bindings','startup_park_private_objects','startup_park_site_drafts','commerce_orders','crm_people')) AS core_tables"});
+  if(sourceCheck[0]?.success!==true||Number(sourceCheck[0].results[0].seeded_accounts)!==0||Number(sourceCheck[0].results[0].core_tables)!==5)throw new Error('完整平台資料結構或測試帳號隔離不符');
+  if(appEnv==='production'){
+   const upload=await fetch(config.vars.APP_ORIGIN+'/api/line/webhook/menu-upload/page',{redirect:'manual',signal:AbortSignal.timeout(20000)});
+   const bytes=Buffer.from(await upload.arrayBuffer()),built=await readFile('dist/public/platform/menu-upload.html');
+   const hash=b=>createHash('sha256').update(b).digest('hex');
+   if(upload.status!==200||hash(bytes)!==hash(built)||upload.headers.get('cache-control')!=='no-store'||!upload.headers.get('content-security-policy')?.includes('https://static.line-scdn.net'))throw new Error('正式 LIFF 上傳頁未直接回應本次建置');
+   console.log('MENU_UPLOAD_PUBLIC_PAGE_VERIFIED '+hash(bytes));
+  }
+ }
+ const query=await cf('/d1/database/'+dbId+'/query',{sql:`SELECT
+ (SELECT COUNT(*) FROM operators) AS operator_count,
+ COUNT(*) AS term_count,
+ COALESCE(SUM(CASE WHEN status!='unagreed' OR partner_name IS NOT NULL OR settlement_basis IS NOT NULL
+ OR platform_fee_amount IS NOT NULL OR platform_share_bps IS NOT NULL OR operator_share_bps IS NOT NULL
+ OR settlement_cycle IS NOT NULL OR effective_on IS NOT NULL OR agreement_reference IS NOT NULL
+ THEN 1 ELSE 0 END),0) AS nonblank_count FROM digital_revenue_terms`});
+ const counts=query[0]?.results?.[0];
+ if(query[0]?.success!==true||!counts||Number(counts.operator_count)<1||Number(counts.term_count)!==4*Number(counts.operator_count)||Number(counts.nonblank_count)!==0)throw new Error('分潤欄位尚未全部空白或不完整');
+ const url=config.vars.APP_ORIGIN;
+ const r=await fetch(url+'/api/me',{redirect:'manual',signal:AbortSignal.timeout(15000)});
+ const location=r.headers.get('location');
+ if(![302,303,307,308].includes(r.status)||!location||!new URL(location,url).hostname.endsWith('.cloudflareaccess.com'))throw new Error('未登入工作台未受 Access 保護');
+ const deployments=await cf('/workers/scripts/'+worker+'/deployments');
+ const access=await cf('/d1/database/'+dbId+'/query',{sql:appEnv==='production'?"SELECT COUNT(*) n FROM platform_admin_grants g JOIN staff_users u ON u.id=g.user_id JOIN auth_identities i ON i.user_id=u.id WHERE g.active=1 AND u.active=1 AND u.id='tsp-primary-owner' AND u.operator_id='tsp-primary-operator' AND u.role='operator_owner' AND i.issuer=?":"SELECT COUNT(*) n FROM staff_users WHERE id='platform' AND role='platform_admin' AND active=1",params:appEnv==='production'?[config.vars.ACCESS_ISSUER]:[]});
+ if(access[0]?.success!==true||Number(access[0]?.results?.[0]?.n)!==1)throw new Error('系統後台指定管理員權限尚未就緒');
+ const settings=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n FROM platform_settings WHERE id=1'});
+ if(settings[0]?.success!==true||Number(settings[0]?.results?.[0]?.n)!==1)throw new Error('平台規劃設定尚未就緒');
+ const login=await cf('/d1/database/'+dbId+'/query',{sql:'SELECT COUNT(*) n FROM platform_line_login WHERE id=1'});
+ if(login[0]?.success!==true||Number(login[0]?.results?.[0]?.n)!==1)throw new Error('LINE Login 設定結構尚未就緒');
+ const lineAccount=await cf('/d1/database/'+dbId+'/query',{sql:"SELECT COUNT(*) n,MAX(CASE WHEN messaging_channel_id!='' THEN 1 ELSE 0 END) channel_id_present,MAX(CASE WHEN encrypted_messaging!='' THEN 1 ELSE 0 END) encrypted_credentials_present,MAX(CASE WHEN last_webhook_at!='' THEN 1 ELSE 0 END) signature_received FROM platform_line_account WHERE id=1"});
+ if(lineAccount[0]?.success!==true||Number(lineAccount[0]?.results?.[0]?.n)!==1)throw new Error('整合 LINE 帳號設定尚未就緒');
+ const workspace=await cf('/d1/database/'+dbId+'/query',{sql:"SELECT (SELECT COUNT(*) FROM operators) operator_count,(SELECT COUNT(*) FROM workspace_modules) module_count,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN('crm_people','crm_line_links','crm_case_requests','workspace_templates','line_keyword_routes','operator_line_login','risk_rules','risk_events','risk_reviews')) table_count"});
+ const foundation=workspace[0]?.results?.[0];
+ if(workspace[0]?.success!==true||Number(foundation?.table_count)!==9||Number(foundation?.module_count)!==4*Number(foundation?.operator_count))throw new Error('LINE 工作區資料結構或業者模組未完成');
+ const monitor=await cf('/d1/database/'+dbId+'/query',{sql:"SELECT COUNT(*) table_count FROM sqlite_master WHERE type='table' AND name IN('monitor_groups','monitor_group_messages','monitor_group_rules','monitor_group_opportunities','monitor_group_reviews','ai_call_ledger')"});
+ if(monitor[0]?.success!==true||Number(monitor[0]?.results?.[0]?.table_count)!==6)throw new Error('四分頁監控資料結構未完成');
+ reports.push({worker,database_name:databaseName,database_isolated:true,app_env:appEnv,line_send_enabled:false,revenue_terms_complete:true,revenue_values_all_null:true,settlement_enabled:false,system_admin_ready:true,line_workspace_ready:true,chat_monitor_ready:true,chat_monitor_table_count:6,workspace_structure:foundation,ai_model_enabled:false,line_login_enabled:false,rich_menu_publish_enabled:false,platform_oa_status:'signed_receiver_available',platform_line_configuration:lineAccount[0].results[0],unauthenticated_status:r.status,deployments:deployments.deployments||[]});
+}
+if(reports.length!==2)throw new Error('發布驗證不完整');
+const report={source_commit:process.env.GITHUB_SHA,checked_at:new Date().toISOString(),targets:reports};
+await writeFile('phase-one-release-report.json',JSON.stringify(report,null,2)+'\n');
+console.log('PHASE_ONE_RELEASE_VERIFIED '+JSON.stringify(report));

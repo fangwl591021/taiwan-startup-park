@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source_commit": "f69fd70a2ff91056bbac158a41e046ee35f10077",
+  "verified_ci_run": 37679159576,
+  "policy": "Compatible npm audit fixes plus explicit sharp 0.35.5 override; original platform snapshot unchanged.",
+  "files": [
+    {
+      "path": "backend/package.json",
+      "sha": "ae833b25e0ee2202062d7608c1d4d1ede3fd1e38"
+    },
+    {
+      "path": "backend/package-lock.json",
+      "sha": "3c4364ae853ed859f6ce9f3678b8c0d14f4086da"
+    },
+    {
+      "path": "frontend/package.json",
+      "sha": "e1b882b9b2511935d89f5d455b748683e1879360"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "sha": "257b567ae0cb36a3700ee258148ac5b5b7f9055c"
+    }
+  ]
+}

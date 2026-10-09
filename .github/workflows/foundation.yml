@@ -1,15 +1,24 @@
 name: Platform acceptance
 on:
   push:
-    branches: [feature/foundation, feature/line-integration, feature/tenant-operations]
+    branches: [feature/foundation, feature/line-integration, feature/tenant-operations, feature/phase1-address-scope, feature/workspace-performance, feature/tenant-service-clarity, feature/mail-line-notifications, feature/line-oa-settings, feature/platform-console, feature/line-login-settings, feature/line-account-settings, feature/line-workspace, feature/chat-monitor-import, feature/full-platform-migration]
+    paths-ignore:
+      - 'platform/upstream-smart-menu/**'
+      - 'config/platform-source-lock.json'
+      - 'scripts/verify-upstream-platform.mjs'
+      - 'scripts/audit-upstream-platform.mjs'
+      - 'scripts/repair-upstream-platform.mjs'
+      - 'platform/dependency-overlays/**'
+      - '.github/workflows/full-platform-baseline.yml'
+      - 'docs/FULL_PLATFORM_MIGRATION.md'
   pull_request:
-    branches: [main, docs/platform-blueprint, feature/foundation, feature/line-integration]
+    branches: [main, docs/platform-blueprint, feature/foundation, feature/line-integration, release/cloudflare]
 permissions:
   contents: read
 jobs:
   acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,6 +42,8 @@ jobs:
           sudo apt-get install -y fonts-noto-cjk
       - name: Browser acceptance and desktop/mobile screenshots
         run: npm run test:e2e
+      - name: Export fictional workspace screenshots for review
+        run: node scripts/export-workspace-screenshots.mjs
       - name: Upload acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -43,4 +54,6 @@ jobs:
             playwright-report
             test-results
             package-lock.json
+            dist/public/tutorial
+            docs/tutorial
           if-no-files-found: warn

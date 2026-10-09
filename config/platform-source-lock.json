@@ -1,0 +1,2239 @@
+{
+  "schema_version": 1,
+  "source_repository": "fangwl591021/Smart-Menu-Studio",
+  "source_ref": "main",
+  "source_commit": "f69fd70a2ff91056bbac158a41e046ee35f10077",
+  "target_base_commit": "e24b74f1fbce1a2b01f8784ec1f2664c3db6b2e5",
+  "import_directory": "platform/upstream-smart-menu",
+  "status": "source_baseline_only",
+  "runtime_integrated": false,
+  "modules": [
+    "CORE_MENU",
+    "CRM",
+    "CAMPAIGN",
+    "COMMERCE",
+    "TRAVEL",
+    "DEALER_COMMISSION",
+    "POINTS_REWARDS",
+    "AI"
+  ],
+  "file_count": 369,
+  "migration_count": 55,
+  "files": [
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "sha": "0ad3d125d1eec421e2d94f61b74fcd98092823e7",
+      "size": 373
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "sha": "299684521ca0da78396c9b919c44954e9106da07",
+      "size": 38
+    },
+    {
+      "path": "backend/.dev.vars.example",
+      "mode": "100644",
+      "sha": "cb80f695d986c3e9c11beb1d1ba3925f3a0cc41f",
+      "size": 144
+    },
+    {
+      "path": "backend/.gitignore",
+      "mode": "100644",
+      "sha": "e319e0635f90803c5c454bc55b3b2f01c9a944a0",
+      "size": 346
+    },
+    {
+      "path": "backend/README.md",
+      "mode": "100644",
+      "sha": "980077028966b19842f9ffa0807c2787bef1c958",
+      "size": 393
+    },
+    {
+      "path": "backend/docs/8a-module-entitlement-policy.md",
+      "mode": "100644",
+      "sha": "44840fa19d2de7be6a7faad163e5f368b310ec5a",
+      "size": 2353
+    },
+    {
+      "path": "backend/docs/8b-travelkeeper-adapter.md",
+      "mode": "100644",
+      "sha": "4db713d5f79ba87545ba52cad1641b6e0bccd88b",
+      "size": 27801
+    },
+    {
+      "path": "backend/docs/8e-travel-operations-architecture.md",
+      "mode": "100644",
+      "sha": "c53573ebdcb56ee833a8623f20586ad175b2329b",
+      "size": 22259
+    },
+    {
+      "path": "backend/docs/8f-travel-promotion-intelligence-architecture.md",
+      "mode": "100644",
+      "sha": "11379267f6d022ba79a60d79c009398cac7b1ec7",
+      "size": 22991
+    },
+    {
+      "path": "backend/migrations/0001_templates.sql",
+      "mode": "100644",
+      "sha": "0b62d5c43c4728fb33da362c81042c251ef79bda",
+      "size": 2028
+    },
+    {
+      "path": "backend/migrations/0002_projects.sql",
+      "mode": "100644",
+      "sha": "95f26aff7cf7a245cb63833eb588d857a1954f4d",
+      "size": 1543
+    },
+    {
+      "path": "backend/migrations/0004_tenant_layer.sql",
+      "mode": "100644",
+      "sha": "167deaa17c6f8ca9df4d5af93e212a376f867074",
+      "size": 2077
+    },
+    {
+      "path": "backend/migrations/0005_auth_membership.sql",
+      "mode": "100644",
+      "sha": "ef485ddae490e8071c7d55ac18561755e2852f53",
+      "size": 931
+    },
+    {
+      "path": "backend/migrations/0006_password_auth.sql",
+      "mode": "100644",
+      "sha": "8e25fb068784f48fdc6b0a2ca6e30f49c1f0bfab",
+      "size": 653
+    },
+    {
+      "path": "backend/migrations/0007_tenant_isolation_test.sql",
+      "mode": "100644",
+      "sha": "317e52c50f7530c6d67d1d6f11ddb6a08f2a73c7",
+      "size": 564
+    },
+    {
+      "path": "backend/migrations/0008_workspace_onboarding.sql",
+      "mode": "100644",
+      "sha": "4e9da9818f578b75c46d3d04202967fa71f46ce7",
+      "size": 307
+    },
+    {
+      "path": "backend/migrations/0009_workspace_line_hub.sql",
+      "mode": "100644",
+      "sha": "432acf9b2051a7b632899551c8e87dc68fa568e6",
+      "size": 3004
+    },
+    {
+      "path": "backend/migrations/0010_backfill_dual_webhooks.sql",
+      "mode": "100644",
+      "sha": "51d0509ffd89688e2181e92e409de0456f317528",
+      "size": 1962
+    },
+    {
+      "path": "backend/migrations/0011_system_admin_accounts.sql",
+      "mode": "100644",
+      "sha": "cb52fb52fa635afdd14b3392e2acd6c6a9d40856",
+      "size": 811
+    },
+    {
+      "path": "backend/migrations/0012_proposal_approval_workflow.sql",
+      "mode": "100644",
+      "sha": "a9c2f3cea34fa0d57100a20d0e9ceb41d08dd9d1",
+      "size": 2419
+    },
+    {
+      "path": "backend/migrations/0013_ai_operation_logs.sql",
+      "mode": "100644",
+      "sha": "5dd201bd2a66ac0656fab21f723802d825701c16",
+      "size": 1296
+    },
+    {
+      "path": "backend/migrations/0014_ai_operation_rollback.sql",
+      "mode": "100644",
+      "sha": "db33a248b25ac291ee360df4d45782bcd6c99d12",
+      "size": 578
+    },
+    {
+      "path": "backend/migrations/0015_ai_https_probe_results.sql",
+      "mode": "100644",
+      "sha": "19624f1118a0224748c2116c0ebebff78f33723e",
+      "size": 4017
+    },
+    {
+      "path": "backend/migrations/0016_composite_operation_plans.sql",
+      "mode": "100644",
+      "sha": "162f81a491de2cc5ed6891306412b29c92839124",
+      "size": 3686
+    },
+    {
+      "path": "backend/migrations/0017_ai_usage_and_plan_execution.sql",
+      "mode": "100644",
+      "sha": "7739e24bc9734bfc510c40784303fa41cedf8f8d",
+      "size": 11079
+    },
+    {
+      "path": "backend/migrations/0018_line_oa_intelligence.sql",
+      "mode": "100644",
+      "sha": "dca9870bb5b773328ae996988d5f13fc543ea982",
+      "size": 4083
+    },
+    {
+      "path": "backend/migrations/0019_conversion_journey_intelligence.sql",
+      "mode": "100644",
+      "sha": "fc7dde1f4edde8142b7efe58809b31bf1eb8ddf0",
+      "size": 3274
+    },
+    {
+      "path": "backend/migrations/0020_tracked_uri_attribution.sql",
+      "mode": "100644",
+      "sha": "554f358f2889aee26df1362a2dd5e4f9c8b080f2",
+      "size": 778
+    },
+    {
+      "path": "backend/migrations/0021_conversion_sources.sql",
+      "mode": "100644",
+      "sha": "e79943785349a82f953bf5dbcfd36d1b57fe0849",
+      "size": 255
+    },
+    {
+      "path": "backend/migrations/0022_member_referral_foundation.sql",
+      "mode": "100644",
+      "sha": "070ff008fdc876801a15bb310fdbf0b5e47268d6",
+      "size": 3730
+    },
+    {
+      "path": "backend/migrations/0023_referral_growth_analytics.sql",
+      "mode": "100644",
+      "sha": "27f7262412f49823ac8d99d26effb9f876ba51c7",
+      "size": 1435
+    },
+    {
+      "path": "backend/migrations/0024_dealer_foundation.sql",
+      "mode": "100644",
+      "sha": "a04ec17a5d818868c15bf18404c73f1c8066372d",
+      "size": 1940
+    },
+    {
+      "path": "backend/migrations/0025_conversion_referral_evidence_bridge.sql",
+      "mode": "100644",
+      "sha": "adf385c634346688df9b43f26bd7ee142df3c3ae",
+      "size": 2305
+    },
+    {
+      "path": "backend/migrations/0026_commission_program_foundation.sql",
+      "mode": "100644",
+      "sha": "fed7005e28c2b57dc8be705bab5b359d001ae768",
+      "size": 3623
+    },
+    {
+      "path": "backend/migrations/0027_commission_attribution.sql",
+      "mode": "100644",
+      "sha": "d17c7bf96af19476573e8888a2ffc17bdf66b587",
+      "size": 1526
+    },
+    {
+      "path": "backend/migrations/0028_commission_calculation_ledger.sql",
+      "mode": "100644",
+      "sha": "ebe52a9b45a9e93ee2ef6c2733d22be94ecff643",
+      "size": 4026
+    },
+    {
+      "path": "backend/migrations/0029_commission_settlement_foundation.sql",
+      "mode": "100644",
+      "sha": "845c117c85c02609772518988e1e4f908797b1fd",
+      "size": 4291
+    },
+    {
+      "path": "backend/migrations/0030_commission_payout_request_foundation.sql",
+      "mode": "100644",
+      "sha": "d3c5ffcb664319e0d46cb5745e8e881d820ed391",
+      "size": 2921
+    },
+    {
+      "path": "backend/migrations/0031_commission_payment_execution_foundation.sql",
+      "mode": "100644",
+      "sha": "0d8876375b55b1423204ca958649e4d020139d43",
+      "size": 3272
+    },
+    {
+      "path": "backend/migrations/0032_points_ledger_foundation.sql",
+      "mode": "100644",
+      "sha": "5fe6baa345d159c76a8c09bb80f04024cb97a020",
+      "size": 3481
+    },
+    {
+      "path": "backend/migrations/0033_reward_redemption_foundation.sql",
+      "mode": "100644",
+      "sha": "0519997c7798e0ff4a545550fad1a0748a5182c7",
+      "size": 3966
+    },
+    {
+      "path": "backend/migrations/0034_contribution_tier_foundation.sql",
+      "mode": "100644",
+      "sha": "9ced3e34f92b2d059afbc960d6e388f04f8a328f",
+      "size": 5578
+    },
+    {
+      "path": "backend/migrations/0035_unified_crm_person_profile_foundation.sql",
+      "mode": "100644",
+      "sha": "de28c21b101923981781ffe81cc8c0756b17b125",
+      "size": 4729
+    },
+    {
+      "path": "backend/migrations/0036_crm_import_dedup_foundation.sql",
+      "mode": "100644",
+      "sha": "777113ce52e7a28bb9a59e39b325ea986c63b2a8",
+      "size": 3757
+    },
+    {
+      "path": "backend/migrations/0037_crm_cards_collection_share.sql",
+      "mode": "100644",
+      "sha": "753e3c909e814b2ea1365a5ec20a13f8aeba7151",
+      "size": 5444
+    },
+    {
+      "path": "backend/migrations/0038_crm_acquisition_relationship_foundation.sql",
+      "mode": "100644",
+      "sha": "0aa3e72196d63d3772cd1bdf8055ba1e95f4db71",
+      "size": 2472
+    },
+    {
+      "path": "backend/migrations/0039_crm_tags_insights_traits.sql",
+      "mode": "100644",
+      "sha": "65dcef53fb7deb2f84e1237ba6d2c15b9bb8e0de",
+      "size": 4010
+    },
+    {
+      "path": "backend/migrations/0040_crm_pipeline_followup.sql",
+      "mode": "100644",
+      "sha": "83e1ecb72db640befab0affd512f413657a067c7",
+      "size": 4808
+    },
+    {
+      "path": "backend/migrations/0041_crm_analytics_segments.sql",
+      "mode": "100644",
+      "sha": "56c752476b3b72ad77bad78645c6b9b936ce2556",
+      "size": 1759
+    },
+    {
+      "path": "backend/migrations/0042_campaign_audience_foundation.sql",
+      "mode": "100644",
+      "sha": "e27e8e7b079b6ad3a31f6ecdef11c547e7918eb2",
+      "size": 4458
+    },
+    {
+      "path": "backend/migrations/0043_campaign_content_prepare_contract.sql",
+      "mode": "100644",
+      "sha": "a4567ea58ca56c86ae1fb30f36ffe54c762e0da6",
+      "size": 9079
+    },
+    {
+      "path": "backend/migrations/0044_campaign_execution_delivery.sql",
+      "mode": "100644",
+      "sha": "08d9407566b170c051d54fd0d4ca0eab7914bd41",
+      "size": 10148
+    },
+    {
+      "path": "backend/migrations/0046_commerce_order_payment.sql",
+      "mode": "100644",
+      "sha": "1661235e22ea177af2e875691ab89016c25d0812",
+      "size": 6475
+    },
+    {
+      "path": "backend/migrations/0047_commerce_member_order_ownership.sql",
+      "mode": "100644",
+      "sha": "dc6b8df5718f0e2b30850363f7bbc5b760e53a65",
+      "size": 2162
+    },
+    {
+      "path": "backend/migrations/0049_workspace_module_entitlements.sql",
+      "mode": "100644",
+      "sha": "eaa98548e5d4e4b02203525a8d13950ff2b446f1",
+      "size": 1836
+    },
+    {
+      "path": "backend/migrations/0050_commerce_travel_offer_payment_legs.sql",
+      "mode": "100644",
+      "sha": "2b69387d41fb866615ac5f43c8474fba14cb817e",
+      "size": 4529
+    },
+    {
+      "path": "backend/migrations/0051_travel_foundation.sql",
+      "mode": "100644",
+      "sha": "32a950f41d3bf2abc6b4bac52d7cd8441b5cc6e0",
+      "size": 11149
+    },
+    {
+      "path": "backend/migrations/0052_travel_ui_contract.sql",
+      "mode": "100644",
+      "sha": "b1558fee3a220d7481fbe4ef2100f63d0a5de56d",
+      "size": 2488
+    },
+    {
+      "path": "backend/migrations/0053_travel_seller_commission_bridge.sql",
+      "mode": "100644",
+      "sha": "2d0b76d6f22019bae0556252f54373f17030bd4b",
+      "size": 7001
+    },
+    {
+      "path": "backend/migrations/0054_travel_operations_events.sql",
+      "mode": "100644",
+      "sha": "14407ed2f3c9d522a4c37d81b8fe771633805d00",
+      "size": 1557
+    },
+    {
+      "path": "backend/migrations/0055_travel_promotion_knowledge.sql",
+      "mode": "100644",
+      "sha": "91a91c6e60f2469797249c4262917dad5befa0d1",
+      "size": 8730
+    },
+    {
+      "path": "backend/migrations/0056_travel_promotion_formal_links.sql",
+      "mode": "100644",
+      "sha": "821d88ad633c8c0e51b36319a6276f8141a83e2a",
+      "size": 3431
+    },
+    {
+      "path": "backend/migrations/0057_campaign_structured_content_extension.sql",
+      "mode": "100644",
+      "sha": "dbe5accd799c3fef153b641ddb9024f97c061f81",
+      "size": 2691
+    },
+    {
+      "path": "backend/migrations/0058_travel_promotion_extraction_json.sql",
+      "mode": "100644",
+      "sha": "d18b7f27cc67fe114deb2f2ad3f5dddfe6033169",
+      "size": 128
+    },
+    {
+      "path": "backend/package-lock.json",
+      "mode": "100644",
+      "sha": "289a4244eaa0aa5ef3be68d76f24e3515877d58c",
+      "size": 64363
+    },
+    {
+      "path": "backend/package.json",
+      "mode": "100644",
+      "sha": "4bc90c6bd23cf0a7999e7903342f3cbd887f09b8",
+      "size": 852
+    },
+    {
+      "path": "backend/src/ai/media-model-routing.ts",
+      "mode": "100644",
+      "sha": "e0f9b530289799529d95570953cb73a1eb088723",
+      "size": 2267
+    },
+    {
+      "path": "backend/src/ai/usage.ts",
+      "mode": "100644",
+      "sha": "00be5f4d9e4c037ff44898d375b64f661372b8e3",
+      "size": 14712
+    },
+    {
+      "path": "backend/src/campaign/audience-routes.ts",
+      "mode": "100644",
+      "sha": "67633d6e2ec4d059475c5eb8b98fb7c7f4522838",
+      "size": 5576
+    },
+    {
+      "path": "backend/src/campaign/audiences.ts",
+      "mode": "100644",
+      "sha": "8941d8cba07ecf65f63d3454b07745f3bbd5ed60",
+      "size": 16898
+    },
+    {
+      "path": "backend/src/campaign/campaign-routes.ts",
+      "mode": "100644",
+      "sha": "22a1cf6c5abaefff3940b075a3918f30d1687c8a",
+      "size": 6972
+    },
+    {
+      "path": "backend/src/campaign/campaigns.ts",
+      "mode": "100644",
+      "sha": "96dfa765a2da48b42e140633e9c0f53ed9d85563",
+      "size": 23847
+    },
+    {
+      "path": "backend/src/campaign/execution-routes.ts",
+      "mode": "100644",
+      "sha": "303d817144d2eca34a4e0d93bb0a8b1f0c5041f4",
+      "size": 4343
+    },
+    {
+      "path": "backend/src/campaign/executions.ts",
+      "mode": "100644",
+      "sha": "518327bc2573821d77a05e74edf3a3a902eb4914",
+      "size": 37750
+    },
+    {
+      "path": "backend/src/campaign/line-push.ts",
+      "mode": "100644",
+      "sha": "9c4db6091b7aa77516dd4353a03d26407688b32b",
+      "size": 5788
+    },
+    {
+      "path": "backend/src/commerce/commerce.ts",
+      "mode": "100644",
+      "sha": "e637f8b7fa7a707cffeeb59a8e8104e8ecee9027",
+      "size": 22758
+    },
+    {
+      "path": "backend/src/commerce/member-commerce.ts",
+      "mode": "100644",
+      "sha": "8119f3ca6806162232b22fed5e3679928b5fbd18",
+      "size": 7242
+    },
+    {
+      "path": "backend/src/commerce/member-routes.ts",
+      "mode": "100644",
+      "sha": "3b7851d3e03fbab6e710f460d033730bd70fcdd2",
+      "size": 5037
+    },
+    {
+      "path": "backend/src/commerce/payment-obligations.ts",
+      "mode": "100644",
+      "sha": "9f5eaee15e26e58d22c94ac2a559e7d7e99aae8f",
+      "size": 10020
+    },
+    {
+      "path": "backend/src/commerce/providers/newebpay.ts",
+      "mode": "100644",
+      "sha": "712adec6ad573aa7cf0e012474aa1e0d922112fc",
+      "size": 4605
+    },
+    {
+      "path": "backend/src/commerce/routes.ts",
+      "mode": "100644",
+      "sha": "37e83901c7d465c25eaab51d696ae9b31305b651",
+      "size": 5434
+    },
+    {
+      "path": "backend/src/commerce/travel-offer.ts",
+      "mode": "100644",
+      "sha": "a324693d6399fc4bdf3a8098aeb0a3d5d23d0593",
+      "size": 5307
+    },
+    {
+      "path": "backend/src/commission/attribution.ts",
+      "mode": "100644",
+      "sha": "0e3a4222d5561b07f2795ebf3efd3e4d57810751",
+      "size": 7821
+    },
+    {
+      "path": "backend/src/commission/calculation-ledger.ts",
+      "mode": "100644",
+      "sha": "0e48ced04b67f94dab40037c11dfb359e7ac78e4",
+      "size": 7637
+    },
+    {
+      "path": "backend/src/commission/dealer-payout-request-handle.ts",
+      "mode": "100644",
+      "sha": "53643f1938a575c5a19772bb2f388f9f2e633ebb",
+      "size": 2859
+    },
+    {
+      "path": "backend/src/commission/dealer-settlement-read.ts",
+      "mode": "100644",
+      "sha": "cba880fa102fe8d056418a0c81c3d2a8c2c0a8a0",
+      "size": 4523
+    },
+    {
+      "path": "backend/src/commission/evidence-bridge.ts",
+      "mode": "100644",
+      "sha": "7b6fb0218ebe26e2c06de95e0f1a9ba996dc512f",
+      "size": 4606
+    },
+    {
+      "path": "backend/src/commission/ledger-read-api.ts",
+      "mode": "100644",
+      "sha": "770c8a8c746e940947e794e643e23e9074219583",
+      "size": 3265
+    },
+    {
+      "path": "backend/src/commission/payment-execution.ts",
+      "mode": "100644",
+      "sha": "7bbf640dc4f7a34b9d05e489547ae46536f4482c",
+      "size": 3115
+    },
+    {
+      "path": "backend/src/commission/payout-foundation.ts",
+      "mode": "100644",
+      "sha": "9b4504df0e055a2da3f9c20ea0b25ca9dac5546a",
+      "size": 1837
+    },
+    {
+      "path": "backend/src/commission/program-foundation.ts",
+      "mode": "100644",
+      "sha": "f8f6e535be9ccc5e03e119ee9705b159fde46861",
+      "size": 2038
+    },
+    {
+      "path": "backend/src/commission/read-api.ts",
+      "mode": "100644",
+      "sha": "83f1f8e61baaa3676b4e7d78896f3d9e0742f362",
+      "size": 3814
+    },
+    {
+      "path": "backend/src/commission/settlement-foundation.ts",
+      "mode": "100644",
+      "sha": "eb44dd074242db7a61491b3fb51e66cbea2a2414",
+      "size": 2515
+    },
+    {
+      "path": "backend/src/contribution/index.ts",
+      "mode": "100644",
+      "sha": "271f8095a6b5e30f6d611f50dbf484f5b16f5b50",
+      "size": 15533
+    },
+    {
+      "path": "backend/src/crm/acquisition.ts",
+      "mode": "100644",
+      "sha": "2588d1a9e26c02350e19c3e81e671809e484dda4",
+      "size": 4034
+    },
+    {
+      "path": "backend/src/crm/analytics.ts",
+      "mode": "100644",
+      "sha": "6e33853b88c8847b3257b012c88a6254492121dd",
+      "size": 3541
+    },
+    {
+      "path": "backend/src/crm/assignee-handle.ts",
+      "mode": "100644",
+      "sha": "4e5cc02afc0ddf1a7b03b34f0ee8da1de6d84706",
+      "size": 1965
+    },
+    {
+      "path": "backend/src/crm/cards.ts",
+      "mode": "100644",
+      "sha": "d368d141ebb883cbbfa2909e9c521c3864075a51",
+      "size": 10145
+    },
+    {
+      "path": "backend/src/crm/imports.ts",
+      "mode": "100644",
+      "sha": "424448cda8ef9e52fdd2309e42d72ba0b966f215",
+      "size": 12637
+    },
+    {
+      "path": "backend/src/crm/index.ts",
+      "mode": "100644",
+      "sha": "5ac08c661a68930c5f546c9059f4147d6c3711f9",
+      "size": 11988
+    },
+    {
+      "path": "backend/src/crm/insight-routes.ts",
+      "mode": "100644",
+      "sha": "f4029a867f7229d9911cd3324e9390f05feffad2",
+      "size": 5073
+    },
+    {
+      "path": "backend/src/crm/insights.ts",
+      "mode": "100644",
+      "sha": "dd8a7b7a9910903ce7d056a730fbb33f26c442a3",
+      "size": 8396
+    },
+    {
+      "path": "backend/src/crm/pipeline-routes.ts",
+      "mode": "100644",
+      "sha": "513a7e576a817c44bb77811ac1342419f5312f8a",
+      "size": 5957
+    },
+    {
+      "path": "backend/src/crm/pipeline.ts",
+      "mode": "100644",
+      "sha": "a97ae438e00ab9afdfa19d7ac87cc49bf5610591",
+      "size": 10272
+    },
+    {
+      "path": "backend/src/crm/segment-routes.ts",
+      "mode": "100644",
+      "sha": "5673b079294c620d55a4f72e8392e8cd4cbf652a",
+      "size": 7843
+    },
+    {
+      "path": "backend/src/crm/segments.ts",
+      "mode": "100644",
+      "sha": "88ecd273f33bd1e4260f2013a9fc9d5e1508e72d",
+      "size": 10290
+    },
+    {
+      "path": "backend/src/crm/timeline-routes.ts",
+      "mode": "100644",
+      "sha": "66644d693b310f36e0aab836a1e5c0e3b26e7557",
+      "size": 1073
+    },
+    {
+      "path": "backend/src/crm/timeline.ts",
+      "mode": "100644",
+      "sha": "39093deec0462610b4965a7c31c2dc9858946085",
+      "size": 11954
+    },
+    {
+      "path": "backend/src/dealers/foundation.ts",
+      "mode": "100644",
+      "sha": "4e1774180a04d450aca4c6d02273096c0ae4bd94",
+      "size": 1501
+    },
+    {
+      "path": "backend/src/gemini.ts",
+      "mode": "100644",
+      "sha": "f841a76c299a18c0b805a316607aadfa4c4675c0",
+      "size": 1054
+    },
+    {
+      "path": "backend/src/guide/context.ts",
+      "mode": "100644",
+      "sha": "68e08f8dd5ce1873b1aee6c5d3abf116f0c1a7bc",
+      "size": 16573
+    },
+    {
+      "path": "backend/src/guide/explanations/engine.ts",
+      "mode": "100644",
+      "sha": "82e3bc54758f852fd2a83e84d979ff1523dc4929",
+      "size": 4879
+    },
+    {
+      "path": "backend/src/guide/explanations/prompt.ts",
+      "mode": "100644",
+      "sha": "1dc654ec89fb00ae69752527e9706363ea49e5da",
+      "size": 6844
+    },
+    {
+      "path": "backend/src/guide/explanations/types.ts",
+      "mode": "100644",
+      "sha": "e249730743e51d85279a686b9477f54793daba97",
+      "size": 1135
+    },
+    {
+      "path": "backend/src/guide/proposals/availability.ts",
+      "mode": "100644",
+      "sha": "f379ad39a7b48b543fa9ebcc3730508b2426a9dc",
+      "size": 534
+    },
+    {
+      "path": "backend/src/guide/proposals/composite-execution.ts",
+      "mode": "100644",
+      "sha": "c0f54f66452ab17f14d7fc344638d67b53beac6b",
+      "size": 16408
+    },
+    {
+      "path": "backend/src/guide/proposals/composite-plan-persistence.ts",
+      "mode": "100644",
+      "sha": "44d135bd4f31df5cd96af6095328b395c387d189",
+      "size": 12754
+    },
+    {
+      "path": "backend/src/guide/proposals/composite-plan.ts",
+      "mode": "100644",
+      "sha": "079e4f74c1445122b8ee01936f0506fc2c7f092e",
+      "size": 14723
+    },
+    {
+      "path": "backend/src/guide/proposals/engine.ts",
+      "mode": "100644",
+      "sha": "eb1f3e1e1b182344e2f09bf9bf860b30b1228519",
+      "size": 8788
+    },
+    {
+      "path": "backend/src/guide/proposals/execution.ts",
+      "mode": "100644",
+      "sha": "d0bc38338bb5b5f894007f0129de50ecc0a6c8aa",
+      "size": 36614
+    },
+    {
+      "path": "backend/src/guide/proposals/https-probe.ts",
+      "mode": "100644",
+      "sha": "7cc31a1201cd2c5d1b78dac31c76662ae182e44f",
+      "size": 15798
+    },
+    {
+      "path": "backend/src/guide/proposals/persistence.ts",
+      "mode": "100644",
+      "sha": "ccb6a412564753c337557506033a74c1e6ff53c3",
+      "size": 14209
+    },
+    {
+      "path": "backend/src/guide/proposals/policy.ts",
+      "mode": "100644",
+      "sha": "8a8a6440842ba6f8878044c49519edf579977834",
+      "size": 20662
+    },
+    {
+      "path": "backend/src/guide/proposals/rollback.ts",
+      "mode": "100644",
+      "sha": "03dd138d23e3c055f2c97800fc88842c4b520a4a",
+      "size": 30570
+    },
+    {
+      "path": "backend/src/guide/proposals/types.ts",
+      "mode": "100644",
+      "sha": "f431f52077c8bf93c3b8017cd1cd6aa41ea36354",
+      "size": 953
+    },
+    {
+      "path": "backend/src/guide/recommendations/behavioralRules.ts",
+      "mode": "100644",
+      "sha": "cdfdb727f59da4f9c63ebf3b747b7e5569c65da3",
+      "size": 9416
+    },
+    {
+      "path": "backend/src/guide/recommendations/engine.ts",
+      "mode": "100644",
+      "sha": "983df5cb7c6f597e46a761709435da0f55a417de",
+      "size": 5030
+    },
+    {
+      "path": "backend/src/guide/recommendations/rules.ts",
+      "mode": "100644",
+      "sha": "0b230d88893448ada8ba0cb302f895ab23dc8cdc",
+      "size": 13830
+    },
+    {
+      "path": "backend/src/guide/recommendations/types.ts",
+      "mode": "100644",
+      "sha": "3a9c81a637c5f37e6172950ad0e01b5ac9febf6b",
+      "size": 2067
+    },
+    {
+      "path": "backend/src/guide/rules.ts",
+      "mode": "100644",
+      "sha": "1922deffddfa502952784ec704b2a07c28b66201",
+      "size": 5658
+    },
+    {
+      "path": "backend/src/guide/types.ts",
+      "mode": "100644",
+      "sha": "3bc3f713094be0638bf6d4eed57b08e6ba523db6",
+      "size": 2893
+    },
+    {
+      "path": "backend/src/guide/workflow-registry.ts",
+      "mode": "100644",
+      "sha": "8a4492d788a9a324b2d3fc02683da07fee66b01d",
+      "size": 1586
+    },
+    {
+      "path": "backend/src/guide/workflow.ts",
+      "mode": "100644",
+      "sha": "88bca2e08c646b80f0f6023e182a31336a468ce1",
+      "size": 2946
+    },
+    {
+      "path": "backend/src/index.ts",
+      "mode": "100644",
+      "sha": "eaa1d028769305bf0b5d5fbd84da99098d2edb98",
+      "size": 396196
+    },
+    {
+      "path": "backend/src/journey/conversion-keys.ts",
+      "mode": "100644",
+      "sha": "627caa3706bf7e8cb8d5c860a5f41d5e01ae2eea",
+      "size": 2162
+    },
+    {
+      "path": "backend/src/journey/conversion-sources.ts",
+      "mode": "100644",
+      "sha": "072cd357d678e88b693ca0f46c27a5640388f357",
+      "size": 3544
+    },
+    {
+      "path": "backend/src/journey/core.ts",
+      "mode": "100644",
+      "sha": "cb9127030d7d2e2b119f4ec7b8e7a4582ff04664",
+      "size": 4677
+    },
+    {
+      "path": "backend/src/journey/engine.ts",
+      "mode": "100644",
+      "sha": "d7ddc4c636d8ef099c9f8453f577a705859e2576",
+      "size": 3736
+    },
+    {
+      "path": "backend/src/journey/recommendations.ts",
+      "mode": "100644",
+      "sha": "c59a4adc6164c3fcf65eb3ee106cf1fc3f7823e1",
+      "size": 7245
+    },
+    {
+      "path": "backend/src/journey/tracked-uri.ts",
+      "mode": "100644",
+      "sha": "45b14dd35c576c3cc6a177157244d3a69d074b5d",
+      "size": 1437
+    },
+    {
+      "path": "backend/src/line-intelligence/service.ts",
+      "mode": "100644",
+      "sha": "14cdc6204a9f9e80a6c1a1d6f7ec19bb423747f9",
+      "size": 12973
+    },
+    {
+      "path": "backend/src/line-rich-menu.mjs",
+      "mode": "100644",
+      "sha": "ddbaa1dc348a57b406d80c0e51370cb0c49f966e",
+      "size": 5788
+    },
+    {
+      "path": "backend/src/modules/entitlements.ts",
+      "mode": "100644",
+      "sha": "70529a8d9f89589cd3c61e1d1da5a99b8501bded",
+      "size": 9423
+    },
+    {
+      "path": "backend/src/modules/routes.ts",
+      "mode": "100644",
+      "sha": "4e39f3903798e03ffa5848ff6eca155a91f9a6bf",
+      "size": 5085
+    },
+    {
+      "path": "backend/src/modules/system-workspaces.ts",
+      "mode": "100644",
+      "sha": "5314351cfedf32f974ae214250289abb6b6ed210",
+      "size": 1000
+    },
+    {
+      "path": "backend/src/openai-responses.ts",
+      "mode": "100644",
+      "sha": "5a74333265e6a16112ce94e9307d9231fb2b7235",
+      "size": 2703
+    },
+    {
+      "path": "backend/src/optimization/recommendations.ts",
+      "mode": "100644",
+      "sha": "024280869c0c03cb44463b79672f80f95a1fa9b8",
+      "size": 9361
+    },
+    {
+      "path": "backend/src/points/index.ts",
+      "mode": "100644",
+      "sha": "b70f75740aa5c7e628329b05d30364bdefa7144c",
+      "size": 11807
+    },
+    {
+      "path": "backend/src/points/reward-handle.ts",
+      "mode": "100644",
+      "sha": "c7b0b9bdbaec0223b22c11b5ed171ec86cfdbc99",
+      "size": 2968
+    },
+    {
+      "path": "backend/src/points/rewards.ts",
+      "mode": "100644",
+      "sha": "16909f2fb13986f34997f393ad4b322448bd5de0",
+      "size": 12140
+    },
+    {
+      "path": "backend/src/project-actions.mjs",
+      "mode": "100644",
+      "sha": "ca7a695f2cfa13bfac8aa136b5cc2ea8c6fba2c0",
+      "size": 1956
+    },
+    {
+      "path": "backend/src/project-line-publish-credential.ts",
+      "mode": "100644",
+      "sha": "b55c3b79e8f3c872a5de85f07f803162c42a7eb2",
+      "size": 1601
+    },
+    {
+      "path": "backend/src/referral/core.ts",
+      "mode": "100644",
+      "sha": "067c7f4dc5ec3095b890e1b893afc62a0f8fdb47",
+      "size": 4360
+    },
+    {
+      "path": "backend/src/referral/growth-api.ts",
+      "mode": "100644",
+      "sha": "59d5345fae22b3fa810724d6866713e9d2634aca",
+      "size": 3518
+    },
+    {
+      "path": "backend/src/referral/growth.ts",
+      "mode": "100644",
+      "sha": "b66bb5aed3af0029cb0d8ef883b7eaf5eef12926",
+      "size": 9872
+    },
+    {
+      "path": "backend/src/rich-menu-layout.ts",
+      "mode": "100644",
+      "sha": "f71096cadb9603462a3d0fd0022593ba78079be0",
+      "size": 5555
+    },
+    {
+      "path": "backend/src/sha256.wasm",
+      "mode": "100644",
+      "sha": "3f437fb883d05873e704310171a9e0193ab9d74f",
+      "size": 9689
+    },
+    {
+      "path": "backend/src/test.ts",
+      "mode": "100644",
+      "sha": "143286a4c1d2afcfb9af300b56abcbd9767083af",
+      "size": 220
+    },
+    {
+      "path": "backend/src/travel/member-routes.ts",
+      "mode": "100644",
+      "sha": "7529c5b105ba6037be99f1620819f973a1728ecd",
+      "size": 5918
+    },
+    {
+      "path": "backend/src/travel/milestones.ts",
+      "mode": "100644",
+      "sha": "65f8b6e7ca4bc360cca1429b230cfcdd47a0dff4",
+      "size": 3958
+    },
+    {
+      "path": "backend/src/travel/operations.ts",
+      "mode": "100644",
+      "sha": "580c55cc49b7ee9f53459b6d587e7f8b1b299503",
+      "size": 10329
+    },
+    {
+      "path": "backend/src/travel/payment-projection.ts",
+      "mode": "100644",
+      "sha": "023cd23cb969041a2204aeee3e1b94419f238586",
+      "size": 3097
+    },
+    {
+      "path": "backend/src/travel/promotion-composer.ts",
+      "mode": "100644",
+      "sha": "1396dec56d3066dbe76ae361760bc8dfb43ff637",
+      "size": 15170
+    },
+    {
+      "path": "backend/src/travel/promotion-formal-link.ts",
+      "mode": "100644",
+      "sha": "a54c8d3351e43c5154fd9d8f7130b76b9dda757e",
+      "size": 9452
+    },
+    {
+      "path": "backend/src/travel/promotion-retrieval.ts",
+      "mode": "100644",
+      "sha": "c484d204af7794f344c922aa40bbcb6e11287991",
+      "size": 12618
+    },
+    {
+      "path": "backend/src/travel/promotion-routes.ts",
+      "mode": "100644",
+      "sha": "7bc5048f1cdc01ffc69ef91b9107bc65de123890",
+      "size": 18139
+    },
+    {
+      "path": "backend/src/travel/promotion.ts",
+      "mode": "100644",
+      "sha": "5a26d9202da1a66e8c0d3ca6dac6eef815f00fbc",
+      "size": 38680
+    },
+    {
+      "path": "backend/src/travel/routes.ts",
+      "mode": "100644",
+      "sha": "616eac4d86a502010d448916470196a559787c4a",
+      "size": 10607
+    },
+    {
+      "path": "backend/src/travel/seller-commission.ts",
+      "mode": "100644",
+      "sha": "6d293667bdd41c1aab94657c7a90c5f385b27926",
+      "size": 15501
+    },
+    {
+      "path": "backend/src/travel/travel.ts",
+      "mode": "100644",
+      "sha": "aa6c8622268c3dfa114a47050cc659e5397e51ff",
+      "size": 32509
+    },
+    {
+      "path": "backend/test/ai-usage-and-plan-execution.test.mjs",
+      "mode": "100644",
+      "sha": "f663985d3f78ee2ebef651a111867b148f750297",
+      "size": 19590
+    },
+    {
+      "path": "backend/test/behavior-ai-safety.test.mjs",
+      "mode": "100644",
+      "sha": "9557b275a8b68efa74ea11a8ed114b663c9402e6",
+      "size": 3683
+    },
+    {
+      "path": "backend/test/behavioral-completion.test.mjs",
+      "mode": "100644",
+      "sha": "25cb4d0a7a3e908a3da984d71d9b180abf383b5d",
+      "size": 808
+    },
+    {
+      "path": "backend/test/campaign-audience-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "89f3ae9921ff652d82c43a326620fdce54c5ffe4",
+      "size": 3331
+    },
+    {
+      "path": "backend/test/campaign-execution-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "908b39a286ff10c35e8d220ba0ac9075c3fcff41",
+      "size": 16187
+    },
+    {
+      "path": "backend/test/campaign-execution-retry-authority.test.mjs",
+      "mode": "100644",
+      "sha": "1bc0a23714d389efec1120db8d1f92aec918eeed",
+      "size": 4385
+    },
+    {
+      "path": "backend/test/campaign-prepare-contract.test.mjs",
+      "mode": "100644",
+      "sha": "d8e1a8998274020c1abb6e77114bbe07191626da",
+      "size": 9505
+    },
+    {
+      "path": "backend/test/commerce-order-payment-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "823ba8479ebb0c2ec7d40ac623e9fa741f984772",
+      "size": 7766
+    },
+    {
+      "path": "backend/test/commerce-travel-offer-payment-legs.test.mjs",
+      "mode": "100644",
+      "sha": "e1a273e0079f52e92e46ba504f21c410e9b47031",
+      "size": 14658
+    },
+    {
+      "path": "backend/test/commission-attribution-read-api.test.mjs",
+      "mode": "100644",
+      "sha": "8029208fd118bcb4c742dc844035e3f41f356860",
+      "size": 6533
+    },
+    {
+      "path": "backend/test/commission-attribution.test.mjs",
+      "mode": "100644",
+      "sha": "724b7a8d74613278fbe5bd4ba89543f16eaeccd5",
+      "size": 8560
+    },
+    {
+      "path": "backend/test/commission-calculation-ledger.test.mjs",
+      "mode": "100644",
+      "sha": "930c33c3b1e4c72fe2d0cc862129c429b25f9491",
+      "size": 7517
+    },
+    {
+      "path": "backend/test/commission-ledger-read-api.test.mjs",
+      "mode": "100644",
+      "sha": "fdd2e63789dafed1f9a50e86e94403896985a695",
+      "size": 5204
+    },
+    {
+      "path": "backend/test/commission-payment-execution-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "9a8508de2c2c30753538b8f23d358deb9f4e000a",
+      "size": 6378
+    },
+    {
+      "path": "backend/test/commission-payout-request-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "eb907f352a86b041d9d7e777ee22afd403facc25",
+      "size": 6874
+    },
+    {
+      "path": "backend/test/commission-program-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "d543b8f7eb91f64e4e85ba06e4651b15a72aa41a",
+      "size": 5568
+    },
+    {
+      "path": "backend/test/commission-settlement-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "b1d5fdfd85c24c717b9c8d6e0b5dfe52758c5995",
+      "size": 6819
+    },
+    {
+      "path": "backend/test/composite-operation-plan.test.mjs",
+      "mode": "100644",
+      "sha": "80c7ca6aef7a95f39451ce90d94d7fc89ba5239e",
+      "size": 16671
+    },
+    {
+      "path": "backend/test/contribution-tier-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "2550fd29dd386c4cf5ef2f47103f8e2fb005213d",
+      "size": 4702
+    },
+    {
+      "path": "backend/test/conversion-referral-evidence-bridge.test.mjs",
+      "mode": "100644",
+      "sha": "550c043d2b0c1cebdb566a2aa758df84aae5f496",
+      "size": 3917
+    },
+    {
+      "path": "backend/test/conversion-sources.test.mjs",
+      "mode": "100644",
+      "sha": "088bf689358b6345c5d6eedabed91e7f27c96dc3",
+      "size": 4797
+    },
+    {
+      "path": "backend/test/crm-acquisition-relationship.test.mjs",
+      "mode": "100644",
+      "sha": "2fda7f68c265117ed2268502484cf589efe56ea1",
+      "size": 1361
+    },
+    {
+      "path": "backend/test/crm-analytics-segments.test.mjs",
+      "mode": "100644",
+      "sha": "1dde722a4a95e2133a9b1252a4c6ff1e111dedfc",
+      "size": 4674
+    },
+    {
+      "path": "backend/test/crm-assignee-picker.test.mjs",
+      "mode": "100644",
+      "sha": "b75de1b5c8b58105fb3e544c3336a3f193d2a98a",
+      "size": 909
+    },
+    {
+      "path": "backend/test/crm-card-collection-share.test.mjs",
+      "mode": "100644",
+      "sha": "348bbd0654d05862b8b1bb7753125a83b7a2910f",
+      "size": 1926
+    },
+    {
+      "path": "backend/test/crm-import-dedup-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "26ff9f8ddd867f1f47666b4677f99d3dbc758db0",
+      "size": 1849
+    },
+    {
+      "path": "backend/test/crm-person-profile-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "f61d8f286896857be1ea8de5d79d23cd5697002a",
+      "size": 9872
+    },
+    {
+      "path": "backend/test/crm-pipeline-followup.test.mjs",
+      "mode": "100644",
+      "sha": "0b1bad585d2b72b352f5a8db498f7480b95664b6",
+      "size": 2791
+    },
+    {
+      "path": "backend/test/crm-tags-insights-traits.test.mjs",
+      "mode": "100644",
+      "sha": "0569a45a673157a63e43f7996d2d8dbe8ae444a6",
+      "size": 2906
+    },
+    {
+      "path": "backend/test/crm-tenant-card-read.test.mjs",
+      "mode": "100644",
+      "sha": "794d52505c6946cc3996df6f6824c24828044891",
+      "size": 996
+    },
+    {
+      "path": "backend/test/crm-unified-timeline.test.mjs",
+      "mode": "100644",
+      "sha": "c12a695dfe76ba673ba335c4b71322497dc4fe45",
+      "size": 3780
+    },
+    {
+      "path": "backend/test/dealer-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "b0c273c3f149b2e34576152fdaf61a1ed08aff82",
+      "size": 3997
+    },
+    {
+      "path": "backend/test/dealer-payout-request-handle.test.mjs",
+      "mode": "100644",
+      "sha": "9cbee35139aaba4852625812d0730e8863b6bf7a",
+      "size": 4244
+    },
+    {
+      "path": "backend/test/dealer-settlement-read-api.test.mjs",
+      "mode": "100644",
+      "sha": "2ac646d8d3b265e7a289043052efc34c4a8103b0",
+      "size": 4939
+    },
+    {
+      "path": "backend/test/gemini-platform-key.test.mjs",
+      "mode": "100644",
+      "sha": "20f2667061dd6cfdbb3df5e50a6537e9c64d291e",
+      "size": 4320
+    },
+    {
+      "path": "backend/test/guide-rules.test.mjs",
+      "mode": "100644",
+      "sha": "9fbdc8fe116e3cb80fb8e29491195fc8df64478e",
+      "size": 6189
+    },
+    {
+      "path": "backend/test/guide-workflow.test.mjs",
+      "mode": "100644",
+      "sha": "ac5b4d3bae6feb91547a1bb215df19723608badc",
+      "size": 5576
+    },
+    {
+      "path": "backend/test/journey-aggregation.test.mjs",
+      "mode": "100644",
+      "sha": "e3be85e5b36bfb52a4b308966f4c2067c9b6cc36",
+      "size": 5221
+    },
+    {
+      "path": "backend/test/journey-attribution.test.mjs",
+      "mode": "100644",
+      "sha": "9cab2546097030a23d303025eb4b9b1dccd79a02",
+      "size": 1698
+    },
+    {
+      "path": "backend/test/journey-closeout.test.mjs",
+      "mode": "100644",
+      "sha": "8cf129d681f818f26d55256e469eed69494a2bb1",
+      "size": 7055
+    },
+    {
+      "path": "backend/test/line-intelligence.test.mjs",
+      "mode": "100644",
+      "sha": "c23061cc8e82561510b4d35499f4fb0b26a3b318",
+      "size": 3423
+    },
+    {
+      "path": "backend/test/line-publish-credential-authority.test.mjs",
+      "mode": "100644",
+      "sha": "f6790838bec564e262599131b7f12c155ac7f462",
+      "size": 8311
+    },
+    {
+      "path": "backend/test/line-rich-menu.test.mjs",
+      "mode": "100644",
+      "sha": "7e547c3ee6d597ffcc5127dc0d61477c0b2cec5f",
+      "size": 3806
+    },
+    {
+      "path": "backend/test/media-model-routing.test.mjs",
+      "mode": "100644",
+      "sha": "91f133e1411fbeb618496bf0cde515d1f7d8d188",
+      "size": 1750
+    },
+    {
+      "path": "backend/test/member-self-commerce-contract.test.mjs",
+      "mode": "100644",
+      "sha": "a331bafe214f0798db6cc9c0d479ddcde3fa9a59",
+      "size": 7570
+    },
+    {
+      "path": "backend/test/module-entitlement-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "d5b27d3d964247d371b8fe727b94c646a9630e15",
+      "size": 17687
+    },
+    {
+      "path": "backend/test/module-entitlement-production-contract.test.mjs",
+      "mode": "100644",
+      "sha": "12130ed373e4280493619163956a674196cb8b67",
+      "size": 4773
+    },
+    {
+      "path": "backend/test/openai-responses-routing.test.mjs",
+      "mode": "100644",
+      "sha": "a4b9280209014461df6ab0ca87eabb7baef52449",
+      "size": 1779
+    },
+    {
+      "path": "backend/test/optimization-intelligence.test.mjs",
+      "mode": "100644",
+      "sha": "eaa513a7bf25b28405c631d09e668b7ce52e4eeb",
+      "size": 6255
+    },
+    {
+      "path": "backend/test/project-actions.test.mjs",
+      "mode": "100644",
+      "sha": "e1a5a622803090e69c9c402b64c3e2f47dafa46d",
+      "size": 2250
+    },
+    {
+      "path": "backend/test/proposal-https-execution.test.mjs",
+      "mode": "100644",
+      "sha": "525389873e28be9260db63e332b409136f1471c3",
+      "size": 21817
+    },
+    {
+      "path": "backend/test/proposal-lifecycle.test.mjs",
+      "mode": "100644",
+      "sha": "7a750d8a335f93327e4fc6d3d5396b80f2f37680",
+      "size": 9992
+    },
+    {
+      "path": "backend/test/proposal-operation.test.mjs",
+      "mode": "100644",
+      "sha": "b09c3483df4bdeba131e3980a6fcf5ef8b2118be",
+      "size": 13685
+    },
+    {
+      "path": "backend/test/proposal-policy.test.mjs",
+      "mode": "100644",
+      "sha": "3493a922f21e766f10eba126819a359a44fa0c5b",
+      "size": 10489
+    },
+    {
+      "path": "backend/test/proposal-rollback.test.mjs",
+      "mode": "100644",
+      "sha": "7204ffacab2b7c60bff7e847b309a19513c958e5",
+      "size": 12271
+    },
+    {
+      "path": "backend/test/proposals.test.mjs",
+      "mode": "100644",
+      "sha": "feee605d85a80a6d651dca2b6de4604193211163",
+      "size": 10649
+    },
+    {
+      "path": "backend/test/recommendation-explanations.test.mjs",
+      "mode": "100644",
+      "sha": "981d5b48de3933cfb27a819e97d5ab90b8c42539",
+      "size": 8084
+    },
+    {
+      "path": "backend/test/recommendations.test.mjs",
+      "mode": "100644",
+      "sha": "35aa9d96eb598a59531a54db7e4550f93c8c49cd",
+      "size": 8820
+    },
+    {
+      "path": "backend/test/referral-authentication.todo.md",
+      "mode": "100644",
+      "sha": "948b497977f4c536efa25e320d1126ac58e05499",
+      "size": 236
+    },
+    {
+      "path": "backend/test/referral-five-stage.test.mjs",
+      "mode": "100644",
+      "sha": "1ff995e2711a2fc2001b83bd2a37cdb8f98ffa08",
+      "size": 5759
+    },
+    {
+      "path": "backend/test/referral-growth-closeout.test.mjs",
+      "mode": "100644",
+      "sha": "7c15e96ad59171de79bb468b9a73d6ea627b1524",
+      "size": 2548
+    },
+    {
+      "path": "backend/test/referral-growth.test.mjs",
+      "mode": "100644",
+      "sha": "f645d9c53cbdfff635e93ab3ea84c29571251d7d",
+      "size": 4422
+    },
+    {
+      "path": "backend/test/referral-landing-dedupe.todo.md",
+      "mode": "100644",
+      "sha": "e2f9965232f876891b475a5ca6981367131da334",
+      "size": 363
+    },
+    {
+      "path": "backend/test/referral-member-growth.test.mjs",
+      "mode": "100644",
+      "sha": "9ea1b84d30c4251de2a17d06bd39df9d18bfc895",
+      "size": 2175
+    },
+    {
+      "path": "backend/test/referral-member.todo.md",
+      "mode": "100644",
+      "sha": "bf40e6ce714bb14c8ba846a2bf5c67db8a0f8258",
+      "size": 312
+    },
+    {
+      "path": "backend/test/referral-qualification.test.mjs",
+      "mode": "100644",
+      "sha": "e050582adbd2098accb38102ae49eef7c479c8b1",
+      "size": 2672
+    },
+    {
+      "path": "backend/test/referral-qualification.todo.md",
+      "mode": "100644",
+      "sha": "d6820060ecb779086ba1fcbf1831fbb9716df2a5",
+      "size": 884
+    },
+    {
+      "path": "backend/test/reward-redemption-route-wiring.test.mjs",
+      "mode": "100644",
+      "sha": "11474e7dc2bf795c5e10855922fd0f4ec13de51c",
+      "size": 6111
+    },
+    {
+      "path": "backend/test/rich-menu-compact-layout.test.mjs",
+      "mode": "100644",
+      "sha": "81cb288a4c1724a5064a648d4b566aa4fb4601ff",
+      "size": 5972
+    },
+    {
+      "path": "backend/test/rich-menu-publish-contract.test.mjs",
+      "mode": "100644",
+      "sha": "f37cf5fbc155f94fd5626009d6a3ecfcf929164a",
+      "size": 5444
+    },
+    {
+      "path": "backend/test/tracked-uri-attribution.test.mjs",
+      "mode": "100644",
+      "sha": "b6619177cd71a1fb1bc655478f733c77c283f299",
+      "size": 2593
+    },
+    {
+      "path": "backend/test/travel-departure-operations-read.test.mjs",
+      "mode": "100644",
+      "sha": "a11b8f6916ee8a3920167316b057a2f54a35e92a",
+      "size": 10217
+    },
+    {
+      "path": "backend/test/travel-itinerary-departure-booking-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "be70c411e047336795bcdfcdf7eab9e182b3be3b",
+      "size": 9961
+    },
+    {
+      "path": "backend/test/travel-operational-milestones.test.mjs",
+      "mode": "100644",
+      "sha": "0b919c769556580bfcc8ee6d5927f9627915845f",
+      "size": 10525
+    },
+    {
+      "path": "backend/test/travel-operations-architecture.test.mjs",
+      "mode": "100644",
+      "sha": "6a0c71cd0cd4b7cbe8b86a91648e0ab883c6b92d",
+      "size": 2877
+    },
+    {
+      "path": "backend/test/travel-promotion-composer-campaign-adapter.test.mjs",
+      "mode": "100644",
+      "sha": "287c2327495f7630b2e3049b0500b8ccedc93766",
+      "size": 8187
+    },
+    {
+      "path": "backend/test/travel-promotion-entitlement-boundary.test.mjs",
+      "mode": "100644",
+      "sha": "6595eb6fef1545cbf2da5adc461c06f306db2d37",
+      "size": 3511
+    },
+    {
+      "path": "backend/test/travel-promotion-formal-link.test.mjs",
+      "mode": "100644",
+      "sha": "3b52db65876435707cb9e8e9e446098a66fbe812",
+      "size": 13234
+    },
+    {
+      "path": "backend/test/travel-promotion-intelligence-architecture.test.mjs",
+      "mode": "100644",
+      "sha": "b2c96f26983b0da98facaf6c76d8978d5ef2d6c8",
+      "size": 3775
+    },
+    {
+      "path": "backend/test/travel-promotion-knowledge-foundation.test.mjs",
+      "mode": "100644",
+      "sha": "0370bbdd928a581db86c0f25812ef5a1f58841ed",
+      "size": 15224
+    },
+    {
+      "path": "backend/test/travel-promotion-retrieval.test.mjs",
+      "mode": "100644",
+      "sha": "a22afaa244abe9c358033e65da83e009daf7bfa0",
+      "size": 8177
+    },
+    {
+      "path": "backend/test/travel-seller-commission-bridge.test.mjs",
+      "mode": "100644",
+      "sha": "49ccdaa2c7c80e3cbec4915fca5301ac86f73c5f",
+      "size": 12632
+    },
+    {
+      "path": "backend/test/travel-ui-contract-completion.test.mjs",
+      "mode": "100644",
+      "sha": "56ea35e6edeb47a8942ea77a8f93155c36f36223",
+      "size": 9540
+    },
+    {
+      "path": "backend/test/travelkeeper-architecture-adapter.test.mjs",
+      "mode": "100644",
+      "sha": "2222f968d59822dd747f0404705b4de9c41a5cc2",
+      "size": 3661
+    },
+    {
+      "path": "backend/tsconfig.campaign.json",
+      "mode": "100644",
+      "sha": "47e61fd923d9eaee011ac345f72f52f0281c5dca",
+      "size": 565
+    },
+    {
+      "path": "backend/tsconfig.commerce.json",
+      "mode": "100644",
+      "sha": "bd62eb969f8c1ae9d16117f84f1d46969abdc8e9",
+      "size": 442
+    },
+    {
+      "path": "backend/tsconfig.json",
+      "mode": "100644",
+      "sha": "23345376b79ccece18d4150fcbb41e574fb2a8d5",
+      "size": 253
+    },
+    {
+      "path": "backend/tsconfig.modules.json",
+      "mode": "100644",
+      "sha": "a3b0cb6ac4113b53bf0280c1bc1a28282e032c97",
+      "size": 287
+    },
+    {
+      "path": "backend/tsconfig.travel.json",
+      "mode": "100644",
+      "sha": "460e8ef6db3185a4e5070d05b0bc66cdaa64aca2",
+      "size": 577
+    },
+    {
+      "path": "backend/wrangler.jsonc",
+      "mode": "100644",
+      "sha": "55a18de028e0f33e67d5836fd49ed733b3a94bfb",
+      "size": 1126
+    },
+    {
+      "path": "frontend/.env.example",
+      "mode": "100644",
+      "sha": "9f964d9a6f027b7ece1f689f15f02d5ad5acc0f4",
+      "size": 179
+    },
+    {
+      "path": "frontend/.gitignore",
+      "mode": "100644",
+      "sha": "d4a1b2ea9fc88b52bc707618464505201e540d72",
+      "size": 331
+    },
+    {
+      "path": "frontend/.oxlintrc.json",
+      "mode": "100644",
+      "sha": "1255078235d0ce4e80ac34866d5ce2af89aa6220",
+      "size": 231
+    },
+    {
+      "path": "frontend/README.md",
+      "mode": "100644",
+      "sha": "d937833bd5b8c9cfc5978ab9f0fcfd68d4d8b42c",
+      "size": 1009
+    },
+    {
+      "path": "frontend/fix-linehub.ps1",
+      "mode": "100644",
+      "sha": "8806d95615495bf16aba3e5599bc9f9a322db7ff",
+      "size": 3846
+    },
+    {
+      "path": "frontend/index.html",
+      "mode": "100644",
+      "sha": "6506bdd0ffbbcbd0ee8659ea6c7cd958669af4ed",
+      "size": 371
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "mode": "100644",
+      "sha": "c7f69306aab4235c695eca9e663c12ec31127c1b",
+      "size": 118551
+    },
+    {
+      "path": "frontend/package.json",
+      "mode": "100644",
+      "sha": "fa0000f4766642f2ebd1be8c42bffe1a7574a897",
+      "size": 805
+    },
+    {
+      "path": "frontend/postcss.config.js",
+      "mode": "100644",
+      "sha": "522a958748b1a5c112474220cf4d89b387a95099",
+      "size": 71
+    },
+    {
+      "path": "frontend/public/favicon.svg",
+      "mode": "100644",
+      "sha": "6893eb13237060adc0c968a690149a49faa2d7d3",
+      "size": 9522
+    },
+    {
+      "path": "frontend/public/icons.svg",
+      "mode": "100644",
+      "sha": "e9522193d9f796a9748e9ad8c952a5df73c87db9",
+      "size": 5031
+    },
+    {
+      "path": "frontend/src/App.jsx",
+      "mode": "100644",
+      "sha": "bec4e5e170fbfa49a2859558be6d6b92c6182762",
+      "size": 232136
+    },
+    {
+      "path": "frontend/src/App.jsx.backup",
+      "mode": "100644",
+      "sha": "edbcee5496195d5c54a3fd7f04477a27ec9614c9",
+      "size": 107205
+    },
+    {
+      "path": "frontend/src/assets/hero.png",
+      "mode": "100644",
+      "sha": "02251f4b956c55af2d76fd0788124d7eee2b45eb",
+      "size": 13057
+    },
+    {
+      "path": "frontend/src/assets/react.svg",
+      "mode": "100644",
+      "sha": "6c87de9bb3358469122cc991d5cf578927246184",
+      "size": 4126
+    },
+    {
+      "path": "frontend/src/assets/vite.svg",
+      "mode": "100644",
+      "sha": "5101b674df391399da71c767aa5c976426c9dc7a",
+      "size": 8709
+    },
+    {
+      "path": "frontend/src/commission-source-presentation.js",
+      "mode": "100644",
+      "sha": "dd224edf8314dfcfe39caa0d3a66503c482e14fc",
+      "size": 366
+    },
+    {
+      "path": "frontend/src/components/AIUsagePanel.jsx",
+      "mode": "100644",
+      "sha": "69f29a9da519bb88ad91f2b6edc5521bb2ec4f8d",
+      "size": 6492
+    },
+    {
+      "path": "frontend/src/components/CampaignAudiencePanel.jsx",
+      "mode": "100644",
+      "sha": "f6c7b8140bb6d943fef2df5788300d6f8e174579",
+      "size": 13310
+    },
+    {
+      "path": "frontend/src/components/CampaignDeliveryList.jsx",
+      "mode": "100644",
+      "sha": "cd2a17d497c35401c3ad9c65d4556cb31149d8f3",
+      "size": 2118
+    },
+    {
+      "path": "frontend/src/components/CampaignEditor.jsx",
+      "mode": "100644",
+      "sha": "d358ebaf4eeb27f0e89015a3270a496cfc9a2f22",
+      "size": 10853
+    },
+    {
+      "path": "frontend/src/components/CampaignExecutionHistory.jsx",
+      "mode": "100644",
+      "sha": "aee88d116d8c215ef0c98ec26f5f3ad0821168c3",
+      "size": 2050
+    },
+    {
+      "path": "frontend/src/components/CampaignExecutionPanel.jsx",
+      "mode": "100644",
+      "sha": "58a4d1b2a00db81516412deac90de88c16591dcd",
+      "size": 13575
+    },
+    {
+      "path": "frontend/src/components/CampaignWorkspace.jsx",
+      "mode": "100644",
+      "sha": "e53f35f7bef49f21cc3084f9417739d7d590184b",
+      "size": 7421
+    },
+    {
+      "path": "frontend/src/components/CommerceAdminWorkspace.jsx",
+      "mode": "100644",
+      "sha": "4e67621831ce3a0b83d76370b4746cff2e839b66",
+      "size": 14259
+    },
+    {
+      "path": "frontend/src/components/CommissionAttributionPanel.jsx",
+      "mode": "100644",
+      "sha": "613dee561a3d177de7154d1d5a0e80e9aa08ff91",
+      "size": 5742
+    },
+    {
+      "path": "frontend/src/components/CommissionLedgerPanel.jsx",
+      "mode": "100644",
+      "sha": "729f72b2bbe71a0f0e6bdf0046ab2b26ffce98ae",
+      "size": 5317
+    },
+    {
+      "path": "frontend/src/components/ContributionTierPanel.jsx",
+      "mode": "100644",
+      "sha": "504b8388bab8e40c5a2454f6431e6680857481d3",
+      "size": 8179
+    },
+    {
+      "path": "frontend/src/components/ConversionApiKeyPanel.jsx",
+      "mode": "100644",
+      "sha": "a89b8db2141c201828c038d7a1a82d4246890905",
+      "size": 5860
+    },
+    {
+      "path": "frontend/src/components/CrmAnalyticsPanel.jsx",
+      "mode": "100644",
+      "sha": "707657f75b3eb82cfe1088b03380405bcda1541e",
+      "size": 14039
+    },
+    {
+      "path": "frontend/src/components/CrmInsightsTraitsPanel.jsx",
+      "mode": "100644",
+      "sha": "c7380ebc5eb4369a6e528bd934b3ba3b88bba453",
+      "size": 9909
+    },
+    {
+      "path": "frontend/src/components/CrmPipelinePanel.jsx",
+      "mode": "100644",
+      "sha": "c2b5ddc534bb8e26b4f8f033189cb23f98e7d6e7",
+      "size": 13279
+    },
+    {
+      "path": "frontend/src/components/CrmTimelinePanel.jsx",
+      "mode": "100644",
+      "sha": "3a1c48059c4d06066cc7886ab9b8d1bc9d2af43b",
+      "size": 6135
+    },
+    {
+      "path": "frontend/src/components/CrmWorkspace.jsx",
+      "mode": "100644",
+      "sha": "0397d1739b67a0a5b67eaa27ca1e03a0122213e6",
+      "size": 14989
+    },
+    {
+      "path": "frontend/src/components/DealerSettlementPayoutPanel.jsx",
+      "mode": "100644",
+      "sha": "6fce54588481f30e3f76b2cdc5f76dead700dc36",
+      "size": 11920
+    },
+    {
+      "path": "frontend/src/components/DepartureOperationsPanel.jsx",
+      "mode": "100644",
+      "sha": "cb340664d72057be6a6293d5a520ad4e4cbe6436",
+      "size": 10086
+    },
+    {
+      "path": "frontend/src/components/JourneyIntelligencePanel.jsx",
+      "mode": "100644",
+      "sha": "0ba5a9901b36e90c90eccd71ee6c58c4c0bc33dd",
+      "size": 5916
+    },
+    {
+      "path": "frontend/src/components/LiffCommercePage.jsx",
+      "mode": "100644",
+      "sha": "e5c48484931f79b599c604b73fcd41c2f972cb7e",
+      "size": 20098
+    },
+    {
+      "path": "frontend/src/components/LiffReferralConfigPanel.jsx",
+      "mode": "100644",
+      "sha": "f875a790bf5db929ed918c783307a384eb841b4f",
+      "size": 3863
+    },
+    {
+      "path": "frontend/src/components/LiffReferralPage.jsx",
+      "mode": "100644",
+      "sha": "62c5665531a64150d5d13d018a497d108e123c8a",
+      "size": 21129
+    },
+    {
+      "path": "frontend/src/components/LiffTravelPage.jsx",
+      "mode": "100644",
+      "sha": "1373aac504b705ad2eaa6b5f0c8bf6aeba987199",
+      "size": 21625
+    },
+    {
+      "path": "frontend/src/components/LineIntelligenceHealthPanel.jsx",
+      "mode": "100644",
+      "sha": "22e5db07bcaad3b62d4b43dec9a59438483d6a5a",
+      "size": 9139
+    },
+    {
+      "path": "frontend/src/components/LineIntelligencePanel.jsx",
+      "mode": "100644",
+      "sha": "ccf4df28e95aabc96ae902eea708f3eb6843ff1e",
+      "size": 7203
+    },
+    {
+      "path": "frontend/src/components/MemberContributionTierPanel.jsx",
+      "mode": "100644",
+      "sha": "ef7cfd9b8e033769d1233f96126ef6be23993a4d",
+      "size": 3887
+    },
+    {
+      "path": "frontend/src/components/MemberRewardRedemptionPanel.jsx",
+      "mode": "100644",
+      "sha": "82d4e49fc3c7ff7a1c1d1c7912f668cff32abd97",
+      "size": 4559
+    },
+    {
+      "path": "frontend/src/components/ModuleEntitlementToggle.jsx",
+      "mode": "100644",
+      "sha": "8289b5219d7f99bf49e28bcad4af792f64acb98d",
+      "size": 1221
+    },
+    {
+      "path": "frontend/src/components/OperationPlanManagement.jsx",
+      "mode": "100644",
+      "sha": "4fcd1972ca30ab7ebc914c68948e0160bbdda4c9",
+      "size": 25536
+    },
+    {
+      "path": "frontend/src/components/OptimizationIntelligencePanel.jsx",
+      "mode": "100644",
+      "sha": "639dbc834622d3744d293865b03cdee4dded6293",
+      "size": 3437
+    },
+    {
+      "path": "frontend/src/components/ProposalManagement.jsx",
+      "mode": "100644",
+      "sha": "492ce584b611ae2073313cba7af518467179a1a8",
+      "size": 40519
+    },
+    {
+      "path": "frontend/src/components/RecommendationSection.jsx",
+      "mode": "100644",
+      "sha": "578d1016f5e22caa219738b3d4210cbdeceae504",
+      "size": 19547
+    },
+    {
+      "path": "frontend/src/components/ReferralGrowthHealthPanel.jsx",
+      "mode": "100644",
+      "sha": "c5cf862c2cad2f519720efc2f37f22014af2e4fb",
+      "size": 4334
+    },
+    {
+      "path": "frontend/src/components/ReferralGrowthPanel.jsx",
+      "mode": "100644",
+      "sha": "35b1d6b9bd9f4600232f74dd98227e474f3a39e1",
+      "size": 4361
+    },
+    {
+      "path": "frontend/src/components/RewardRedemptionPanel.jsx",
+      "mode": "100644",
+      "sha": "7f4172915d9802e25d50cbd5d93e8ee030c8dd45",
+      "size": 6239
+    },
+    {
+      "path": "frontend/src/components/SmartGuide.jsx",
+      "mode": "100644",
+      "sha": "018f899a4b24733af0753f34a97f4713cc264287",
+      "size": 10648
+    },
+    {
+      "path": "frontend/src/components/SystemWorkspaceModules.jsx",
+      "mode": "100644",
+      "sha": "2b5e120e6fc9833d90163c01d0a1573ebb49be69",
+      "size": 9093
+    },
+    {
+      "path": "frontend/src/components/TenantSettlementPayoutPanel.jsx",
+      "mode": "100644",
+      "sha": "cbdad75318d4432c21a063ed9c2750ec1d4cba4a",
+      "size": 12360
+    },
+    {
+      "path": "frontend/src/components/TrackedUriTool.jsx",
+      "mode": "100644",
+      "sha": "690cd4ad62387a82ae4486fb5e8ebc7de5879c87",
+      "size": 2202
+    },
+    {
+      "path": "frontend/src/components/TravelPromotionExtractionEditor.jsx",
+      "mode": "100644",
+      "sha": "dbdb946c083a826e17262ca0dc7ee80f44045521",
+      "size": 6330
+    },
+    {
+      "path": "frontend/src/components/TravelPromotionWorkspace.jsx",
+      "mode": "100644",
+      "sha": "e6a2d85166090b6fe3205aa8b839efba75560d31",
+      "size": 51667
+    },
+    {
+      "path": "frontend/src/components/TravelWorkspace.jsx",
+      "mode": "100644",
+      "sha": "8140271204bf76f6ce02a33315def545ce183273",
+      "size": 29319
+    },
+    {
+      "path": "frontend/src/components/WorkspaceModuleProvider.jsx",
+      "mode": "100644",
+      "sha": "8d740d9af057a57cb195be69e3eecfcbe69f3c97",
+      "size": 2781
+    },
+    {
+      "path": "frontend/src/guide-events.js",
+      "mode": "100644",
+      "sha": "aeeb395b2d08be9a0771ab95550ef605cda72046",
+      "size": 296
+    },
+    {
+      "path": "frontend/src/index.css",
+      "mode": "100644",
+      "sha": "a461c505f1f0c24ab12240ac3f7fa374dfa237fb",
+      "size": 22
+    },
+    {
+      "path": "frontend/src/index.ts",
+      "mode": "100644",
+      "sha": "477062fe14fbbaed4f22453835fb2028e806bc2a",
+      "size": 87977
+    },
+    {
+      "path": "frontend/src/liff-referral.js",
+      "mode": "100644",
+      "sha": "7d0fa07ed2d156644e4ed0dd38b87a70df0f239b",
+      "size": 1585
+    },
+    {
+      "path": "frontend/src/main.jsx",
+      "mode": "100644",
+      "sha": "b9a1a6deac8775b5598874b2bc3c7971d82cf211",
+      "size": 229
+    },
+    {
+      "path": "frontend/src/module-entitlements.js",
+      "mode": "100644",
+      "sha": "114c89ded285ed4cf4089acc5c89ba0f305d2e69",
+      "size": 2408
+    },
+    {
+      "path": "frontend/src/referral-flow.js",
+      "mode": "100644",
+      "sha": "9df42814e328f59d2c9d3f1d4e88be00a5bddb37",
+      "size": 910
+    },
+    {
+      "path": "frontend/src/travel-operations-presentation.js",
+      "mode": "100644",
+      "sha": "235467a0590bb02354829be7d6aba341aa0be1f8",
+      "size": 2032
+    },
+    {
+      "path": "frontend/src/travel-presentation.js",
+      "mode": "100644",
+      "sha": "e267cbb389732ee34f8340d11c21ab58f13c704c",
+      "size": 2021
+    },
+    {
+      "path": "frontend/src/travel-promotion-presentation.js",
+      "mode": "100644",
+      "sha": "03217394fcaa018894d8022d570a322fadfd7685",
+      "size": 3429
+    },
+    {
+      "path": "frontend/src/travel-seller-presentation.js",
+      "mode": "100644",
+      "sha": "0bfc29ac7947f2b03ee7cf165bce16224c47a2b8",
+      "size": 922
+    },
+    {
+      "path": "frontend/src/utils/campaignExecutionPresentation.js",
+      "mode": "100644",
+      "sha": "44a84e4cd7db41c42cc857fede69edff67b7f659",
+      "size": 1254
+    },
+    {
+      "path": "frontend/src/utils/presentationLabels.js",
+      "mode": "100644",
+      "sha": "c6fd066a92ca0b6fdcf60974c10d8381a99b32a7",
+      "size": 1625
+    },
+    {
+      "path": "frontend/src/新增 文字文件.txt",
+      "mode": "100644",
+      "sha": "a461c505f1f0c24ab12240ac3f7fa374dfa237fb",
+      "size": 22
+    },
+    {
+      "path": "frontend/tailwind.config.js",
+      "mode": "100644",
+      "sha": "cd333aa8841b53823123085acc282434baf96c4f",
+      "size": 185
+    },
+    {
+      "path": "frontend/test/campaign-builder-ui.test.mjs",
+      "mode": "100644",
+      "sha": "02fd34af81d582438697d865c6f2cb6a96f192cc",
+      "size": 7762
+    },
+    {
+      "path": "frontend/test/campaign-execution-ui.test.mjs",
+      "mode": "100644",
+      "sha": "84ca5f1be63a8928eb58c7156cbea74745838f1e",
+      "size": 9277
+    },
+    {
+      "path": "frontend/test/commerce-checkout-ui.test.mjs",
+      "mode": "100644",
+      "sha": "23bff0afd89b337d32bf30aea1bc3546857f94d6",
+      "size": 6029
+    },
+    {
+      "path": "frontend/test/commission-attribution-panel.test.mjs",
+      "mode": "100644",
+      "sha": "71966d6c9789daf98ed92427937a3580f22fd2b8",
+      "size": 2098
+    },
+    {
+      "path": "frontend/test/commission-ledger-panel.test.mjs",
+      "mode": "100644",
+      "sha": "b5e7bae6988be67167f2739876cd959bddfd2a31",
+      "size": 1841
+    },
+    {
+      "path": "frontend/test/contribution-tier-ui.test.mjs",
+      "mode": "100644",
+      "sha": "d99db1b9bf9b365ee5800d7eeee90a8cbc3435fe",
+      "size": 3077
+    },
+    {
+      "path": "frontend/test/crm-analytics-panel.test.mjs",
+      "mode": "100644",
+      "sha": "8de84ab1e99a562dd4077c91c5d12f9a4ba5e161",
+      "size": 2860
+    },
+    {
+      "path": "frontend/test/crm-insights-traits-ui.test.mjs",
+      "mode": "100644",
+      "sha": "1e13c4b9f1f7ecf7391abff4439ff5f03f1f26f1",
+      "size": 2872
+    },
+    {
+      "path": "frontend/test/crm-pipeline-ui.test.mjs",
+      "mode": "100644",
+      "sha": "717f01a299844ee058069ac65663bc050cc80b25",
+      "size": 2276
+    },
+    {
+      "path": "frontend/test/crm-timeline-ui.test.mjs",
+      "mode": "100644",
+      "sha": "e69c6bac872db07cf1d10690a46ab25a8e2b8b8f",
+      "size": 2304
+    },
+    {
+      "path": "frontend/test/crm-workspace.test.mjs",
+      "mode": "100644",
+      "sha": "f233fa0c2193ce5beb5479f8d3b57408e3dc5bf7",
+      "size": 1415
+    },
+    {
+      "path": "frontend/test/dealer-self-commission-attribution.test.mjs",
+      "mode": "100644",
+      "sha": "0ed62a501dbb973792f36adaab66741e967063b3",
+      "size": 2545
+    },
+    {
+      "path": "frontend/test/dealer-self-commission-ledger.test.mjs",
+      "mode": "100644",
+      "sha": "a80ee04e6fcc1bf77df35ff33f269b5efedafaeb",
+      "size": 1847
+    },
+    {
+      "path": "frontend/test/dealer-settlement-payout-ui.test.mjs",
+      "mode": "100644",
+      "sha": "e9c257ae6dc28103349c590e97a7779098fbcf3b",
+      "size": 2753
+    },
+    {
+      "path": "frontend/test/liff-referral-growth.test.mjs",
+      "mode": "100644",
+      "sha": "d0a40f6c8b799337ebb7e30551bbdadf2b6db37d",
+      "size": 1554
+    },
+    {
+      "path": "frontend/test/liff-referral.test.mjs",
+      "mode": "100644",
+      "sha": "0e114ed444c690e55be6d51a162eaf84fb97de68",
+      "size": 2229
+    },
+    {
+      "path": "frontend/test/module-assignment-ui.test.mjs",
+      "mode": "100644",
+      "sha": "336bfa2309877f30486ba5d49f5c6ec27e5f0c23",
+      "size": 12238
+    },
+    {
+      "path": "frontend/test/module-entitlement-production-contract.test.mjs",
+      "mode": "100644",
+      "sha": "90c794c51861227398bbe5fb4cfd161805d7ee95",
+      "size": 2347
+    },
+    {
+      "path": "frontend/test/referral-flow.test.mjs",
+      "mode": "100644",
+      "sha": "62e3c5f705b53c8078f2aff0cc239df5269a5d71",
+      "size": 1472
+    },
+    {
+      "path": "frontend/test/referral-growth-health.test.mjs",
+      "mode": "100644",
+      "sha": "cae89666d4ea6c01c748a1ba6659bbf017b1fca9",
+      "size": 2061
+    },
+    {
+      "path": "frontend/test/referral-growth-panel.test.mjs",
+      "mode": "100644",
+      "sha": "f1558c2a44a831aeff10039402dbe9c369a60650",
+      "size": 1558
+    },
+    {
+      "path": "frontend/test/reward-redemption-ui.test.mjs",
+      "mode": "100644",
+      "sha": "92491d2b6120e3d7e202757048719223c893cd35",
+      "size": 2624
+    },
+    {
+      "path": "frontend/test/rich-menu-project-ux.test.mjs",
+      "mode": "100644",
+      "sha": "82fa205465fe4faaf8594fb3527c04136593f7e5",
+      "size": 10335
+    },
+    {
+      "path": "frontend/test/tenant-settlement-payout-panel.test.mjs",
+      "mode": "100644",
+      "sha": "f948bc03eacc1f35e1704e06841afda35111d610",
+      "size": 4105
+    },
+    {
+      "path": "frontend/test/travel-experience-ui.test.mjs",
+      "mode": "100644",
+      "sha": "8b2f9d8f21b81367f1be99226a6f5d351ea20bd9",
+      "size": 10006
+    },
+    {
+      "path": "frontend/test/travel-operations-ui.test.mjs",
+      "mode": "100644",
+      "sha": "efdb9fba0ddc63106e7f19efe1fe9756662951de",
+      "size": 10667
+    },
+    {
+      "path": "frontend/test/travel-promotion-dm-extraction-ui.test.mjs",
+      "mode": "100644",
+      "sha": "e37a244a929a520830fca546eae9fc086bc5284b",
+      "size": 4411
+    },
+    {
+      "path": "frontend/test/travel-promotion-intelligence-ui.test.mjs",
+      "mode": "100644",
+      "sha": "f86eff21d5a46bf42ad4424fbb5a4a02ffdb74f2",
+      "size": 9162
+    },
+    {
+      "path": "frontend/test/travel-promotion-workbench-ui.test.mjs",
+      "mode": "100644",
+      "sha": "fa82cbb15104d47943912ae4473ee47a04564e93",
+      "size": 2495
+    },
+    {
+      "path": "frontend/test/travel-seller-commission-ui.test.mjs",
+      "mode": "100644",
+      "sha": "f1715c79fde9546edeb4ca5376a9293e55a8c8c4",
+      "size": 4424
+    },
+    {
+      "path": "frontend/test/zh-tw-crm-localization.test.mjs",
+      "mode": "100644",
+      "sha": "fa8bc27708614b60262907210734eb8897e54fc1",
+      "size": 2397
+    },
+    {
+      "path": "frontend/vite.config.js",
+      "mode": "100644",
+      "sha": "f7cd3676843614e18dd950d093abe003b088ecea",
+      "size": 229
+    },
+    {
+      "path": "frontend/wrangler.jsonc",
+      "mode": "100644",
+      "sha": "bcafe7f1aadbb11e883e28a31de700d80fea7c11",
+      "size": 300
+    }
+  ],
+  "source_tree": "dbcc440b081bcdeb11aa98d1ebac06e0e7300ea1"
+}

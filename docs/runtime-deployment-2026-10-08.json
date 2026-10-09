@@ -1,0 +1,77 @@
+{
+  "source_commit": "5351289d184721b81b47e5dfa1b858e915bef892",
+  "source_snapshot_commit": "f69fd70a2ff91056bbac158a41e046ee35f10077",
+  "checked_at": "2026-10-08T00:33:59.703Z",
+  "release_run": 37708091829,
+  "release_url": "https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829",
+  "merged_pr": 19,
+  "test_counts": {
+    "root_backend": 131,
+    "root_browser": 39,
+    "source_backend": 1222,
+    "source_frontend": 592,
+    "actual_runtime": 12,
+    "actual_runtime_browser": 4,
+    "total": 2000
+  },
+  "targets": [
+    {
+      "worker": "taiwan-startup-park",
+      "active_version": "51a37d4d-cd39-48a4-80b5-1b495bc99ab2",
+      "address_database_name": "taiwan-startup-park-prod",
+      "address_database_id": "2c2ef714-429f-4ac2-9a4b-417a242627fb",
+      "platform_database_name": "taiwan-startup-park-platform-prod",
+      "platform_database_id": "bce2ab64-bc4e-4c69-b2b7-5af1fb4700d4",
+      "app_env": "production",
+      "databases_isolated": true,
+      "platform_runtime_enabled": true,
+      "platform_schema_migrations_applied": true,
+      "source_development_accounts_removed": true,
+      "unauthenticated_api_status": 302,
+      "revenue_values_all_null": true,
+      "settlement_enabled": false,
+      "platform_signed_receiver": true,
+      "source_workspace_oa_receiver": false,
+      "line_login_enabled": false,
+      "line_send_enabled": false,
+      "ai_model_enabled": false,
+      "payment_gateway_enabled": false,
+      "paid_site_publish_enabled": false
+    },
+    {
+      "worker": "taiwan-startup-park-demo",
+      "active_version": "f4d48613-fda3-4a0e-8696-334859d4a4ce",
+      "address_database_name": "taiwan-startup-park-demo",
+      "address_database_id": "a81974f2-ffff-4973-a128-22597eed6919",
+      "platform_database_name": "taiwan-startup-park-platform-demo",
+      "platform_database_id": "29dfe7ad-7b29-4194-a215-05632a7c5168",
+      "app_env": "sandbox",
+      "databases_isolated": true,
+      "platform_runtime_enabled": true,
+      "platform_schema_migrations_applied": true,
+      "source_development_accounts_removed": true,
+      "unauthenticated_api_status": 302,
+      "revenue_values_all_null": true,
+      "settlement_enabled": false,
+      "platform_signed_receiver": false,
+      "source_workspace_oa_receiver": false,
+      "line_login_enabled": false,
+      "line_send_enabled": false,
+      "ai_model_enabled": false,
+      "payment_gateway_enabled": false,
+      "paid_site_publish_enabled": false
+    }
+  ],
+  "assets": {
+    "backend": "project_private_d1",
+    "image_max_bytes": 1048576,
+    "other_project_r2_reused": false
+  },
+  "recovery": {
+    "first_release_run": 37707481646,
+    "failed_migration": "0033_reward_redemption_foundation.sql",
+    "source_snapshot_modified": false,
+    "recovery": "Exact newly created D1 identity + migration prefix/schema + no actual workspace verified; SQLite-equivalent WHEN trigger in deployment copy; no reset/delete database."
+  },
+  "evidence_scope": "HTTP and browser tests use isolated fictional fixtures. Live checks verify real bindings, schemas, active versions, Access, signed receiver boundary and unagreed commercial terms; authenticated production UI was not impersonated."
+}

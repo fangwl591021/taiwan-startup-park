@@ -1,0 +1,9 @@
+{
+  "worker": "taiwan-startup-park",
+  "hostname": "taiwan-startup-park.fangwl591021.workers.dev",
+  "D1_DATABASE_ID": "2c2ef714-429f-4ac2-9a4b-417a242627fb",
+  "PLATFORM_DATABASE_ID": "bce2ab64-bc4e-4c69-b2b7-5af1fb4700d4",
+  "ACCESS_ISSUER": "https://fangwl591021.cloudflareaccess.com",
+  "ACCESS_AUD": "fa01fe419cf527a6c755d8851220d211a3b6d0b488cb08ba8211016fdebf4d87",
+  "access_application_id": "c5d84dd6-e223-45b5-8ba0-936200b91cbd"
+}

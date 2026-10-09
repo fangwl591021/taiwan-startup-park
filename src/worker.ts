@@ -1,8 +1,23 @@
+import {platformWorkspacesRoute} from './platform-workspaces.js';
+import {digitalPreview,requireDigitalPreview} from './scope.js';
 import type {Actor,Env,Opportunity,Statement} from './types.js';
-import {HttpError,fail,now,uid,stmt,local,digest,audit} from './shared.js';
-import {actor,accessLogin,configured} from './auth.js';
+import {HttpError,fail,now,uid,stmt,local,sandbox,demo,digest,audit} from './shared.js';
+import {actor,accessLogin,configured,sandboxAccess} from './auth.js';
 import {receiveWebhook,processInbox,integrationStatus,inbox,attachContact,enqueueLine,dispatchOutbox,retryLine,conversationLineStatus} from './line.js';
+import {listPage} from './paging.js';
 import {operationRoute} from './operations.js';
+import {addressAttention} from './address-attention.js';
+import {lineSettingsRoute} from './line-settings.js';
+import {platformRoute,platformAccess} from './platform.js';
+import {platformLoginRoute} from './platform-login.js';
+import {platformLineRoute} from './platform-line.js';
+import {receivePlatformWebhook} from './platform-webhook.js';
+import {moduleRoute} from './workspace-modules.js';
+import {crmRoute} from './crm.js';
+import {templateRoute} from './workspace-templates.js';
+import {hubRoute} from './line-hub.js';
+import {monitorRoute} from './chat-monitor.js';
+import {monitorConsoleRoute} from './monitor-console.js';
 type Context={waitUntil(promise:Promise<unknown>):void};
 const json=(data:unknown,status=200,headers:Record<string,string>={})=>Response.json(data,{status,headers});
 const stages=['contact','onboarding','billing','won','paused','lost'];
@@ -34,7 +49,7 @@ function opScope(a:Actor,alias='o'):{sql:string,args:unknown[]}{
 }
 function bizScope(a:Actor,alias='b'):{sql:string,args:unknown[]}{
  roles(a,['operator_owner','operator_sales','operator_service','operator_finance']);
- if(a.role==='operator_sales')return {sql:alias+'.operator_id=? AND EXISTS(SELECT 1 FROM opportunities ao WHERE ao.operator_id='+alias+'.operator_id AND ao.business_id='+alias+'.id AND ao.owner_id=?)',args:[a.operator_id,a.id]};
+ if(a.role==='operator_sales')return {sql:alias+'.operator_id=? AND (EXISTS(SELECT 1 FROM opportunities ao WHERE ao.operator_id='+alias+'.operator_id AND ao.business_id='+alias+'.id AND ao.owner_id=?) OR ('+alias+'.is_tenant=1 AND '+alias+'.service_owner_id=?))',args:[a.operator_id,a.id,a.id]};
  if(a.role==='operator_service')return {sql:alias+'.operator_id=? AND '+alias+'.is_tenant=1 AND '+alias+'.service_owner_id=?',args:[a.operator_id,a.id]};
  return {sql:alias+'.operator_id=?',args:[a.operator_id]};
 }
@@ -59,12 +74,35 @@ async function agent(env:Env,a:Actor,id:unknown){
  const u=await stmt(env,"SELECT id FROM staff_users WHERE id=? AND operator_id=? AND active=1 AND role IN('operator_owner','operator_sales')",value,a.operator_id).first();
  if(!u)fail(400,'承辦人不屬於本業者或已停權');return value;
 }
+
+async function dashboardData(env:Env,a:Actor){
+ const b=bizScope(a),canSales=['operator_owner','operator_sales','operator_finance'].includes(a.role);
+ const o=canSales?opScope(a):null;
+ const statements=[stmt(env,"SELECT COUNT(*) AS tenant_count,COALESCE(SUM((SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status='requested')),0) AS request_count FROM businesses b WHERE "+b.sql+" AND b.is_tenant=1",...b.args)];
+ if(o)statements.push(
+  stmt(env,"SELECT o.stage,COUNT(*) AS total,SUM(CASE WHEN o.payment_status='unpaid' AND o.stage IN('billing','won') THEN 1 ELSE 0 END) AS pending FROM opportunities o WHERE "+o.sql+' GROUP BY o.stage',...o.args),
+  stmt(env,"SELECT o.*,b.name AS business_name,u.name AS owner_name FROM opportunities o JOIN businesses b ON b.id=o.business_id AND b.operator_id=o.operator_id JOIN staff_users u ON u.id=o.owner_id WHERE "+o.sql+" AND o.stage NOT IN('won','lost') ORDER BY CASE WHEN o.followup_at='' THEN 1 ELSE 0 END,o.followup_at,o.updated_at DESC,o.id DESC LIMIT 4",...o.args)
+ );
+ const results=await env.DB.batch(statements),groups=o?results[1].results:[];
+ const stage_counts=Object.fromEntries(stages.map(s=>[s,0]));let open_count=0,pending_payment_count=0;
+ for(const r of groups){stage_counts[String(r.stage)]=Number(r.total);if(!['won','lost'].includes(String(r.stage)))open_count+=Number(r.total);pending_payment_count+=Number(r.pending);}
+ return {stats:{...results[0].results[0],stage_counts,open_count,pending_payment_count},opportunities:o?results[2].results:[],attention:await addressAttention(env,a,b)};
+}
+
 async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  const url=new URL(req.url);const path=url.pathname;const method=req.method;
+ if(env.APP_ENV==='sandbox'){
+  if(!sandbox(req,env))fail(503,'測試環境隔離檢查未通過');
+  if(path.startsWith('/api/'))await sandboxAccess(req,env);
+ }
  if(path==='/api/health')return json({ok:true,version:'0.3.0'});
- if(path==='/api/bootstrap'&&method==='GET')return json({demo:local(req,env),auth:local(req,env)?'local_demo':configured(env)?'cloudflare_access':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
+ if(path==='/api/bootstrap'&&method==='GET')return json({demo:demo(req,env),sandbox:sandbox(req,env),auth:demo(req,env)?'local_demo':configured(env)?'cloudflare_access':'not_configured',integrations:{line:'not_connected',payment:'not_connected',ai:'not_enabled'}});
+ if(path==='/api/auth/line/callback'&&method==='GET')return json({error:'LINE Login 登入流程尚未啟用；此為預留 Callback 路徑'},503);
  const webhook=path.match(/^\/api\/line\/webhook\/([a-zA-Z0-9_-]+)$/);
+ if(webhook&&webhook[1].startsWith('platform-')&&method==='GET')return json({error:'Webhook 使用 POST；請在 LINE Developers 的 Messaging API 按 Verify 驗證'},405,{Allow:'POST'});
  if(webhook&&method==='POST'){
+  if(sandbox(req,env))fail(404,'測試環境不接收真實 LINE');
+  if(webhook[1].startsWith('platform-'))return receivePlatformWebhook(req,env,webhook[1]);
   const response=await receiveWebhook(req,env,webhook[1]);
   ctx?.waitUntil(processInbox(env).catch(()=>console.error('LINE inbox processing needs recovery')));
   return response;
@@ -72,19 +110,34 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(!path.startsWith('/api/'))return env.ASSETS?env.ASSETS.fetch(req):new Response('Not found',{status:404});
  if(!['GET','HEAD','OPTIONS'].includes(method))writes(req);
  if(path==='/api/demo/users'&&method==='GET'){
-  if(!local(req,env))fail(404,'不存在');
-  return json((await stmt(env,'SELECT u.id,u.name,u.role,o.name AS operator_name FROM staff_users u JOIN operators o ON o.id=u.operator_id WHERE u.active=1 ORDER BY u.operator_id,u.id').all()).results);
+  if(!demo(req,env))fail(404,'不存在');
+  const users=(await stmt(env,'SELECT u.id,u.name,u.role,o.name AS operator_name FROM staff_users u JOIN operators o ON o.id=u.operator_id WHERE u.active=1 ORDER BY u.operator_id,u.id').all()).results;
+  return json(sandbox(req,env)?users.filter(u=>['operator_owner','operator_sales','operator_service','operator_finance','platform_admin'].includes(String(u.role))):users);
  }
  if(path==='/api/demo/login'&&method==='POST'){
-  if(!local(req,env))fail(404,'不存在');
+  if(!demo(req,env))fail(404,'不存在');
   const d=await body(req,['user_id']);const id=textField(d.user_id,'使用者',100);
-  const u=await stmt(env,'SELECT id FROM staff_users WHERE id=? AND active=1',id).first();
-  if(!u)fail(401,'帳號不可使用');
-  const token=uid()+uid();await stmt(env,'INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)',await digest(token),id,new Date(Date.now()+8*3600000).toISOString()).run();
-  return json({ok:true},200,{'Set-Cookie':'tsp_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800'});
+  const u=await stmt(env,'SELECT id,role FROM staff_users WHERE id=? AND active=1',id).first();
+  if(!u||sandbox(req,env)&&!['operator_owner','operator_sales','operator_service','operator_finance','platform_admin'].includes(String(u.role)))fail(401,'帳號不可使用');
+  const token=uid()+uid();
+  const claim=sandbox(req,env)?await sandboxAccess(req,env):null;
+  const seconds=claim?Math.max(0,Math.min(28800,claim.exp-Math.floor(Date.now()/1000))):28800;
+  await stmt(env,"INSERT INTO sessions(token_hash,user_id,expires_at,auth_method,issuer,subject) VALUES(?,?,?,'demo',?,?)",await digest(token),id,new Date(Date.now()+seconds*1000).toISOString(),claim?.iss??null,claim?.sub??null).run();
+  return json({ok:true},200,{'Set-Cookie':'tsp_session='+token+'; HttpOnly; SameSite=Strict; Path=/; Max-Age='+seconds+(sandbox(req,env)?'; Secure':'')});
  }
- if(path==='/api/auth/access'&&method==='POST'){await body(req,[]);return accessLogin(req,env);}
+ if(path==='/api/auth/access'&&method==='POST'){if(sandbox(req,env))fail(404,'請選擇模擬帳號');await body(req,[]);return accessLogin(req,env);}
  const a=await actor(req,env);
+ const platformWorkspaces=await platformWorkspacesRoute(req,env,a);if(platformWorkspaces)return platformWorkspaces;
+ const workspaceModules=await moduleRoute(req,env,a);if(workspaceModules)return workspaceModules;
+ const templates=await templateRoute(req,env,a);if(templates)return templates;
+ const crm=await crmRoute(req,env,a);if(crm)return crm;
+ const hub=await hubRoute(req,env,a);if(hub)return hub;
+ const monitorConsole=await monitorConsoleRoute(req,env,a);if(monitorConsole)return monitorConsole;
+ const monitor=await monitorRoute(req,env,a);if(monitor)return monitor;
+ const loginSettings=await platformLoginRoute(req,env,a);if(loginSettings)return loginSettings;
+ const platformLine=await platformLineRoute(req,env,a);if(platformLine)return platformLine;
+ const platform=await platformRoute(req,env,a);if(platform)return platform;
+ const lineSettings=await lineSettingsRoute(req,env,a);if(lineSettings)return lineSettings;
  const operation=await operationRoute(req,env,a,id=>getBusiness(env,a,id));if(operation)return operation;
  if(path==='/api/integrations'&&method==='GET')return json(await integrationStatus(env,a));
  if(path==='/api/line/inbox'&&method==='GET')return json(await inbox(env,a));
@@ -101,7 +154,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
 
  if(path==='/api/me'&&method==='GET'){
   const op=await stmt(env,'SELECT name FROM operators WHERE id=?',a.operator_id).first();
-  return json({...a,operator_name:op?.name,demo:local(req,env)});
+  return json({...a,platform_access:await platformAccess(env,a),operator_name:op?.name,phase:'address_only',digital_preview:digitalPreview(env),demo:demo(req,env),sandbox:sandbox(req,env)});
  }
  if(path==='/api/logout'&&method==='POST'){
   const token=req.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith('tsp_session='))?.slice(12)||'';
@@ -110,7 +163,18 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/staff'&&method==='GET'){
   roles(a,['operator_owner','operator_sales','operator_service','operator_finance']);
-  return json((await stmt(env,"SELECT id,name,role,active FROM staff_users WHERE operator_id=? AND role IN('operator_owner','operator_sales','operator_service','operator_finance') ORDER BY name",a.operator_id).all()).results);
+  return json((await stmt(env,"SELECT u.id,u.name,u.role,u.active,EXISTS(SELECT 1 FROM auth_identities i WHERE i.user_id=u.id) AS login_bound FROM staff_users u WHERE u.operator_id=? AND u.role IN('operator_owner','operator_sales','operator_service','operator_finance') ORDER BY name",a.operator_id).all()).results);
+ }
+ if(path==='/api/staff'&&method==='POST'){
+  roles(a,['operator_owner']);const d=await body(req,['name','role']);
+  const name=textField(d.name,'人員姓名',100),role=textField(d.role,'角色',30);
+  if(!['operator_sales','operator_service','operator_finance'].includes(role))fail(400,'新增人員僅可選擇業務、維運或財務');
+  const id=uid();
+  await env.DB.batch([
+   stmt(env,'INSERT INTO staff_users(id,operator_id,name,role,active) VALUES(?,?,?,?,0)',id,a.operator_id,name,role),
+   audit(env,a,null,null,'staff_created',{user_id:id,role,login_status:'pending_identity_binding'})
+  ]);
+  return json({id,name,role,active:0,login_bound:0},201);
  }
  const staffMatch=path.match(/^\/api\/staff\/([^/]+)\/status$/);
  if(staffMatch&&method==='PATCH'){
@@ -119,9 +183,11 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   if(staffMatch[1]===a.id)fail(400,'不能停用自己的帳號');
   const target=await stmt(env,"SELECT id,active FROM staff_users WHERE operator_id=? AND id=? AND role<>'operator_owner'",a.operator_id,staffMatch[1]).first();
   if(!target)fail(404,'找不到可管理的員工');
+  if(d.active&&!demo(req,env)&&!await stmt(env,'SELECT user_id FROM auth_identities WHERE user_id=? AND issuer=?',staffMatch[1],env.ACCESS_ISSUER).first())fail(409,'此人員尚未完成企業登入身分綁定，不能啟用');
   await env.DB.batch([stmt(env,'UPDATE staff_users SET active=? WHERE operator_id=? AND id=?',d.active?1:0,a.operator_id,staffMatch[1]),audit(env,a,null,null,'staff_status',{user_id:staffMatch[1],active:d.active},true)]);
   return json({ok:true});
  }
+ if(path==='/api/dashboard'&&method==='GET')return json(await dashboardData(env,a));
  if(path==='/api/businesses'&&method==='GET'){
   const s=bizScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);
   return json((await stmt(env,'SELECT b.* FROM businesses b WHERE '+s.sql+' AND b.name LIKE ? ORDER BY b.created_at DESC',...s.args,'%'+q+'%').all()).results);
@@ -129,6 +195,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(path==='/api/opportunities'&&method==='GET'){
   const s=opScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);const stage=url.searchParams.get('stage');
   if(stage&&!stages.includes(stage))fail(400,'階段不正確');
+  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select:'o.*,b.name AS business_name,u.name AS owner_name',from:'opportunities o JOIN businesses b ON b.id=o.business_id AND b.operator_id=o.operator_id JOIN staff_users u ON u.id=o.owner_id',where:s.sql+' AND (o.title LIKE ? OR b.name LIKE ?)'+(stage?' AND o.stage=?':''),args:[...s.args,'%'+q+'%','%'+q+'%',...(stage?[stage]:[])],time:'o.updated_at',id:'o.id',timeKey:'updated_at'}));
   return json((await stmt(env,'SELECT o.*,b.name AS business_name,u.name AS owner_name FROM opportunities o JOIN businesses b ON b.id=o.business_id AND b.operator_id=o.operator_id JOIN staff_users u ON u.id=o.owner_id WHERE '+s.sql+' AND (o.title LIKE ? OR b.name LIKE ?)'+(stage?' AND o.stage=?':'')+' ORDER BY o.updated_at DESC',...s.args,'%'+q+'%','%'+q+'%',...(stage?[stage]:[])).all()).results);
  }
  if(path==='/api/opportunities'&&method==='POST'){
@@ -213,9 +280,34 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   if(!r[0].meta.changes)fail(409,'案件已更新');
   return json({ok:true});
  }
+ if(path==='/api/tenants'&&method==='POST'){
+  roles(a,['operator_owner']);
+  const d=await body(req,['business_name','registration_no','contact_name','phone','email','service_owner_id','reference']);
+  const name=textField(d.business_name,'企業名稱',150),contact=textField(d.contact_name,'聯絡人',100);
+  const registration=d.registration_no?textField(d.registration_no,'統編',8):null;
+  if(registration&&!/^\d{8}$/.test(registration))fail(400,'統編應為八位數字');
+  if(registration&&await stmt(env,'SELECT id FROM businesses WHERE operator_id=? AND registration_no=?',a.operator_id,registration).first())fail(409,'統編已存在，請沿用既有企業或案件轉租戶');
+  const phone=textField(d.phone??'','電話',50,true),email=textField(d.email??'','Email',200,true);
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail(400,'Email 格式不正確');
+  const reference=textField(d.reference,'租戶建檔依據',500);
+  const assigned=textField(d.service_owner_id??a.id,'服務承辦人',100);
+  if(!await stmt(env,"SELECT id FROM staff_users WHERE id=? AND operator_id=? AND active=1 AND role IN('operator_owner','operator_sales','operator_service')",assigned,a.operator_id).first())fail(400,'服務承辦人不屬於本業者或已停權');
+  const id=uid(),time=now();
+  await env.DB.batch([
+   stmt(env,'INSERT INTO businesses(id,operator_id,name,registration_no,is_tenant,service_owner_id,created_at) VALUES(?,?,?,?,1,?,?)',id,a.operator_id,name,registration,assigned,time),
+   stmt(env,'INSERT INTO contacts(id,operator_id,business_id,name,phone,email) VALUES(?,?,?,?,?,?)',uid(),a.operator_id,id,contact,phone,email),
+   audit(env,a,id,null,'tenant_created',{method:'manual_existing_tenant',reference,service_owner_id:assigned})
+  ]);
+  return json({business_id:id},201);
+ }
  if(path==='/api/tenants'&&method==='GET'){
   const s=bizScope(a);const q=(url.searchParams.get('q')||'').slice(0,100);
-  return json((await stmt(env,'SELECT b.*,u.name AS service_owner_name,(SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status=\'requested\') AS request_count FROM businesses b LEFT JOIN staff_users u ON u.id=b.service_owner_id WHERE '+s.sql+' AND b.is_tenant=1 AND b.name LIKE ? ORDER BY b.created_at DESC',...s.args,'%'+q+'%').all()).results);
+  const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+  const select="b.*,u.name AS service_owner_name,c.status AS contract_status,c.starts_on AS service_starts_on,c.ends_on AS service_ends_on,c.term_kind,c.payment_cycle,l.name AS location_name,(SELECT COUNT(*) FROM service_requests sr WHERE sr.operator_id=b.operator_id AND sr.business_id=b.id AND sr.status='requested') AS request_count";
+  const from="businesses b LEFT JOIN staff_users u ON u.id=b.service_owner_id LEFT JOIN address_contracts c ON c.id=(SELECT ac.id FROM address_contracts ac WHERE ac.operator_id=b.operator_id AND ac.business_id=b.id ORDER BY CASE WHEN ac.status='active' AND ac.starts_on<='"+today+"' AND ac.ends_on>='"+today+"' THEN 0 WHEN ac.status='active' AND ac.starts_on>'"+today+"' THEN 1 WHEN ac.status='active' THEN 2 WHEN ac.status='draft' THEN 3 ELSE 4 END,CASE WHEN ac.status='active' AND ac.starts_on>'"+today+"' THEN ac.starts_on ELSE NULL END ASC,ac.ends_on DESC,ac.id DESC LIMIT 1) AND c.operator_id=b.operator_id LEFT JOIN locations l ON l.id=c.location_id AND l.operator_id=b.operator_id";
+  const where=s.sql+' AND b.is_tenant=1 AND b.name LIKE ?';
+  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select,from,where,args:[...s.args,'%'+q+'%'],time:'b.created_at',id:'b.id',timeKey:'created_at'}));
+  return json((await stmt(env,'SELECT '+select+' FROM '+from+' WHERE '+where+' ORDER BY b.created_at DESC',...s.args,'%'+q+'%').all()).results);
  }
  const bizMatch=path.match(/^\/api\/businesses\/([^/]+)$/);
  if(bizMatch&&method==='GET'){
@@ -236,6 +328,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  if(requestMatch&&method==='POST'){
   roles(a,['operator_owner','operator_sales','operator_service']);const b=await getBusiness(env,a,requestMatch[1]);
   if(!b.is_tenant)fail(409,'請先成交轉為租戶');
+  requireDigitalPreview(env);
   const d=await body(req,['module']);const module=textField(d.module,'功能',30);if(!modules.includes(module))fail(400,'功能不正確');
   const id=uid();const time=now();
   const r=await env.DB.batch([stmt(env,"INSERT OR IGNORE INTO service_requests(id,operator_id,business_id,actor_id,module,status,created_at,updated_at) VALUES(?,?,?,?,?,'requested',?,?)",id,a.operator_id,b.id,a.id,module,time,time),
@@ -245,7 +338,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  const cancelMatch=path.match(/^\/api\/businesses\/([^/]+)\/services\/([^/]+)$/);
  if(cancelMatch&&method==='PATCH'){
-  roles(a,['operator_owner','operator_sales','operator_service']);await getBusiness(env,a,cancelMatch[1]);const d=await body(req,['status']);
+  roles(a,['operator_owner','operator_sales','operator_service']);await getBusiness(env,a,cancelMatch[1]);requireDigitalPreview(env);const d=await body(req,['status']);
   if(d.status!=='cancelled')fail(400,'整合尚未串接，僅可取消申請');
   const r=await env.DB.batch([stmt(env,"UPDATE service_requests SET status='cancelled',updated_at=? WHERE id=? AND operator_id=? AND business_id=? AND status='requested'",now(),cancelMatch[2],a.operator_id,cancelMatch[1]),
   audit(env,a,cancelMatch[1],null,'service_cancelled',{request_id:cancelMatch[2]},true)]);
@@ -253,6 +346,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
  }
  if(path==='/api/conversations'&&method==='GET'){
   roles(a,['operator_owner','operator_sales','operator_service']);const s=bizScope(a);
+  if(url.searchParams.get('paged')==='1')return json(await listPage(env,url,{select:'c.*,b.name AS business_name,o.title,o.owner_id,u.name AS owner_name,(SELECT body FROM messages m WHERE m.operator_id=c.operator_id AND m.conversation_id=c.id ORDER BY m.created_at DESC,m.rowid DESC LIMIT 1) AS preview',from:'conversations c JOIN businesses b ON b.id=c.business_id AND b.operator_id=c.operator_id JOIN opportunities o ON o.id=c.opportunity_id AND o.operator_id=c.operator_id JOIN staff_users u ON u.id=o.owner_id',where:s.sql+(a.role==='operator_sales'?' AND o.owner_id=?':''),args:[...s.args,...(a.role==='operator_sales'?[a.id]:[])],time:'c.created_at',id:'c.id',timeKey:'created_at'}));
   return json((await stmt(env,'SELECT c.*,b.name AS business_name,o.title,o.owner_id,u.name AS owner_name,(SELECT body FROM messages m WHERE m.operator_id=c.operator_id AND m.conversation_id=c.id ORDER BY m.created_at DESC,m.rowid DESC LIMIT 1) AS preview FROM conversations c JOIN businesses b ON b.id=c.business_id AND b.operator_id=c.operator_id JOIN opportunities o ON o.id=c.opportunity_id AND o.operator_id=c.operator_id JOIN staff_users u ON u.id=o.owner_id WHERE '+s.sql+(a.role==='operator_sales'?' AND o.owner_id=?':'')+' ORDER BY c.created_at DESC',...s.args,...(a.role==='operator_sales'?[a.id]:[])).all()).results);
  }
  const msgMatch=path.match(/^\/api\/conversations\/([^/]+)\/messages$/);
@@ -264,7 +358,7 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   const c=await getConversation(env,a,msgMatch[1]);
   const d=await body(req,['body','idempotency_key','simulate_failure']);
   const message=textField(d.body,'訊息',2000);const key=textField(d.idempotency_key,'請求識別碼',100);
-  if(!local(req,env)){
+  if(!demo(req,env)){
    if(d.simulate_failure!==undefined)fail(400,'正式 LINE 訊息不能指定模擬狀態');
    const result=await enqueueLine(env,a,c,message,key);
    ctx?.waitUntil(dispatchOutbox(env,a.operator_id).catch(()=>console.error('LINE delivery needs recovery')));
@@ -308,12 +402,10 @@ async function route(req:Request,env:Env,ctx?:Context):Promise<Response>{
   let extra='';const args:unknown[]=[a.operator_id];
   if(businessId){extra=' AND e.business_id=?';args.push(businessId);}
   if(a.role==='operator_service')extra+=" AND e.action NOT IN('receivable_created','receivable_voided','ledger_recorded','payment_recorded')";
+  if(a.role!=='operator_owner')extra+=" AND e.action NOT LIKE 'line_connection_%' AND e.action NOT IN('platform_runtime_operation','platform_site_operation')";
   if(a.role==='operator_finance')extra+=" AND e.action NOT IN('mail_received','mail_status_changed','ticket_created','ticket_status_changed')";
   if(a.role==='operator_sales'){extra+=' AND (e.opportunity_id IS NULL OR EXISTS(SELECT 1 FROM opportunities o WHERE o.id=e.opportunity_id AND o.operator_id=e.operator_id AND o.owner_id=?))';args.push(a.id);}
   return json((await stmt(env,'SELECT e.id,e.action,e.detail,e.created_at,e.business_id,e.opportunity_id,u.name AS actor_name FROM activity_events e JOIN staff_users u ON u.id=e.actor_id WHERE e.operator_id=?'+extra+' ORDER BY e.created_at DESC,e.rowid DESC LIMIT 100',...args).all()).results);
- }
- if(path==='/api/admin/risk'&&method==='GET'){
-  roles(a,['operator_owner']);return json({enabled:false,status:'not_enabled',events:[],message:'AI 與風控規則尚未啟用'});
  }
  return fail(404,'找不到此功能');
 }

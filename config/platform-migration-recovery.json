@@ -1,0 +1,8 @@
+{
+  "worker": "taiwan-startup-park",
+  "database_name": "taiwan-startup-park-platform-prod",
+  "database_id": "bce2ab64-bc4e-4c69-b2b7-5af1fb4700d4",
+  "address_database_id": "2c2ef714-429f-4ac2-9a4b-417a242627fb",
+  "created_by_release_run": 37707481646,
+  "reason": "Only permit verified migration prefix recovery from the newly created independent platform DB; never reset it or adopt another project's database."
+}

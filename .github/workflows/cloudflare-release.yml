@@ -1,0 +1,217 @@
+name: Cloudflare release
+on:
+  push:
+    branches: [release/cloudflare]
+    paths-ignore: ['docs/DEPLOYMENT_STATUS.md']
+  workflow_dispatch:
+    inputs:
+      record_tutorial:
+        description: 'Only record a new tutorial when explicitly requested'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: taiwan-startup-park-production-release
+  cancel-in-progress: "${{ startsWith(github.event.head_commit.message, 'ci-defer-tutorial') }}"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Typecheck, build and permission tests
+        run: |
+          npm run typecheck
+          npm test
+          npm audit --audit-level=high
+          npm run worker:check
+          node scripts/auth-runtime-check.mjs
+          node --check scripts/phase-one-release-check.mjs
+          node --check scripts/line-settings-deploy.mjs
+      - name: Browser and mobile acceptance
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+          npm run test:e2e
+      - name: Verify and build complete imported platform with trusted root identity
+        run: |
+          node scripts/verify-upstream-platform.mjs --prepare
+          node scripts/verify-platform-schema.mjs
+          npm ci --prefix .migration-build/smart-menu/backend
+          npm ci --prefix .migration-build/smart-menu/frontend
+          npm run typecheck --prefix .migration-build/smart-menu/backend
+          npm test --prefix .migration-build/smart-menu/backend
+          npm test --prefix .migration-build/smart-menu/frontend
+          node scripts/audit-upstream-platform.mjs
+          node scripts/prepare-platform-runtime.mjs
+          npm run build --prefix .migration-build/smart-menu/frontend
+          node scripts/build-platform-test-worker.mjs
+          node --test tests/platform-runtime/*.test.mjs
+          npx playwright test --config playwright.platform.config.mjs
+          mkdir -p dist/public/platform
+          cp -a .migration-build/smart-menu/frontend/dist/. dist/public/platform/
+          npx wrangler deploy --dry-run --config wrangler.platform-local.json --outdir .platform-worker-build
+      - name: Download previously published tutorial without recording
+        if: github.event_name != 'workflow_dispatch' || inputs.record_tutorial != true
+        uses: actions/download-artifact@v4
+        with:
+          name: tutorial-video
+          run-id: 37391789253
+          github-token: ${{ github.token }}
+          path: .retained-tutorial
+      - name: Preserve published tutorial media
+        if: github.event_name != 'workflow_dispatch' || inputs.record_tutorial != true
+        run: |
+          test -s .retained-tutorial/dist/public/tutorial/taiwan-startup-park-tutorial.mp4
+          mkdir -p dist/public docs
+          cp -a .retained-tutorial/dist/public/tutorial dist/public/
+          cp -a .retained-tutorial/docs/tutorial docs/
+      - name: Record actual Chinese-captioned tutorial
+        if: github.event_name == 'workflow_dispatch' && inputs.record_tutorial == true
+        run: |
+          sudo apt-get install -y ffmpeg
+          TUTORIAL_REHEARSAL=on node scripts/record-tutorial.mjs
+          node scripts/record-tutorial.mjs
+      - name: Save tutorial video and transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tutorial-video
+          path: |
+            dist/public/tutorial
+            docs/tutorial
+          if-no-files-found: warn
+      - name: Save build and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-release-build
+          include-hidden-files: true
+          path: |
+            .migration-build/smart-menu/backend/src
+            .migration-build/smart-menu/backend/package.json
+            .migration-build/smart-menu/backend/package-lock.json
+            reports
+            dist
+            migrations
+            docs/screenshots
+            playwright-report
+            test-results
+          if-no-files-found: warn
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/release/cloudflare' && github.repository == 'fangwl591021/taiwan-startup-park'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+      D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID || vars.D1_DATABASE_ID }}
+      ACCESS_ISSUER: ${{ secrets.ACCESS_ISSUER || vars.ACCESS_ISSUER }}
+      ACCESS_AUD: ${{ secrets.ACCESS_AUD || vars.ACCESS_AUD }}
+      INITIAL_OWNER_EMAIL: ${{ secrets.INITIAL_OWNER_EMAIL }}
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check required settings without exposing values
+        run: node scripts/deployment.mjs check
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: cloudflare-release-build
+      - name: Install locked isolated runtime dependencies
+        run: npm ci --prefix .migration-build/smart-menu/backend
+      - name: Check owner binding or prepare restricted first-login page
+        id: owner
+        run: node scripts/owner-setup.mjs
+      - name: Validate restricted setup bundle
+        if: steps.owner.outputs.ready == 'false'
+        run: npx wrangler deploy --config wrangler.owner-setup.json --dry-run --outdir .worker-build
+      - name: Publish first-login setup page
+        if: steps.owner.outputs.ready == 'false'
+        run: npx wrangler deploy --config wrangler.owner-setup.json
+      - name: Verify account, D1, Access and bound owner
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/deployment.mjs inspect
+      - name: Prepare this project's independent production platform data layer
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/platform-provision.mjs
+      - name: Validate production bundle
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler deploy --config wrangler.production.json --dry-run --outdir .worker-build
+      - name: Apply pending migrations to verified project D1
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler d1 migrations apply DB --remote --config wrangler.production.json
+      - name: Apply imported migrations only to verified independent platform D1
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler d1 migrations apply PLATFORM_DB --remote --config wrangler.production.json
+      - name: Prepare independently protected simulation resources
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/sandbox-deploy.mjs prepare
+      - name: Prepare a separate platform D1 for fictional simulation only
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/platform-provision.mjs sandbox
+      - name: Validate isolated simulation bundle
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler deploy --config wrangler.sandbox.json --dry-run --outdir .sandbox-build
+      - name: Apply migrations only to named simulation D1
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler d1 migrations apply DB --remote --config wrangler.sandbox.json
+      - name: Apply imported migrations to independent simulation platform D1
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler d1 migrations apply PLATFORM_DB --remote --config wrangler.sandbox.json
+      - name: Prepare fictional seed without importing production
+        id: sandbox_seed
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/sandbox-deploy.mjs seed
+      - name: Initialize empty simulation D1 with fictional fixtures
+        if: steps.owner.outputs.ready == 'true' && steps.sandbox_seed.outputs.seed_required == 'true'
+        run: npx wrangler d1 execute DB --remote --config wrangler.sandbox.json --file .sandbox-seed.sql
+      - name: Publish isolated simulation Worker and private gate
+        if: steps.owner.outputs.ready == 'true'
+        run: |
+          npx wrangler deploy --config wrangler.sandbox.json
+          npx wrangler secret bulk .sandbox-secrets.json --config wrangler.sandbox.json
+          rm -f .sandbox-secrets.json
+      - name: Verify simulation protection and actual database binding
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/sandbox-deploy.mjs verify
+      - name: Publish verified Worker and assets
+        if: steps.owner.outputs.ready == 'true'
+        run: npx wrangler deploy --config wrangler.production.json
+      - name: Prepare encrypted OA settings and exact signed webhook route
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/line-settings-deploy.mjs prepare
+      - name: Verify signed webhook and protected OA settings boundary
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/line-settings-deploy.mjs verify
+      - name: Check unauthenticated boundary
+        run: node scripts/deployment.mjs smoke
+      - name: Verify deployed address-only environments and blank revenue terms
+        if: steps.owner.outputs.ready == 'true'
+        run: node scripts/phase-one-release-check.mjs
+      - name: Save deployment metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-deployment-metadata-${{ github.run_attempt }}
+          path: |
+            platform-production-resources.json
+            platform-demo-resources.json
+            deployment-target-report.json
+            sandbox-resources.json
+            phase-one-release-report.json
+            line-settings-resources.json
+            line-settings-boundary-report.json
+          if-no-files-found: ignore

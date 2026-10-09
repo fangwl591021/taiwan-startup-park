@@ -1,0 +1,94 @@
+{
+  "source_repository": "fangwl591021/Smart-Menu-Studio",
+  "source_state": "selected_local_feature_files_with_uncommitted_no_push_patch",
+  "files": [
+    {
+      "file": "backend/src/rich-menu-chat.mjs",
+      "bytes": 28056,
+      "sha256": "5ae97d403be085816db1e84e886b15bf4ee2260b65fdea05231869440dbc1f7d"
+    },
+    {
+      "file": "backend/src/rich-menu-chat-image.mjs",
+      "bytes": 6992,
+      "sha256": "04bf973e02db04808b1e9cc35d08b152ad169a6d0a44c5ec5174851380d9dfc5"
+    },
+    {
+      "file": "backend/src/rich-menu-upload-layout.mjs",
+      "bytes": 5657,
+      "sha256": "85e3cf61a78272ca6f19695e19c9413f00116c6536dbd30581bdd52c812ef12b"
+    },
+    {
+      "file": "backend/src/rich-menu-upload-routes.ts",
+      "bytes": 10335,
+      "sha256": "b0b8855718e1f7927b5ce7eb002f1b15e0f2ec3af5ab70bfa8ed58f3496e389f"
+    },
+    {
+      "file": "backend/src/line-rich-menu.mjs",
+      "bytes": 6475,
+      "sha256": "371a226ab575b8d9e2be0ddfe7652c7c91f6a89ac337021061bda987cc81179d"
+    },
+    {
+      "file": "backend/src/rich-menu-layout.ts",
+      "bytes": 15066,
+      "sha256": "3bd6a677b8f1aaad0443dd57dd188678a163715144e181508b5197047a430c96"
+    },
+    {
+      "file": "backend/migrations/0102_rich_menu_chat.sql",
+      "bytes": 2659,
+      "sha256": "f0f40ae342e8e15b4e70b7ba029a9d8733301d9d8f146475eb18ffa1464635ab"
+    },
+    {
+      "file": "frontend/src/components/RichMenuChatOperators.jsx",
+      "bytes": 6457,
+      "sha256": "6605e5aa164382aa39a5a6923b7fff5e163c30262ed1f8136d7b962c304a7c99"
+    },
+    {
+      "file": "frontend/src/components/LiffMenuUploadPage.jsx",
+      "bytes": 16230,
+      "sha256": "9a6d60b08c33f85093a76717f3caba797eb681ded45c9fcf49e8f2130583e09d"
+    },
+    {
+      "file": "frontend/src/components/MenuUploadAreaEditor.jsx",
+      "bytes": 8778,
+      "sha256": "340597c49a900eefa0fedfa0d10ae9e190b9e43ade21eb28ecaad617ab889cd9"
+    },
+    {
+      "file": "frontend/src/components/MenuUploadAreaEditor.css",
+      "bytes": 4081,
+      "sha256": "4b23ddb22e529706e0aba448173626954703456a4a128a2bc7d8fd2e84d15588"
+    },
+    {
+      "file": "frontend/src/menu-upload.js",
+      "bytes": 22253,
+      "sha256": "80affb45a9593503cb831188279f552e6a34053798503119e6ba0581e4d9eb16"
+    },
+    {
+      "file": "frontend/src/menu-upload-geometry.js",
+      "bytes": 5387,
+      "sha256": "968d6d0ded424b58ad1a62dad7e6a01d1defb5e9c01db1c2f1d6f63a62e75a78"
+    },
+    {
+      "file": "frontend/src/liff-entry.js",
+      "bytes": 2922,
+      "sha256": "1f94cb5899c5d53e8e0a0e0e3b2151df3dfbb5f11cfc30ab547a8c1e4263ff2f"
+    },
+    {
+      "file": "frontend/src/utils/richMenuGeometry.js",
+      "bytes": 13448,
+      "sha256": "e251c8af4abc227bee4a7ba6fac670c9d5ed3a719dcf7d42436195c93d5028f7"
+    },
+    {
+      "file": "frontend/src/utils/richMenuImageReplacement.js",
+      "bytes": 5341,
+      "sha256": "91bde6680fd9f5c947548519dfc0eb4d59c15d3b3cee20b23eaf7330b02e1787"
+    },
+    {
+      "file": "backend/test/rich-menu-chat.test.mjs",
+      "bytes": 21811,
+      "sha256": "2a25ae421f6650e80a906cff8f7e901f483e2c7500327fe95a051ba50ac07d85"
+    }
+  ],
+  "target_adapter": "platform/runtime/menu-chat; platform/runtime/menu-upload",
+  "credentials_copied": false,
+  "upstream_snapshot_changed": false
+}

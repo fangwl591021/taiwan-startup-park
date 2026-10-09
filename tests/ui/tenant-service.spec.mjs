@@ -1,0 +1,44 @@
+import {test,expect} from '@playwright/test';
+for(const [name,width,height] of [['desktop',1440,1050],['mobile',390,844]]){
+ test(name+' tenant detail shows service dates, separates annual term from monthly payment and preserves future service limits',async({page})=>{
+  await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:8789/');
+  await page.getByLabel('示範身分').selectOption('owner-a');await page.getByRole('button',{name:'進入示範工作台'}).click();
+  await expect(page.getByRole('heading',{name:'總覽',exact:true})).toBeVisible();
+  const origin=new URL(page.url()).origin;
+  const summary=await page.request.get(origin+'/api/businesses/b4/service-summary');expect(summary.status()).toBe(200);
+  const current=(await summary.json()).contracts.find(c=>c.id==='contract-demo');
+  const reset=await page.request.patch(origin+'/api/businesses/b4/contracts/contract-demo/terms',{headers:{origin,'x-requested-with':'tsp'},data:{version:current.version,term_kind:null,payment_cycle:null,mail_service:null,note:'虛構 UI 驗收前置：保留未知舊合約條件'}});
+  expect(reset.status()).toBe(200);
+  if(await page.getByRole('button',{name:'開啟導覽'}).isVisible())await page.getByRole('button',{name:'開啟導覽'}).click();
+  await page.getByRole('button',{name:'租戶管理',exact:true}).click();
+  const tenant=page.locator('.tenant-row[data-tenant="b4"]');await expect(tenant).toContainText('2026-10-01 ～ 2027-09-30');await tenant.click();
+  const dialog=page.getByRole('dialog');await expect(dialog.getByRole('heading',{name:'借址服務與合約',exact:true})).toBeVisible();
+  await expect(dialog.locator('.tenant-service-facts').first()).toContainText('2026-10-01');await expect(dialog.locator('.tenant-service-facts').first()).toContainText('2027-09-30');
+  await expect(dialog.locator('.tenant-service-facts').first()).toContainText('待補資料');
+  const order=await dialog.locator('h3.section-title').allTextContents();expect(order.indexOf('借址服務與合約')).toBeLessThan(order.indexOf('聯絡資料與服務承辦'));
+  await page.screenshot({path:'docs/screenshots/'+name+'-tenant-service-summary.png',fullPage:true});
+  expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+  await dialog.getByRole('button',{name:'展開企業數位服務租用',exact:true}).click();
+  await expect(dialog.locator('.tenant-digital-list')).toContainText('月租／年租與平台分潤待議定');
+  await expect(dialog.locator('.tenant-digital-list')).toContainText('尚未串接 · 未開通 · 分潤待議定');
+  await expect(dialog.locator('.tenant-digital-list')).toContainText('既有預覽紀錄');
+  await dialog.getByRole('button',{name:'開啟租戶維運台 →',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'借址服務與合約',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'地址合約',exact:true}).click();
+  const original=page.locator('.ops-card').filter({hasText:'2026-10-01'}).filter({hasText:'2027-09-30'}).first();
+  await original.getByRole('button',{name:'補登服務條件',exact:true}).click();
+  await page.getByLabel('合約類型',{exact:true}).selectOption('annual');await page.getByLabel('約定付款週期',{exact:true}).selectOption('monthly');
+  await page.getByLabel('郵件代收',{exact:true}).selectOption('included');
+  await page.getByLabel('變更依據',{exact:true}).fill('虚構驗收：年約按月繳，含郵件代收');
+  await page.getByRole('button',{name:'儲存紀錄',exact:true}).click();await expect(dialog).not.toBeVisible();
+  await expect(original).toContainText('年約');await expect(original).toContainText('每月繳付');await expect(original).toContainText('已包含');
+  await expect(original).toContainText('NT$ 36,000');
+  await page.screenshot({path:'docs/screenshots/'+name+'-tenant-contract-terms.png',fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.getByRole('button',{name:'＋ 新增合約'}).click();
+  await page.getByLabel('開始日',{exact:true}).fill('2028-01-31');
+  await page.getByLabel('合約類型',{exact:true}).selectOption('monthly');
+  await expect(page.getByLabel('結束日（含當日）',{exact:true})).toHaveValue('2028-02-28');
+  await dialog.getByRole('button',{name:'關閉',exact:true}).click();
+ });
+}

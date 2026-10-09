@@ -1,12 +1,12 @@
 import type {Env,Actor} from './types.js';
-import {fail,stmt,now,uid,local,digest,cookieToken} from './shared.js';
+import {fail,stmt,now,uid,local,sandbox,digest,cookieToken} from './shared.js';
 type JWK=JsonWebKey&{kid?:string};
 const keys=new Map<string,{expires:number,value:JWK[]}>();
 export function configured(env:Env){
  return !!env.ACCESS_AUD&&!!env.ACCESS_ISSUER&&/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(env.ACCESS_ISSUER)&&!!env.APP_ORIGIN&&/^https:\/\/[^/]+$/.test(env.APP_ORIGIN);
 }
 function decode(part:string){if(!/^[A-Za-z0-9_-]+$/.test(part))fail(401,'身分憑證無效');const s=atob(part.replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(s,c=>c.charCodeAt(0));}
-export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:number;iss:string}>{
+export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:number;iss:string;email?:string}>{
  if(!configured(env))fail(503,'正式登入尚未設定');
  if(new URL(req.url).origin!==env.APP_ORIGIN)fail(403,'非授權服務網址');
  const token=req.headers.get('cf-access-jwt-assertion')||'';
@@ -21,7 +21,7 @@ export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:
   const issuer=env.ACCESS_ISSUER!;
   let cached=keys.get(issuer);
   if(!cached||cached.expires<Date.now()||!cached.value.some(k=>k.kid===header.kid)){
-   const response=await (env.HTTP||fetch)(issuer+'/cdn-cgi/access/certs',{signal:AbortSignal.timeout(5000),redirect:'error'});
+   const response=await (env.HTTP||fetch)(issuer+'/cdn-cgi/access/certs',{signal:AbortSignal.timeout(5000),redirect:'manual'});
    if(!response.ok)fail(503,'身分驗證服務暫時不可用');
    const data=await response.json() as {keys:JWK[]};
    if(!Array.isArray(data.keys)||data.keys.length>10)fail(503,'身分驗證服務暫時不可用');
@@ -31,8 +31,14 @@ export async function verifyAccess(req:Request,env:Env):Promise<{sub:string;exp:
   if(!jwk)fail(401,'身分憑證無效');
   const key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
   if(!await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,decode(parts[2]),new TextEncoder().encode(parts[0]+'.'+parts[1])))fail(401,'身分憑證簽章無效');
-  return {sub:payload.sub,exp:payload.exp,iss:payload.iss};
+  return {sub:payload.sub,exp:payload.exp,iss:payload.iss,...(typeof payload.email==='string'&&payload.email.length<=254?{email:payload.email}:{})};
  }catch(error){if(error instanceof Error&&'status' in error)throw error;return fail(401,'身分憑證驗證失敗');}
+}
+export async function sandboxAccess(req:Request,env:Env){
+ if(!sandbox(req,env)||!env.SANDBOX_OWNER_EMAIL)fail(503,'測試環境尚未安全設定');
+ const claim=await verifyAccess(req,env);
+ if(!claim.email||claim.email.toLowerCase()!==env.SANDBOX_OWNER_EMAIL.toLowerCase())fail(403,'此身分不能進入測試環境');
+ return claim;
 }
 export async function accessLogin(req:Request,env:Env){
  const claim=await verifyAccess(req,env);
@@ -50,7 +56,11 @@ export async function actor(req:Request,env:Env):Promise<Actor>{
  const row=await stmt(env,'SELECT u.id,u.operator_id,u.name,u.role,u.active,s.auth_method,s.issuer,s.subject FROM sessions s JOIN staff_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1',await digest(token),now()).first<Actor&{auth_method:string;issuer:string;subject:string}>();
  if(!row)fail(401,'登入已失效或帳號已停權');
  if(isLocal){if(row.auth_method!=='demo')fail(401,'登入環境不符');}
- else {
+ else if(sandbox(req,env)){
+  if(row.auth_method!=='demo'||!row.issuer||!row.subject)fail(401,'測試登入環境不符');
+  const claim=await sandboxAccess(req,env);
+  if(row.issuer!==claim.iss||row.subject!==claim.sub)fail(401,'測試登入身分不符');
+ }else {
   if(row.auth_method!=='access')fail(401,'示範登入不可用於正式環境');
   const claim=await verifyAccess(req,env);
   if(claim.iss!==row.issuer||claim.sub!==row.subject)fail(401,'登入身分不符');

@@ -1,0 +1,51 @@
+name: Full platform runtime acceptance
+on:
+  push:
+    branches: [feature/full-platform-migration, feature/menu-chat-port]
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: node scripts/verify-upstream-platform.mjs --prepare
+      - run: node scripts/verify-platform-schema.mjs
+      - run: npm ci
+        working-directory: .migration-build/smart-menu/backend
+      - run: npm ci
+        working-directory: .migration-build/smart-menu/frontend
+      - run: node scripts/prepare-platform-runtime.mjs
+      - name: Build integrated frontend
+        run: npm run build
+        working-directory: .migration-build/smart-menu/frontend
+      - name: Bundle trusted composite Worker
+        run: npx wrangler deploy --dry-run --config wrangler.platform-local.json --outdir .platform-worker-build
+      - run: node scripts/build-platform-test-worker.mjs
+      - run: node --test tests/platform-runtime/*.test.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: sudo apt-get update -qq && sudo apt-get install -y fonts-noto-cjk
+      - run: npx playwright test --config playwright.platform.config.mjs
+      - name: Export only controlled fictional runtime screenshots
+        run: node scripts/export-platform-runtime-screenshots.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platform-runtime-acceptance
+          path: |
+            reports
+            .platform-worker-build
+            .migration-build/smart-menu/frontend/dist
+            playwright-report
+            test-results
+            docs/screenshots

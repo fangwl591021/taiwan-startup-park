@@ -1,0 +1,364 @@
+# 最新發布：聊天室修改選單與 LIFF 原圖上傳
+
+2026/10/9 09:50:22（Asia/Taipei）正式站與獨立展示站已完成發布，Worker 版本、資料結構及正式上傳頁檔案核對成功。
+
+- 入口：業者工作台 → 完整數位工作區 → 聊天室修改選單。支援 LINE UID 授權、私訊「修改選單」選擇已發布選單、聊天室收圖、LIFF 原圖上傳與座標調整、發布紀錄及既有使用者連結更新。保留按鈕名稱、功能、ID 與首頁；完成／失敗／待核對結果顯示在頁面與紀錄，不發終端 push。
+- 管理員需設定自己的工作區 OA 憑證、啟用連線、設定獨立 Webhook 並授權 UID；LIFF 另需同 Provider 的 LINE Login Channel 與 LIFF。原 SaaS 的憑證、OA、資料庫未複製，既有平台 OA 接收器未改址。詳見 [設定與操作](MENU_CHAT_PORT.md)。
+- [最終建置、驗收與發布成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37871310240)：139 根後端、42 根桌面／手機、1222 來源後端、592 來源前端、36 移植／實際 runtime、6 完整平台／上傳桌面手機，共 2037 項通過。TypeScript、來源 369 檔完整性、Vite、Worker bundle／dry-run 與依賴檢查通過。[PR #22](https://github.com/fangwl591021/taiwan-startup-park/pull/22) 與 [入口修正 PR #23](https://github.com/fangwl591021/taiwan-startup-park/pull/23) 已合併。
+- 兩個專用平台 D1 的 0060_menu_chat.sql 已套用；遠端唯讀核對各 10 張新表、6 個 revision trigger、projects.sync_revision，以及 0059／0060 各一筆已套用紀錄。沒有重建資料庫或種入授權 UID。正式既有借址與平台資料保留。
+- 首輪線上核對發現 Assets 將 .html 轉址至受保護路徑，已改為內部讀取 canonical 路徑，補入回歸測試及發布檢查。最終正式上傳頁與 4 個 JS／CSS 的 SHA-256 均符合本次建置，直接回應 200；管理 API 仍為 Access 302。展示站保留完整登入保護且不啟用 LINE 發布。
+- 正式發布來源 f39180721d589a42933e17fcd17035606d5be7b3；正式 active version ed1b3441-5fa2-4734-82ec-75c89554c2b7；展示 active version 6ea84870-202b-4702-b8f4-45d74ee4595a。後續文件提交不更動已發布程式。
+- 既有加密主鑰保留（key_created:false），根 Access 不變；原 LINE 外送 off、分潤全 NULL 與結算 off 保留。新圖文選單發布只允許個別工作區明確啟用，預設授權名單為空。中斷發布要求核對，不自動重發；refresh 依 batch 狀態及完成收據更新。
+- 手機驗收使用隔離的虛構 UID、Token、圖片與 LINE API；遠端驗證核對真實版本、schema、保護及靜態檔案。真人 LINE／LIFF 發布驗收尚待該工作區完成設定，沒有對真實 OA 發布測試圖片。不重錄教學影片。
+
+以下為歷次發布紀錄。
+
+# 最新發布：完整 Smart-Menu 平台與借址 CRM
+
+2026-10-08 08:33:59（Asia/Taipei）正式站與獨立測試站已完成發布，遠端版本、資料庫及保護核對成功。
+
+- 原 Smart-Menu 的完整 React／Hono 平台已實際接入台灣創業園驗證身分與業者工作區；不是只有來源存檔或選單預留。原 369 檔 snapshot 不修改，完整 8 模組與後續規格保留。詳見 [本輪可操作範圍與未啟用項目](FULL_PLATFORM_RUNTIME.md)。
+- 入口：業者工作台 → 平台工作區 → 業者工作區 → 開啟完整數位工作區。包含 CRM／分析、圖文選單與模板、商城商品／訂單、行銷草稿、旅遊、經銷／佣金、點數與 AI 用量介面；模組依伺服器權益判斷。一般業務、維運、財務及系統管理身分不會取得企業零售工作區所有權。
+- 借址 CRM 帶入既有租戶、據點、服務起迄、合約類型與付款週期，連回原維運流程；名片／DM、介紹及社群連結可保存為有版本的私有官網草稿。小型 PNG／JPG 每張最多 1 MB，以本專案專用 D1 私有保存。
+- 正式與測試新增各自獨立平台 D1，與原借址 D1 分離；54 份來源 schema（不含 0007 測試 fixture）及新 runtime schema 已套用，來源開發帳號／default 工作區移除。正式既有借址租戶、合約、收款及操作歷程保留。
+- 首次發布在來源 0033 的巢狀 CASE trigger 發生遷移解析錯誤，正式 Worker 未被替換。修正部署副本為等價 WHEN guard，補驗點數餘額與跨工作區，核對新建 D1 的已完成遷移前綴、schema 與無實際工作區後接續；沒有清空資料庫或修改原 snapshot。
+- [最終建置、驗收與發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829)：131 根後端、39 根桌面／手機、1222 來源後端、592 來源前端、12 實際 runtime HTTP／遷移及 4 完整平台桌面／手機，共 2000 項通過；建置、typecheck、Worker dry-run、npm audit 0 通過。
+- [發布 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829/artifacts/11519869325)；[最終建置報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37708091829/artifacts/11519849228)；[桌面／手機截圖](screenshots/platform-runtime-manifest.json)；[PR #19，已合併](https://github.com/fangwl591021/taiwan-startup-park/pull/19)。非秘密版本／資料庫核對保存在 [runtime-deployment-2026-10-08.json](runtime-deployment-2026-10-08.json)。
+- 已發布來源 `5351289d184721b81b47e5dfa1b858e915bef892`；正式 active version `51a37d4d-cd39-48a4-80b5-1b495bc99ab2`；測試 active version `f4d48613-fda3-4a0e-8696-334859d4a4ce`。文件提交不改動發布程式。
+- 既有 OA 加密主鑰保留（key_created:false），平台 signed receiver 繼續運作；根 Access 未放寬，17 項受保護路徑／Webhook 探針通過。正式與測試新資料庫 binding、來源 schema／無開發帳號、數位分潤全 NULL、結算 off、LINE 外送 off 已核對。
+- 來源工作區 OA 接收／外送、LINE Login／LIFF、AI／OCR、金流、實際佣金匯款與付費官網發布尚未啟用。企業數位服務不因借址成交或付款而開通；平台費與分潤全 NULL／待議定。教學影片沿用，不重錄。
+- 桌面／手機截圖與已驗證 CRUD 使用隔離虛構資料；遠端核對真實資料結構／版本／保護，未代替使用者登入正式瀏覽器。原始 PLATFORM_BLUEPRINT.md 完整保留。
+
+以下為歷次發布紀錄。
+
+# 最新發布：四分頁聊天室監控與群組商機
+
+2026-10-07 20:51:19（Asia/Taipei）正式與獨立測試站已更新，實際資料結構、版本與保護核對成功。
+
+- 業者管理員工作台 → 聊天室 AI 監控，新增 LINE 聊天室、用量總覽、群組商機、AI 呼叫紀錄；支援 1／7／30／90 天、搜尋及狀態篩選、keyset 分頁、30 秒更新。背景、輸入、對話框、離頁及切換身分停止輪詢；快速切換不重疊載入。
+- LINE 聊天室顯示授權工作訊息、未分派來客、實際回覆者與送出狀態。群組須已驗簽發現並由管理員明確啟用，關鍵字＋同則情境用語形成規則候選；可人工確認並連結同業者 CRM，不自動建案、成交或收費。
+- AI 用量與紀錄由可信內部執行介面計量；未知 Token／價格保留 NULL，不保存提示詞、正文、輸出或密鑰。模型未接通，群組是規則候選，不是 AI 情境判讀。詳見 [操作與界線](CHAT_MONITOR_IMPORT.md)。
+- 117 項後端與 35 項桌面／手機驗收通過，另含 TypeScript、Worker dry-run、runtime 身分驗證、npm audit 0 vulnerabilities。首輪自動更新焦點判斷問題已修正，後續完整驗收通過；截圖確認控制大小、歷程對齊與收合。
+- [發布與遠端驗證](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623673561)；[實際部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623673561/artifacts/11482948510)；[最終驗收與八張桌面／手機截圖](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37623597984/artifacts/11483420941)；[PR #18](https://github.com/fangwl591021/taiwan-startup-park/pull/18)（先建立草稿，隨發布分支快轉已合併）。
+- 已發布應用來源 `a816245c0e7bfe7d2b33d74e7bf9ccad68b0bb73`；正式 active version `c2fc1d34-e23b-4400-89ef-00ea2e9c4ed3`；測試 active version `5367ef58-caed-4401-a1db-1a621ca7425b`。後續文件提交不更動已發布應用。
+- `0014_chat_monitor.sql` 在兩區專用 D1 成功套用；確認 6 張監控新表。原 CRM／租戶／合約／郵件及後續藍圖保留，沒有匯入正式 fixture。既有加密主鑰保留（key_created:false），根 Access 未放寬；17 項遠端邊界通過，新 `/api/admin/monitor` 未登入為 Access 302，未知 Webhook 404。
+- 一般業務、維運、財務及平台管理身分不能讀取業者監控；群組確認與規則歷程獨立保存，不進一般 activity 或 CRM 預載。圖片為獨立記憶體測試服務的虛構資料，群組真實接收另以原始簽章後端測試驗證；沒有代替使用者登入正式瀏覽器驗收。
+- LINE Login、正式外送、圖文選單圖片發布、金流、AI 模型與告警仍未啟用，平台費／分潤全 NULL，結算關閉。不重新錄製教學影片。
+
+以下為歷次發布紀錄。
+
+# 先前發布：LINE OA 工作台、會員 CRM、模組與模板
+
+2026-10-07 19:06:02（Asia/Taipei）正式與獨立測試站已更新，遠端結構與保護核對通過。
+
+- 參照 Smart-Menu-Studio 的 LINE 工作區機制，加入會員 CRM、LINE OA 工作台、模組權益、共用／私有模板，以及僅業者管理員可見的聊天室核查。CRM → 成交案件 → 借址租戶沿用同一份客戶資料；單一未綁定 LINE 身分可帶入已接收的歷史對話。詳見 [功能對照與界線](LINE_WORKSPACE_IMPORT.md)。
+- 會員支援搜尋、標籤、狀態、分頁、指派與操作歷程；保留既有登記據點、合約起迄、年約／月約、付款約定、郵件代收及續約維運。列表採上限與 keyset 分頁，避免一次載入所有會員。
+- 平台管理模組與共用模板，不預設讀取業者 CRM／聊天室。業務與維運依案件／租戶指派限制；核查規則、事件及人工處理歷程不出現在一般活動紀錄。AI 模型未啟用，現在提供的是人工規則核查。
+- 109 項後端、31 項桌面／手機測試、TypeScript、建置、Worker dry-run 通過，npm audit 0 vulnerabilities。測試包含跨業者／角色隔離、千筆 CRM 分頁、重送不重建案件、會員到租戶、LINE 訊息綁定、模組相依、模板草稿及私有核查。
+- [發布與遠端核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611482434)；[實際部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611482434/artifacts/11478417739)；[桌面／手機驗收與截圖](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37611846625/artifacts/11477339138)；[PR #17](https://github.com/fangwl591021/taiwan-startup-park/pull/17)（先建立草稿，隨發布分支快轉已合併）。
+- 正式應用來源 `13ed99c931f2e20aa75943b87ede3fb3c364043f`；正式 active version `9a184830-2687-466e-b5c6-15223feaba22`；測試 active version `b07b2605-b908-4448-9456-ad01f1fd5f61`。後續截圖修正 `08bb6d8282bc81445d4b5a06d8f4d650a9972af1` 僅更動測試拍攝選項，應用程式與已發布來源相同。
+- `0013_line_workspace.sql` 成功套用兩區專用 D1；核對 9 張新增表，正式 1 家業者／4 項模組，測試 2 家業者／8 項模組。既有 LINE 密鑰保留、主鑰未重建（key_created:false），根 Access 保護未放寬。16 項遠端邊界檢查通過；新受保護 API 未登入均為 Access 302，未知 Webhook 為 404。
+- 平台已配置 OA 的最後有效驗簽紀錄仍存在（signature_received:1）；未更換原平台 Webhook。此為遠端既有接收紀錄，不代表本輪代替使用者按下 LINE Console Verify。從本地環境直接探測原網址被 Cloudflare 回應 403／1010，未將該探測當成應用驗簽結果。
+- LINE Login OAuth／LIFF、正式外送、圖文選單圖片發布、金流、AI 模型與告警推播未啟用；數位服務平台費／分潤全部 NULL，結算關閉。測試站不填真實憑證；截圖使用虛構資料。沒有代替使用者登入正式工作台驗收，也沒有重錄教學影片。原始 PLATFORM_BLUEPRINT.md 與後續需求完整保留。
+
+以下為歷次發布紀錄。
+
+# 先前發布：平台 Webhook Verify 與獨立來訊接收
+
+2026-10-07 17:57:34（Asia/Taipei）正式／測試站驗證更新。平台原網址已接入專用驗簽接收端；有效空事件回應 200，訊息持久保存後才確認，支援重送去重與訊息收回。平台事件與所有業者客戶、聊天室分開。
+
+系統總後台新增「平台 OA 來訊」，帳號設定顯示最後驗簽時間。Login、推播、金流、AI 仍未啟用，分潤 NULL，藍圖完整保留；不錄製教學影片。
+
+100 項後端、27 項桌面／手機通過；[發布及保護檢查](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37603887754)；[截圖／報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37603887754/artifacts/11473827821)；[PR #16](https://github.com/fangwl591021/taiwan-startup-park/pull/16)。
+
+Source `c7a106936a8e5cd9d6be86c819bd82198ba70f8b`；正式 active `c740117a-3bfe-489b-a1a2-787d7cf00c50`；測試 active `ef56babe-f84f-40c3-aae1-b7a1d5aa26f3`。原平台網址無效簽章公開探測已由 404 改為 401；實際 LINE Console Verify 仍需由使用者按下確認。詳見 [PLATFORM_LINE_WEBHOOK.md](PLATFORM_LINE_WEBHOOK.md)。
+
+以下為歷次發布紀錄。
+
+# 最新發布：平台 LINE 帳號單頁設定
+
+2026-10-07 16:15:53（Asia/Taipei）正式站與獨立測試站已驗證更新。
+
+- 依 Smart-Menu-Studio 參考模式，官方帳號名稱、@ID、Login 與 Messaging Channel ID、三組憑證、Callback／預留 Webhook 集中同頁；憑證狀態分開顯示，留白保留。桌面兩欄、手機單欄、深色大字。
+- 系統總後台 → LINE 帳號設定；網址 `/?workspace=platform&section=line-account`。一次交易保存，版本衝突不會部分寫入；密鑰不回顯、不入歷程；舊 Login 設定沿用。
+- 平台 OAuth／平台 Webhook 接收／推播尚未啟用，表單明示。業者既有 OA 接收維持原狀；金流、AI、數位分潤、原始藍圖完整保留；沒有重錄影片。
+- 97 項後端、27 項桌面／手機驗收、TypeScript、建置、Worker dry-run 全通過；npm audit 0 vulnerabilities。
+- [發布與保護檢查](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37592331763)；[驗收及桌面／手機截圖](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37592326214/artifacts/11469521126)；[草稿 PR #15](https://github.com/fangwl591021/taiwan-startup-park/pull/15)。
+- Source：`beb4ed3ba1639c0d2cdf37abd711bfc7cc84df1d`。
+- 正式 active version：`2f3cde31-a276-45dd-97b9-374ce8debbe2`；測試 active version：`acdfaa97-9c1a-464f-9019-9babad387024`。
+- 0011 遷移在兩個專用 D1 套用成功；資料庫隔離、分潤 NULL、發送關閉、指定系統管理員與 Access 保護確認正常。既有加密主鑰未重建，根路徑 Access 未放寬。
+- 只放行原有精確 signed webhook 路徑；未登入新 `/api/platform/line-account` 回應 Access 302。詳見 [LINE_ACCOUNT_SETTINGS.md](LINE_ACCOUNT_SETTINGS.md)。
+
+以下為歷次發布紀錄。
+
+# 目前版本：郵件代收 LINE 聯絡人綁定與通知預覽
+
+2026-10-06 11:14（Asia/Taipei）正式與獨立測試區已更新。
+
+- 租戶詳情及「租戶維運台 → 信件包裹」新增主要通知聯絡人設定；使用業者自己的 LINE OA，與租戶後續租用自己的 LINE OA 分開。
+- 管理員從本業者已驗簽接收的來客中選擇，確認姓名與企業授權；更換／解除皆有操作者與版本歷程。一般 LINE ID 不作為推播識別碼，不開放手填 userId。前端與 audit 不暴露完整 LINE 身分或憑證。
+- 每筆收件可預覽企業、摘要及台北時間，固定「僅預覽／未發送」。實際 LINE 接收需先完成業者通道設定；郵件推播尚未啟用，沒有 HTTP 送出或外送佇列，不改收件狀態。
+- 0007_mail_line_recipients.sql 在正式與測試專用 D1 成功套用；新增受 operator／tenant／contact／actor 外鍵約束的綁定表與索引，未回填、清除或導入正式資料。
+- 借址第一期、合約條件、付款台帳、深色大字條列與收合保留。官網／商城／租戶 LINE OA／CRM 仍為後續服務，平台費與分潤全 NULL；完整原始藍圖保留。[規格與驗收界線](MAIL_LINE_NOTIFICATIONS.md)。
+- [84 項後端、20 項桌面／手機驗收與發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174)。
+- [桌面／手機截圖及完整報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174/artifacts/11387114157)：desktop/mobile-mail-line-binding.png、desktop/mobile-mail-notification-preview.png。
+- Source：48bb738be0a588eb67f0e0e0ec48b5facaf3811a；正式 active：6a45a94a-3c9e-4da9-b55d-eab786785c9f；測試 active：07f625c9-3617-4506-b6dd-e193f601176a。
+- 2026-10-06T03:14:33.973Z 發布後確認實際 DB 綁定與隔離、LINE 外送 off、分潤全 NULL、兩區未登入 API Access 302。[發布證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37407877174/artifacts/11387119312)。
+- 未代替管理員登入正式瀏覽器；通知 UI 截圖使用局部 mock，身分來源／權限／零發送由 SQLite 與 HMAC webhook 後端測試驗證。教學影片沿用原版，錄影步驟 skipped。
+
+---
+
+## 先前發布紀錄
+
+# 目前版本：合約服務起迄與付款約定
+
+2026-10-06 10:46（Asia/Taipei）正式與獨立測試區已更新。
+
+- 租戶清單依實際合約顯示起迄與服務狀態，未建合約不再一律顯示服務中。詳情先呈現據點、地址、日期、合約類型、付款週期、郵件內容與到期／續約提示，聯絡及承辦紀錄置後；保留條列、深色大字及收合。
+- 合約類型與付款週期獨立，支持年約按月付款等約定。舊條件為 NULL／待補；管理員可依版本及變更依據補登，保留實際操作者。續約可沿用，終止紀錄只讀。
+- 0006_contract_service_terms.sql 在正式與測試專用 D1 成功套用；只新增 nullable 欄位與索引，未刪除、重設或導入正式資料。
+- 一次性代辦與借址年約明確區分；獨立代辦／押金台帳尚未提供。付款週期本輪是約定紀錄，現有應收仍是本期總額台帳，可分次人工記錄實收，不自動拆月帳單、扣款或續約。
+- 數位服務逐項呈現期間與收費規劃。第一期不開放數位收費或開通，分潤與平台費全 NULL／待議定。原始藍圖及後續需求保留；[研究與驗收界線](TENANT_SERVICE_CLARITY.md)。
+- [建置、79 後端及 18 桌面／手機驗收、發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113)。
+- [桌面／手機截圖及完整報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113/artifacts/11387071367)：desktop/mobile-tenant-service-summary.png、desktop/mobile-tenant-contract-terms.png。
+- Source：fcb9d7b02b830cf0e796bf8730320c9595df9d6b。
+- 正式 Worker active：111b9d82-fe7e-44be-8c9b-9feaf3b0cc2d；測試 Worker active：fb82f36a-d691-427e-a56e-624183edc2c8。
+- 2026-10-06T02:46:42.673Z 發布後已確認實際 DB 綁定與環境隔離、LINE 外送 off、分潤全 NULL、兩區未登入 API Access 302；[部署證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37405598113/artifacts/11387616244)。未代替使用者登入正式瀏覽器；畫面驗收使用本機虛構資料。
+- 教學影片沿用原版，錄影步驟 skipped。
+
+---
+
+## 先前發布紀錄
+
+# 目前版本：按需載入、快取與列表分頁
+
+2026-10-06 08:55（Asia/Taipei）正式與獨立測試區已更新。
+
+- 切頁保留側欄與外框；資料按頁載入，15 秒內合併與重用 GET，寫入及身分切換清除。租戶、案件、對話清單每頁 50 筆，完整總數及搜尋由後端提供。
+- 0005_workspace_paging_indexes.sql 已成功套用於兩個專用 D1；只新增索引，不清除資料。租戶維運與據點讀取批次化，移除逐訂閱額外資格請求；原有角色／業者權限保留。
+- [建置、75 後端及 16 桌面／手機驗收、發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37396358578)
+- 1,001 家虛構租戶的分頁完整性與索引驗收通過；模擬 GET 延遲下，TTL 內的重訪與維運分頁額外讀取為 0。這些是本機／自動化證據，不是正式使用者延遲保證；[詳細測試與界線](PERFORMANCE_ACCEPTANCE.md)。
+- [截圖與報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37396358578/artifacts/11383383146)
+- Source：d6f4074854e09067a2ad2134d0e4173077f06d47
+- 正式 Worker：e87a75f6-8ca6-4605-ac9a-cca84eb24b80
+- 測試 Worker active：74c21861-ca48-4e01-8ddd-ebd6a63cee90
+- [發布後核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37396358578/artifacts/11382854641)：2026-10-06T00:55:37.475Z 確認 DB 分離、分潤值全 NULL、LINE 外送 off、兩區未登入 API Access 302。未代替本人完成正式已登入瀏覽器效能量測。
+- 教學影片沿用原版，錄影步驟 skipped；借址第一期、原始藍圖及未串接狀態完整保留。
+
+---
+
+## 先前發布紀錄
+
+# 目前版本：緊湊租戶條列與深色文字
+
+2026-10-06 08:36（Asia/Taipei）已更新正式與獨立測試區。
+
+- 租戶企業由大型卡片改為條列：企業、服務狀態、服務承辦、功能申請數及查看入口；整列可點選。桌面列高約 78px，手機分行呈現，保留大字、搜尋、側欄及區塊收合。
+- 全站原本偏淡的輔助文字調深；表單 placeholder、停用欄位、歷程與狀態標籤同樣調深，維持綠色按鈕與白字。
+- [建置、72 項後端及 14 項桌面／手機驗收、發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37394706074)
+- [桌面／手機截圖及驗收報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37394706074/artifacts/11383210927)：新增 desktop-tenant-compact-dark.png、mobile-tenant-compact-dark.png；驗收列高、輔助文字對比至少 7:1（對白色背景）、搜尋的空結果與正確篩選、點選租戶及維運入口、無橫向溢出。
+- Source commit：c3461e8361576e09fc2b1d432a45ac43de93472d
+- 正式 Worker version：63a9e8a2-b259-49b0-9fb9-22ecf45dc0ba
+- 測試 Worker active version：b48b7513-a411-486a-92d2-058875862102
+- [遠端核對與部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37394706074/artifacts/11383275860)：2026-10-06T00:36:20.917Z 確認實際 D1 binding 分離、分潤欄位全部 NULL、LINE 外送關閉，兩區未登入 /api/me 均 Access HTTP 302。
+- 本輪僅前端與 UI 驗收變更，不改動後端權限、資料庫 schema 或借址第一期範圍；原始藍圖完整保留。LINE、金流、AI 尚未串接。
+- 教學影片保留原版，錄影步驟 skipped；沒有重製影片。
+- UI 與截圖使用本機虛構資料，未代替本人完成正式網址已登入的瀏覽器驗收。
+
+---
+
+## 先前發布紀錄
+
+# 目前版本：大字與可收合工作台
+
+2026-10-06 08:26（Asia/Taipei）已更新正式與獨立測試區。
+
+- 桌面頁首可收合／展開側欄；收合為圖示後仍有完整無障礙名稱及提示，手機維持抽屜導航。
+- 工作台主要區塊及彈出視窗段落提供展開／收合；租戶的企業數位服務租用預設收起，先呈現承辦與維運入口。
+- 主要文字與表單為 16–18px，輔助文字至少 14px；手機欄數、換行、表單與關閉按鈕調整。瀏覽器只記住版面偏好，不保存客戶資料或權限。
+- 依使用者指示暫不製作教學影片。先前錄影流程的發布已取消，本次沿用已上線 run 37391789253 的影片與字幕；新的發布 run 明確跳過錄影。一般 push 不再自動重錄。
+- 借址第一期範圍、後端權限與既有資料保持不變；LINE、金流與 AI 尚未串接，數位功能不收費、不開通，分潤欄位全為 NULL／待議定。
+
+## 本次發布證據
+
+- Source commit：89e4cedf093a1c5e8f86e112cb3c9588eb194f13
+- 正式 Worker：607a37e5-7d55-4973-99c1-414b18be0f41（100%）
+- 獨立測試 Worker：12d29316-54f0-4724-97fe-e372982842c7（100%）
+- [建置、驗收及部署全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37393823430)
+- [桌面／手機截圖與驗收報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37393823430/artifacts/11382320856)
+- [實際環境、資料隔離、分潤欄位與部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37393823430/artifacts/11382415838)
+- 72 項後端及 14 項桌面／手機測試通過。新增檢查涵蓋側欄收合增加內容寬度、重新載入保存偏好、區塊收合與恢復、租戶維運入口可操作、字體大小與無橫向溢出。
+- 新截圖：desktop-dashboard-folded.png、mobile-dashboard-folded.png、desktop-sidebar-folded.png、desktop-tenant-large-text.png、mobile-tenant-large-text.png。
+- 第一次版面驗收的教學連結測試使用舊圖示文字名稱，更新為語意名稱後通過；未移除權限檢查或降低驗收。
+- 2026-10-06T00:26:33.661Z 發布後核對：兩區實際 D1 binding 分離、每業者四組數位條件完整且全部空白、LINE 外送關閉、未登入 /api/me 均 Access HTTP 302。
+- UI 驗收使用本機虛構資料；未代替本人完成正式網站已登入的瀏覽器驗收。原始 PLATFORM_BLUEPRINT.md 完整保留。
+- 詳細操作及影片延期決策：[READABLE_LAYOUT.md](READABLE_LAYOUT.md)。
+
+---
+
+## 先前發布紀錄
+
+# 第一期借址版本發布紀錄
+
+2026-10-06 08:07（Asia/Taipei）：正式工作台、獨立測試區及新版借址教學影片已發布完成。
+
+## 可使用入口
+
+- [正式工作台](https://taiwan-startup-park.fangwl591021.workers.dev/)
+- [獨立測試帳號模擬](https://taiwan-startup-park-demo.fangwl591021.workers.dev/)
+- [新版實際操作教學影片](https://taiwan-startup-park.fangwl591021.workers.dev/tutorial.html)
+
+## 本次生效範圍
+
+第一期只到借址：成交追蹤、成交轉租戶、地址合約、人工應收／收退款、續約、信件包裹、維運、工作聊天室基礎與操作人員歷程保持可操作。既有資料與數位歷程保留。
+
+官網、商城、LINE OA 與 CRM 的後續程式保留；正式與測試區均不開放數位需求、訂閱、數位收費或功能開通。合作平台商、平台費、雙方分潤、結算基準與週期、生效日及議定依據欄位全部留空（NULL）、待議定，沒有分潤計算、撥款或結算。LINE、金流及 AI 尚未串接／啟用。
+
+## 版本與驗收證據
+
+- 發布來源 commit：96bc332a9101de140ef9d59003db70cd4e03114a
+- 正式 Worker version：2a5114af-2dd3-43ba-9d39-7fdc84ba81c9（100%）
+- 測試 Worker active version：04799136-d75e-4358-b138-1f26d19515af（100%，包含原有私有入口 secret 設定）
+- [建置、測試、錄影及正式發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253)
+- [桌面／手機截圖與建置證據](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253/artifacts/11381846232)
+- [新版影片、中文字幕與逐步教學](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253/artifacts/11381816187)
+- [遠端核對報告與部署 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37391789253/artifacts/11381483295)
+- Typecheck、建置、72 項後端／權限／核心流程測試、12 項桌面／手機驗收、Worker dry run 及 Access runtime 驗證通過。
+- 實際 UI 錄影：146.1 秒、25 個步驟、1280 × 900、H.264、1,418,023 bytes，中文字幕、無旁白；播放器驗證通過。新版已替換線上教學。
+- docs/screenshots 含 desktop-phase1-revenue-terms.png、mobile-phase1-revenue-terms.png、desktop-phase1-address-billing.png、mobile-phase1-address-billing.png。
+
+## 遠端發布後核對
+
+2026-10-06 00:07:00 UTC 的 phase-one-release-report.json 確認：
+
+- 正式 D1 為 taiwan-startup-park-prod，測試 D1 為 taiwan-startup-park-demo；核對遠端 Worker 真實 binding，兩區獨立。
+- 兩個專用 D1 均成功套用 0004_digital_revenue_placeholders.sql；未刪除原有租戶、合約、收款或操作歷程，未重設測試資料。
+- 每家業者四種模組的預留資料完整，商業欄位全部為 NULL、狀態 unagreed。
+- 正式 production／DEMO_MODE=off，測試 sandbox／DEMO_MODE=on；兩者 LINE_SEND_ENABLED=off。
+- 兩區未登入 /api/me 均 HTTP 302 至 Cloudflare Access；原有管理員綁定及 Access 保護保留，無公開示範登入。
+- 原始 PLATFORM_BLUEPRINT.md 完整保留。
+- 自動化 UI 與影片使用本機虛構資料；未代替本人完成正式網址已登入的瀏覽器驗收。遠端資料庫、實際發布版本、環境旗標與未登入邊界已核對。
+
+## 回復與後續
+
+部署 metadata 保留前一正式版本 e71f3748-5c73-401f-b865-bc56b3535af6 及測試版本，供人工核對回復。0004 為新增資料表與 trigger，不以 Worker 回復自動刪除資料；舊版本仍含本期關閉前的數位流程，回復時須重新核對第一期限制，不可直接視為可對外收費。
+
+後續數位串接須先議定合作條件，再另行實作設定、核准、當期標準快照及結算對帳。詳見 [第一期範圍](PHASE_ONE_SCOPE.md) 與 [測試操作指引](SIMULATION_GUIDE.md)。
+
+---
+
+## 歷史發布紀錄（以下為過往版本，不代表目前功能範圍）
+
+# 正式工作台、測試帳號模擬與教學影片
+
+2026-10-05 12:42 UTC：本輪更新已發布成功。
+
+## 目前可使用
+- [正式工作台](https://taiwan-startup-park.fangwl591021.workers.dev/)
+- [獨立測試帳號模擬](https://taiwan-startup-park-demo.fangwl591021.workers.dev/)
+- [操作教學影片](https://taiwan-startup-park.fangwl591021.workers.dev/tutorial.html)
+- 教學為實際 UI 錄影，145.55 秒（約 2 分 26 秒）、25 個步驟，1280 × 900、H.264、1,475,809 bytes；中文字幕直接顯示，另附 WebVTT，無旁白。播放及下載控制、桌面／手機排版皆驗收通過。
+
+## 本輪發布識別與證據
+- 程式提交：6f87bf7f55305b28f5b1f0d92a4374ed6f676251
+- 正式 Worker version：e71f3748-5c73-401f-b865-bc56b3535af6
+- 測試 Worker：taiwan-startup-park-demo
+- 測試 D1：taiwan-startup-park-demo，UUID a81974f2-ffff-4973-a128-22597eed6919；不使用正式 D1。
+- [完整建置／驗收／發布成功（attempt 2）](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37310577997)
+- [影片、字幕、封面與逐步文字](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37310577997/artifacts/11345526746)
+- [桌面／手機截圖、建置與 UI 報告](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37310577997/artifacts/11345886356)
+- [部署前版本與測試區資源 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37310577997/artifacts/11346450378)
+- 67 項後端測試、10 項桌面／手機測試、教學流程快速預演、完整錄影及媒體播放驗證通過。影片兩個代表畫面已人工檢視，含表單字幕與 B 業者隔離範例。
+- 首次新測試區發布後登入重新導向檢查未通過；相同提交僅重跑失敗發布工作後，測試 /api/demo/users 與正式 /api/me 均 HTTP 302 至 Access。未改動或放寬驗證／通行規則。
+- 尚未代替本人完成已登入的正式網址瀏覽器驗收；自動化 UI／錄影使用獨立記憶體虛構資料，遠端已核對實際 D1 binding、Access 規則與未登入邊界。
+
+## 測試帳號與資料界線
+- 原本指定管理員通過獨立 Access application 驗證後，選擇管理員、業務 S1／S2／S3、維運、財務及 B 業者管理員／業務。沒有公開密碼。
+- 各角色使用既有後端角色／業者資料範圍；模擬 session 綁定授權訪客的 Access issuer／subject。正式環境不接受模擬 session 或角色選擇登入。
+- 測試區虛構資料獨立保存，不自動重設、不匯入正式客戶。新增人員仍為待身分綁定。請勿在測試區填真實客戶資料。
+- 正式 Worker 保持 production／DEMO_MODE=off；LINE_SEND_ENABLED=off。測試 Worker sandbox／DEMO_MODE=on，但無真實 LINE credentials、webhook／外送或排程。
+- LINE、金流、AI 尚未串接／啟用；訂閱、人工收款、需求申請不代表外部功能已開通。
+- 原始 docs/PLATFORM_BLUEPRINT.md 完整保留。詳見 [測試操作指引](SIMULATION_GUIDE.md)。
+
+---
+
+## 上一輪正式部署紀錄
+
+2026-10-05 11:51 UTC：完整工作台已發布至指定 Worker。
+
+## 已完成
+- 首位管理員已由本人通過 Access 驗證並初始化；發布前以正式 D1 核對有效 operator_owner 與 issuer／subject 綁定。
+- 本專案 D1：taiwan-startup-park-prod；0001、0002、0003 schema 已套用，本次發布確認無待套用 migration。
+- Access 僅保護本專案完整網址，首位登入信箱由 INITIAL_OWNER_EMAIL GitHub Secret 提供，未寫入公開原始碼；無 bypass 政策。
+- 完整 Worker 與 3 個靜態資產已成功發布；初始化頁程式已由正式工作台取代。
+- APP_ENV=production、DEMO_MODE=off、LINE_SEND_ENABLED=off；未匯入示範客戶資料，未啟用排程。
+- 未登入 /api/me 回應 302 至 Access 登入，未開放客戶資料。
+- 第一輪與租戶維運功能已保留：LINE OA 風格儀表板、後端權限、成交追蹤、成交轉租戶、工作聊天室及操作人員歷程，另含合約、人工帳務、功能租用、收件與維運工單。
+- 原始 PLATFORM_BLUEPRINT.md 完整保留，未串接項目仍有明確狀態。
+
+## 發布識別
+- 網址：https://taiwan-startup-park.fangwl591021.workers.dev/
+- 發布來源 commit：a0f2c4a54b24ac0abf4d3d5055e9089329cedc39
+- Cloudflare Worker version：a83ba0da-901a-443f-a79d-aacfdb239eaf
+- [完整工作台建置及發布成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37305465164)
+- [部署前資源核對及回復 metadata](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37305465164/artifacts/11343209871)
+- [桌面／手機驗收截圖與建置成果](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37305465164/artifacts/11343566122)
+
+## 驗證與界線
+63 項後端／權限／核心流程／部署測試及 8 項瀏覽器驗收全部通過。workerd 執行環境的 RS256 驗證與實際 Access 公開金鑰取得／匯入皆通過。公開金鑰請求使用 manual redirect 並拒絕 3xx，修正 Workers 不支援 redirect:error 的問題。
+
+截圖在建置 artifact 的 docs/screenshots 目錄，含 desktop-dashboard.png、mobile-dashboard.png、成交／租戶／聊天室與維運頁面；使用本地虛構測試資料，非正式客戶資料。本人已完成初始化，但正式工作台發布後的瀏覽器登入確認仍待本人重新開啟頁面；不將未登入檢查或測試 fixture 視為正式使用者登入驗收。
+
+LINE 真實收送尚未串接且發送關閉；金流未串接，帳務為人工記錄；AI 與風控規則未啟用。官網、商城等未接通的服務不得因申請或人工帳務而標示為已啟用。其餘後續需求以 PLATFORM_BLUEPRINT.md 為準。
+
+## 影響與回復
+僅使用 taiwan-startup-park 與本專案專用 D1／Access；未修改其它 Worker 或其它資料庫。回復時核對 artifact 中前一版本的部署記錄及 Worker ID；不自動刪除資料庫或取消 Access 保護。非秘密資源對應保存在 config/production-resources.json，真正憑證只由 GitHub Secrets 提供。
+
+## 新增入口修正
+
+已發布新增既有租戶、新增操作人員資料及獨立據點／方案設定，並補上空資料頁的可點擊建立入口。空租戶工作台、實際建檔、手機入口及承辦人權限已通過測試。直接建檔租戶不製造案件成交、收款或權益；明確指派業務承辦時，僅該員或管理員可查看。人員資料預設停用且待 Access 綁定；不能直接啟用、指派案件或新增 owner/platform 角色。新增操作指引見 CREATION_GUIDE.md。
+
+新增驗收截圖：desktop-empty-tenants.png、desktop-add-staff.png、mobile-add-tenant.png、mobile-catalog.png，保存於上述 build artifact 的 docs/screenshots。
+# LINE Login 串接欄位修正
+
+2026-10-07 15:48（Asia/Taipei）正式與獨立測試區已更新。
+
+- 系統側欄新增「LINE Login 登入設定」：Login Channel ID、加密保存的 Channel secret、選填 Provider ID、唯讀預定 Callback URL 與 openid profile。平台 OA 欄位明確改標 Messaging API，兩類資料不混用。[操作與界線](LINE_LOGIN_SETTINGS.md)。
+- 0010_platform_line_login.sql 新增獨立空白設定，不移用舊 OA 值；原 OA 接收、角色、合約與租戶保留。任何 OA／Login 密文存在都不重建主鑰；主鑰核對 key_created:false。
+- 本輪只保存設定；LINE Login OAuth 流程未啟用，Callback 為預留路徑、不能登入或提升權限。既有 Access 與平台角色隔離保留。
+- [95 後端、27 桌面／手機、建置與發布全通過](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37589370643)，npm audit 0 vulnerabilities。[畫面與建置](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37589370643/artifacts/11468260803)；[遠端核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37589370643/artifacts/11468206103)。
+- Source：f9e532524e8266eddbf8883cf3aab44ca6fb4747；正式 active：e717c930-bf6a-4c34-a545-d14444c85e08；測試 active：f2165b71-ed2a-4a67-a604-59af6ef4df97。
+- 新 Login 設定 API 與其餘工作台 API 皆 Access 302，Webhook 探針 404、根政策未放寬。兩區 Login 設定結構及管理員核對完成，DB 分離、分潤 NULL、LINE 外送 off、結算 disabled；金流／AI 未啟用。
+- UI 用虛構資料；密鑰輸入可用旗標採局部模擬，真正加密與權限另由後端驗證。未輸入正式 Login 憑證、未代替本人登入正式瀏覽器；教學沿用、不重錄，原始藍圖保留。
+
+---
+
+# 系統總後台與管理員角色修正
+
+2026-10-07 15:20（Asia/Taipei）正式與獨立測試區已更新。
+
+- 「系統總管理員」與「業者管理員」分開；平台建立者的業者角色保留，另加明確系統權限，可切換後台。一般業者沒有跨業者權限。[範圍與操作](SYSTEM_CONSOLE.md)。
+- 新增系統總覽、業者與 OA 狀態總覽、可保存的平台 OA／通知規劃、平台費與分潤預留、獨立系統設定歷程。平台 OA 僅規劃，未串接／未發送；業者開通、停用與 SaaS 方案核准尚未開放。
+- 0009_platform_console.sql 已套用專用 D1，授權限預先綁定的固定平台建立者；既有角色、合約與租戶保留。測試可選虛構系統管理員；不重設資料。
+- [93 後端、25 桌面／手機、建置、權限與發布通過](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743)；npm audit 0 vulnerabilities。
+- [截圖與建置](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743/artifacts/11466727105)；[部署核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37586454743/artifacts/11467280650)。
+- Source：d2e05cc244a537f8400d11eeb33ce61d2aca901f；正式 active：eb7a56c2-a1bf-41d2-9b6b-8f5ef45d96e9；測試 active：5e029961-e9ee-413e-83cf-7bd260771f23。
+- 系統 overview/settings 與原工作台 API 皆 Access 302；Webhook 保留原精確路徑，根政策未放寬。兩區指定系統帳號與平台設定核對成功，D1 分離、分潤 NULL、LINE 外送 off、結算 disabled、金流與 AI 未啟用。
+- 首輪雙後台 UI mock 的未登入回應錯誤已修正；建置擋下首輪發布。最後全數通過；UI 為虛構資料，雙身分 UI mock 與後端真 grant 分開驗收。未代替本人登入正式瀏覽器。教學沿用、不重錄；原始藍圖保留。
+
+---
+
+# 業者 LINE OA 設定入口
+
+2026-10-07 14:54（Asia/Taipei）正式與獨立測試區已更新。
+
+- 總管理員側欄新增「LINE OA 串接」，整合中心與管理員專區也有入口；可設定業者自有 OA、加密保存憑證、取得 Webhook 網址並區分 Token 查驗與已驗簽接收。[操作與界線](LINE_OA_SETTINGS.md)。
+- 本輪業者自有 OA 接收設定不開放租戶付費數位服務；推播與郵件外送仍未啟用。平台費／分潤全 NULL、結算 disabled，原始藍圖完整保留。
+- 0008_line_settings.sql 已套用兩個專用 D1，未重設或匯入正式資料。正式加密主鑰以 Worker secret 保存，後續部署核對不重建／旋轉。
+- [89 項後端、22 項桌面／手機、建置、權限與發布全部成功](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236)；npm audit 0 vulnerabilities（sharp override 0.35.5）。
+- [畫面與驗收](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236/artifacts/11465462248)；[遠端部署核對](https://github.com/fangwl591021/taiwan-startup-park/actions/runs/37583798236/artifacts/11465952685)。
+- Source：e1370867fd46cc66a851927dc65b0017ddea4857；正式 active：7c070ece-7c6e-450b-8691-6122075108a7；測試 active：794a4c60-2aac-44b0-b833-241c9ca2d446。
+- Webhook 未設定探針回應 404；工作台身分、OA 設定與來客 API 皆 Access 302。精確 webhook 路徑允許第三方請求，根網域政策保留。初次路徑發布後檢查失敗，後續同邊界檢查已通過；加入有上限的傳播等待，沒有放寬登入保護。
+- UI 圖片使用虛構資料，後端以 SQLite 與 HMAC 驗收；未代替管理員登入正式瀏覽器、未填真實 LINE 憑證、未宣稱 OA 已完成串接、未發訊息。教學影片沿用、錄影 skipped。
+
+---

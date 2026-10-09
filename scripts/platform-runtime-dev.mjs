@@ -1,0 +1,13 @@
+import http from 'node:http';
+import {readFile} from 'node:fs/promises';
+import {resolve,extname,sep} from 'node:path';
+import worker from '../reports/platform-test-worker.mjs';
+import {database,seed} from './database.mjs';
+import {platformDatabase} from '../platform/runtime/test-database.mjs';
+const db=database();seed(db);const p=platformDatabase();
+const root=resolve('.migration-build/smart-menu/frontend/dist');
+const assets={async fetch(req){const path=new URL(req.url).pathname;if(path.endsWith('.html'))return new Response(null,{status:307,headers:{Location:path.slice(0,-5)}});let file=resolve(root,'.'+(path==='/platform/'?'/index.html':path.replace(/^\/platform/,'')));if(!file.startsWith(root+sep))return new Response('Not found',{status:404});if(!extname(file))file+='.html';try{return new Response(await readFile(file),{headers:{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'})[extname(file)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}}};
+const env={DB:db,PLATFORM_DB:p,PLATFORM_RUNTIME_ENABLED:'on',APP_ENV:'local',DEMO_MODE:'on',ASSETS:assets,LINE_CREDENTIALS_KEY:Buffer.alloc(32,42).toString('base64')};
+const server=http.createServer(async(req,res)=>{try{const chunks=[];for await(const c of req)chunks.push(c);const request=new Request('http://127.0.0.1:8791'+req.url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});const jobs=[];const r=await worker.fetch(request,env,{waitUntil(p){jobs.push(p);}});res.writeHead(r.status,Object.fromEntries(r.headers));res.end(Buffer.from(await r.arrayBuffer()));await Promise.allSettled(jobs);}catch(e){console.error(e.message);res.writeHead(500);res.end('Runtime test failed');}});
+server.listen(8791,'127.0.0.1',()=>console.log('Isolated actual platform runtime: http://127.0.0.1:8791'));
+process.on('SIGTERM',()=>server.close(()=>{db.close();p.close();process.exit(0);}));

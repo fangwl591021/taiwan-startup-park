@@ -1,0 +1,44 @@
+{
+  "code_commit": "946152be88c163ee0b8c5b56a2def4a27e3de143",
+  "runtime_ci": 37707031251,
+  "root_ci": 37707031339,
+  "source_ci": 37707031236,
+  "artifact_id": 11519644482,
+  "fixture_only": true,
+  "source_snapshot_unchanged": true,
+  "tests": {
+    "source_backend": 1222,
+    "source_frontend": 592,
+    "root_backend": 131,
+    "root_browser": 39,
+    "runtime_http": 10,
+    "runtime_browser": 4
+  },
+  "screenshots": [
+    {
+      "path": "docs/screenshots/desktop-full-platform.png",
+      "size": 139392,
+      "sha256": "f193b5eddf328faef19d55cf523e8fdf0366e134421aff57654c798cd33b4760"
+    },
+    {
+      "path": "docs/screenshots/desktop-full-platform-crm.png",
+      "size": 155169,
+      "sha256": "04c93cd3df24db31fcc3ce9993c087ff8dcdcb35d93b7e9d9f0271a3eed6c558"
+    },
+    {
+      "path": "docs/screenshots/desktop-full-platform-commerce.png",
+      "size": 108225,
+      "sha256": "922f6ede58de6dd35f27459e3a5871e8d4744a519bc2132efddd5ea141d2ba5d"
+    },
+    {
+      "path": "docs/screenshots/mobile-full-platform.png",
+      "size": 82080,
+      "sha256": "b2c29e277496eee634f1e49db972a1b7efb73e990eda7496513f6992b4b0e134"
+    },
+    {
+      "path": "docs/screenshots/mobile-full-platform-sites.png",
+      "size": 78023,
+      "sha256": "594a26b0e96ce54e26f1989d392b70965bba5c0c9377671186ebfd4c2c9a89f4"
+    }
+  ]
+}

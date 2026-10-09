@@ -13,6 +13,55 @@ export function database(path=':memory:'){
   sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0003_tenant_operations.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
   catch(e){sqlite.exec('ROLLBACK');throw e;}
  }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='digital_revenue_terms'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0004_digital_revenue_placeholders.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='businesses_tenant_page'").get())
+  sqlite.exec(readFileSync(new URL('../migrations/0005_workspace_paging_indexes.sql',import.meta.url),'utf8'));
+ if(!sqlite.prepare('PRAGMA table_info(address_contracts)').all().some(c=>c.name==='term_kind')){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0006_contract_service_terms.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tenant_mail_line_recipients'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0007_mail_line_recipients.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='line_connection_secrets'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0008_line_settings.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_settings'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0009_platform_console.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_line_login'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0010_platform_line_login.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_line_account'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0011_platform_line_account.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare('PRAGMA table_info(platform_line_account)').all().some(c=>c.name==='destination')){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0012_platform_line_webhook.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_modules'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0013_line_workspace.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='monitor_groups'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0014_chat_monitor.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_workspaces'").get()){
+  sqlite.exec('BEGIN');try{sqlite.exec(readFileSync(new URL('../migrations/0015_platform_workspace_bridge.sql',import.meta.url),'utf8'));sqlite.exec('COMMIT');}
+  catch(e){sqlite.exec('ROLLBACK');throw e;}
+ }
+ if(!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='platform_runtime_revision'").get()){
+  sqlite.exec(readFileSync(new URL('../migrations/0016_platform_internal_tools.sql',import.meta.url),'utf8'));
+ }
  function prepare(sql,values=[]){
   const execute=()=>{const st=sqlite.prepare(sql);if(st.columns().length)return {results:st.all(...values),meta:{changes:0}};
    const r=st.run(...values);return {results:[],meta:{changes:Number(r.changes)}};};
@@ -40,7 +89,7 @@ export function seed(db){
    ['sales-a3','op-a','業務 S3 · 王禾','operator_sales'],
    ['service-a','op-a','維運 · 張青','operator_service'],
    ['finance-a','op-a','財務 · 周月','operator_finance'],
-   ['platform','op-a','平台管理（未開放）','platform_admin'],
+   ['platform','op-a','系統總管理員（虛構）','platform_admin'],
    ['business-admin','op-a','企業管理（未開放）','business_admin'],
    ['owner-b','op-b','B 業者管理員','operator_owner'],
    ['sales-b','op-b','B 業者業務','operator_sales']]){
