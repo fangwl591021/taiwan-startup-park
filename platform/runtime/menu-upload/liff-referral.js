@@ -1,0 +1,2 @@
+// SDK only. This feature never creates a CRM/member account or sends messages.
+export const loadLiffSdk=()=>new Promise((resolve,reject)=>{if(window.liff)return resolve(window.liff);const script=document.createElement('script');script.src='https://static.line-scdn.net/liff/edge/2/sdk.js';script.async=true;script.onload=()=>window.liff?resolve(window.liff):reject(Error('SDK unavailable'));script.onerror=()=>reject(Error('SDK unavailable'));document.head.appendChild(script);});

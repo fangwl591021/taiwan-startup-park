@@ -1,0 +1,42 @@
+.menu-upload-area-editor{margin-top:20px;color:#0f172a;min-width:0}
+.menu-upload-area-editor h3{font-size:18px;font-weight:700;margin:0 0 8px}
+.menu-upload-area-help{font-size:13px;line-height:1.65;color:#475569;margin:8px 0 12px}
+.menu-upload-area-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.menu-upload-area-tabs button,.menu-upload-area-reset button{border:1px solid #cbd5e1;border-radius:8px;padding:9px 12px;background:#fff;color:#334155;font-size:13px;min-height:40px}
+.menu-upload-area-tabs button[aria-pressed=true]{border-color:#2563eb;background:#eff6ff;color:#1d4ed8;font-weight:700}
+.menu-upload-area-editor button:disabled{opacity:.5;cursor:not-allowed}
+.menu-upload-area-preview-shell{border:1px solid #cbd5e1;border-radius:10px;overflow:hidden;background:#e2e8f0}
+.menu-upload-area-preview{position:relative;width:100%;touch-action:pan-y;overflow:hidden;isolation:isolate}
+.menu-upload-area-preview>img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none}
+.menu-upload-area-frame{position:absolute;box-sizing:border-box;border:2px solid #dc2626;background:rgba(255,255,255,.03);cursor:move;touch-action:none;user-select:none;z-index:1}
+.menu-upload-area-frame.is-selected{border-color:#2563eb;border-width:3px;z-index:3;background:rgba(59,130,246,.07)}
+.menu-upload-area-frame.is-locked{cursor:default}
+.menu-upload-area-label{position:absolute;left:0;top:0;max-width:100%;box-sizing:border-box;background:#dc2626;color:#fff;font-size:11px;line-height:1.35;padding:2px 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+.menu-upload-area-frame.is-selected>.menu-upload-area-label{background:#2563eb;top:30px}
+.menu-upload-area-handle{position:absolute!important;width:28px;height:28px;min-width:28px;min-height:28px;border:2px solid #fff!important;border-radius:5px!important;background:#2563eb!important;padding:0!important;touch-action:none;z-index:4;box-shadow:0 1px 4px #0f172a70}
+.menu-upload-area-handle.top-left{left:0;top:0;cursor:nwse-resize}
+.menu-upload-area-handle.top-right{right:0;top:0;cursor:nesw-resize}
+.menu-upload-area-handle.bottom-left{left:0;bottom:0;cursor:nesw-resize}
+.menu-upload-area-handle.bottom-right{right:0;bottom:0;cursor:nwse-resize}
+.menu-upload-area-fields{margin-top:16px;padding:0;border:0;min-width:0}
+.menu-upload-area-fields legend{font-size:14px;font-weight:700;margin-bottom:12px;line-height:1.5;overflow-wrap:anywhere}
+.menu-upload-area-coordinate-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.menu-upload-area-coordinate-grid label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;min-width:0}
+.menu-upload-area-coordinate-grid input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:10px;background:#fff;font-size:16px;font-weight:400;min-height:42px}
+.menu-upload-area-coordinate-grid input:disabled{background:#f1f5f9;opacity:.6}
+.menu-upload-area-reset{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.menu-upload-area-error{margin:12px 0;padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#991b1b;font-size:13px;line-height:1.6}
+.menu-upload-area-editor :focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+@media(max-width:480px){
+  .menu-upload-area-coordinate-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .menu-upload-area-handle{width:30px;height:30px;min-width:30px;min-height:30px}
+  /* Keep a draggable center in small mobile frames instead of filling it with
+     four touch targets. Controls straddle the actual corners; geometry stays
+     tied to the image rectangle, never to these visual handle offsets. */
+  .menu-upload-area-handle.top-left{left:-15px;top:-15px}
+  .menu-upload-area-handle.top-right{right:-15px;top:-15px}
+  .menu-upload-area-handle.bottom-left{left:-15px;bottom:-15px}
+  .menu-upload-area-handle.bottom-right{right:-15px;bottom:-15px}
+  .menu-upload-area-frame.is-selected>.menu-upload-area-label{top:0}
+  .menu-upload-area-tabs button{flex-grow:1}
+}

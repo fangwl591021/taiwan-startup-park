@@ -1,7 +1,7 @@
 name: Full platform runtime acceptance
 on:
   push:
-    branches: [feature/full-platform-migration]
+    branches: [feature/full-platform-migration, feature/menu-chat-port]
 permissions:
   contents: read
 jobs:
