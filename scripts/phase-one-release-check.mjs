@@ -1,4 +1,5 @@
 import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;
 if(!/^[a-f0-9]{32}$/i.test(account||'')||!token)throw new Error('發布驗證缺少帳號授權');
 const api='https://api.cloudflare.com/client/v4/accounts/'+account;
@@ -29,6 +30,13 @@ for(const [file,worker,databaseName,appEnv,demoMode] of targets){
   const info=await cf('/d1/database/'+platformDb.database_id);if(info.name!==expectedName||info.uuid===dbId||plain('PLATFORM_RUNTIME_ENABLED')!=='on')throw new Error('完整平台資料層未獨立啟用');
   const sourceCheck=await cf('/d1/database/'+platformDb.database_id+'/query',{sql:"SELECT (SELECT COUNT(*) FROM users WHERE id='usr_dev_owner')+(SELECT COUNT(*) FROM workspaces WHERE id IN('default','ws_test_b')) AS seeded_accounts,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN('startup_park_bridge_bindings','startup_park_private_objects','startup_park_site_drafts','commerce_orders','crm_people')) AS core_tables"});
   if(sourceCheck[0]?.success!==true||Number(sourceCheck[0].results[0].seeded_accounts)!==0||Number(sourceCheck[0].results[0].core_tables)!==5)throw new Error('完整平台資料結構或測試帳號隔離不符');
+  if(appEnv==='production'){
+   const upload=await fetch(config.vars.APP_ORIGIN+'/api/line/webhook/menu-upload/page',{redirect:'manual',signal:AbortSignal.timeout(20000)});
+   const bytes=Buffer.from(await upload.arrayBuffer()),built=await readFile('dist/public/platform/menu-upload.html');
+   const hash=b=>createHash('sha256').update(b).digest('hex');
+   if(upload.status!==200||hash(bytes)!==hash(built)||upload.headers.get('cache-control')!=='no-store'||!upload.headers.get('content-security-policy')?.includes('https://static.line-scdn.net'))throw new Error('正式 LIFF 上傳頁未直接回應本次建置');
+   console.log('MENU_UPLOAD_PUBLIC_PAGE_VERIFIED '+hash(bytes));
+  }
  }
  const query=await cf('/d1/database/'+dbId+'/query',{sql:`SELECT
  (SELECT COUNT(*) FROM operators) AS operator_count,
