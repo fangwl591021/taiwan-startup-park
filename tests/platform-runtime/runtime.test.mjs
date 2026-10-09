@@ -5,6 +5,13 @@ import worker from '../../reports/platform-test-worker.mjs';
 import {database,seed} from '../../scripts/database.mjs';
 import {platformDatabase} from '../../platform/runtime/test-database.mjs';
 import {privateAssetBucket} from '../../platform/runtime/private-assets.mjs';
+test('public LIFF HTML stays on its endpoint when assets canonicalize HTML paths',async()=>{
+ const assets={async fetch(req){const path=new URL(req.url).pathname;if(path.endsWith('.html'))return new Response(null,{status:307,headers:{Location:path.slice(0,-5)}});return path==='/platform/menu-upload'?new Response('<!doctype html><title>Upload fixture</title>',{headers:{'Content-Type':'text/html'}}):new Response('Not found',{status:404});}};
+ const url='https://example.com/api/line/webhook/menu-upload/page?menuRun=fixture';
+ const r=await worker.fetch(new Request(url),{ASSETS:assets},{});
+ assert.equal(r.status,200);assert.equal(r.headers.get('location'),null);assert.match(await r.text(),/Upload fixture/);assert.equal(r.headers.get('cache-control'),'no-store');assert.match(r.headers.get('content-security-policy'),/https:\/\/static.line-scdn.net/);
+ assert.equal((await worker.fetch(new Request(url,{method:'POST'}),{ASSETS:assets},{})).status,405);
+});
 async function fixture(t){
  const db=database();seed(db);const p=platformDatabase();t.after(()=>{db.close();p.close();});
  const env={DB:db,PLATFORM_DB:p,PLATFORM_RUNTIME_ENABLED:'on',APP_ENV:'local',DEMO_MODE:'on',LINE_CREDENTIALS_KEY:Buffer.alloc(32,42).toString('base64')};

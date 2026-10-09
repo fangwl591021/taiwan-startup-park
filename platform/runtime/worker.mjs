@@ -21,7 +21,7 @@ export default{
    let result;
    if(url.pathname==='/api/line/webhook/menu-upload/page'||/^\/api\/line\/webhook\/menu-upload\/assets-base\/assets\/[A-Za-z0-9_.-]+$/.test(url.pathname)){
     if(!['GET','HEAD'].includes(req.method))return response({error:'Method not allowed'},405);
-    const file=url.pathname.endsWith('/page')?'/platform/menu-upload.html':'/platform/assets/'+url.pathname.split('/').at(-1);
+    const file=url.pathname.endsWith('/page')?'/platform/menu-upload':'/platform/assets/'+url.pathname.split('/').at(-1);
     result=env.ASSETS?await env.ASSETS.fetch(new Request(new URL(file,url.origin),req)):response({error:'UI unavailable'},503);
    }else{try{result=await menuUploadPublic(req,env,ctx,url.pathname.slice('/api/line/webhook/menu-upload'.length));}catch{result=response({success:false,error:'MENU_UPLOAD_UNAVAILABLE'},503);}}
    result=secured(result);const headers=new Headers(result.headers);headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' https://static.line-scdn.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.line.me https://liff.line.me; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");return new Response(result.body,{status:result.status,headers});
